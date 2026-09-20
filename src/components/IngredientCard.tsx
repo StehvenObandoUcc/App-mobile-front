@@ -151,7 +151,7 @@ export function IngredientCard({
 
         {/* Contenido central */}
         <View style={styles.body}>
-          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={styles.name} numberOfLines={2} ellipsizeMode="tail">
             {ingredient.name}
           </Text>
           <View style={styles.detailsRow}>
@@ -173,18 +173,18 @@ export function IngredientCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: '#F0E4D8',
     shadowColor: '#2B211D',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   cardSelected: {
     borderColor: '#B94E35',
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 48,
     height: 48,
-    borderRadius: 16,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2B211D',
     marginBottom: 5,
+    lineHeight: 20,
   },
   detailsRow: {
     flexDirection: 'row',
@@ -235,9 +236,9 @@ const styles = StyleSheet.create({
   },
   quantityPill: {
     backgroundColor: '#F8EDE2',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
     justifyContent: 'center',
     alignItems: 'center',
   },

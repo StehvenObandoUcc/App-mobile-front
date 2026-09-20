@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { useAuth } from '../src/hooks/useAuth';
+import { AppBottomNav } from '../src/components';
 
 export default function Layout() {
   const { isAuthenticated, isHydrated } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -32,43 +34,49 @@ export default function Layout() {
     );
   }
 
+  const hideBottomNavOn = ['/login', '/scan', '/scan-result', '/recipe-detail'];
+  const showBottomNav = isAuthenticated && !hideBottomNavOn.includes(pathname);
+
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: '#FFF9F2' },
-        headerTintColor: '#2B211D',
-        headerTitleStyle: { fontWeight: '700', fontSize: 18 },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: '#FFF9F2' },
-      }}
-    >
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="shopping-list"
-        options={{ title: 'Lista de Compras' }}
-      />
-      <Stack.Screen
-        name="scan"
-        options={{ title: 'Escanear Alimentos' }}
-      />
-      <Stack.Screen
-        name="scan-result"
-        options={{ title: 'Revisar Detección' }}
-      />
-      <Stack.Screen
-        name="inventory"
-        options={{ title: 'Mi Inventario' }}
-      />
-      <Stack.Screen
-        name="recipes"
-        options={{ title: 'Recetas Sugeridas' }}
-      />
-      <Stack.Screen
-        name="recipe-detail"
-        options={{ title: 'Preparar Receta' }}
-      />
-    </Stack>
+    <View style={{ flex: 1, backgroundColor: '#FFF9F2' }}>
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: '#FFF9F2' },
+          headerTintColor: '#2B211D',
+          headerTitleStyle: { fontWeight: '700', fontSize: 18 },
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: '#FFF9F2' },
+        }}
+      >
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="shopping-list"
+          options={{ title: 'Lista de Compras' }}
+        />
+        <Stack.Screen
+          name="scan"
+          options={{ title: 'Escanear Alimentos' }}
+        />
+        <Stack.Screen
+          name="scan-result"
+          options={{ title: 'Revisar Detección' }}
+        />
+        <Stack.Screen
+          name="inventory"
+          options={{ title: 'Mi Inventario' }}
+        />
+        <Stack.Screen
+          name="recipes"
+          options={{ title: 'Recetas Sugeridas' }}
+        />
+        <Stack.Screen
+          name="recipe-detail"
+          options={{ title: 'Preparar Receta' }}
+        />
+      </Stack>
+      {showBottomNav && <AppBottomNav />}
+    </View>
   );
 }
 

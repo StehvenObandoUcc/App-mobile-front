@@ -568,11 +568,9 @@ const styles = StyleSheet.create({
   bulkToolbar: {
     flexDirection: 'column',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EBDDD2',
-    marginBottom: 8,
+    paddingVertical: 6,
+    backgroundColor: 'transparent',
+    marginBottom: 6,
     gap: 8,
   },
   bulkTopRow: {
@@ -586,8 +584,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 8,
     paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#EBDDD2',
   },
   bulkInfo: {
     flexDirection: 'row',
@@ -597,7 +593,7 @@ const styles = StyleSheet.create({
   bulkCountText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#2B211D',
+    color: '#66534A',
   },
   bulkSelectedText: {
     fontSize: 12,
@@ -607,10 +603,12 @@ const styles = StyleSheet.create({
   bulkActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 999,
     backgroundColor: '#FBE9E2',
+    borderWidth: 1,
+    borderColor: '#F5D6C8',
   },
   bulkActionBtnText: {
     fontSize: 12,
@@ -621,9 +619,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
     backgroundColor: '#FBE5E3',
+    borderWidth: 1,
+    borderColor: '#F4BCB8',
   },
   bulkDeleteBtnText: {
     fontSize: 12,
@@ -632,13 +632,13 @@ const styles = StyleSheet.create({
   },
   bulkCancelBtn: {
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
     backgroundColor: '#F8EDE2',
   },
   bulkCancelBtnText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#66534A',
   },
   modalDeleteBtn: {
@@ -695,12 +695,12 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 96,
+    paddingBottom: 110,
   },
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 24,
+    bottom: 96,
     width: 58,
     height: 58,
     borderRadius: 29,

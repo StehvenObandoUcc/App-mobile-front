@@ -14,8 +14,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useShoppingList } from '../src/hooks/useShoppingList';
 import { useInventory } from '../src/hooks/useInventory';
 import { getExpirationStatus } from '../src/components/IngredientCard';
-import { AppScreen, PrimaryButton, SecondaryButton } from '../src/components';
+import {
+  AppScreen,
+  PrimaryButton,
+  SecondaryButton,
+  SearchInput,
+  StatusBadge,
+  ActionSheetModal,
+} from '../src/components';
 import { IngredientCategory, IngredientUnit, ShoppingItem } from '../src/types';
+import { Modal } from 'react-native';
 
 const CATEGORIES: { label: string; value: IngredientCategory; icon: any }[] = [
   { label: 'Verduras', value: 'vegetable', icon: 'leaf-outline' },
@@ -56,22 +64,27 @@ export default function ShoppingListScreen() {
   const [isAdding, setIsAdding] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
 
-  // Sugerencias inteligentes basadas en inventario (vencidos, por vencer o sin stock)
-  const expiringOrDepletedInventory = inventoryItems.filter((inv) => {
-    const s = getExpirationStatus(inv.expirationDate);
-    const isLowOrZero = inv.quantity !== null && inv.quantity <= 1;
-    return s.status === 'expired' || s.status === 'expiringSoon' || isLowOrZero;
-  });
+  // Estados para selector de adición
+  const [isAddChooserVisible, setIsAddChooserVisible] = useState(false);
+  const [isInventoryPickerVisible, setIsInventoryPickerVisible] = useState(false);
+  const [inventorySearch, setInventorySearch] = useState('');
 
-  const inventorySuggestions = expiringOrDepletedInventory.filter(
-    (inv) => !pendingItems.some((p) => p.name.toLowerCase() === inv.name.toLowerCase())
-  );
+  // Inventario filtrado y ordenado para el picker
+  const filteredInventory = inventoryItems
+    .filter((inv) => inv.name.toLowerCase().includes(inventorySearch.toLowerCase().trim()))
+    .sort((a, b) => {
+      const sa = getExpirationStatus(a.expirationDate);
+      const sb = getExpirationStatus(b.expirationDate);
+      const prioA = sa.status === 'expired' ? 3 : sa.status === 'expiringSoon' ? 2 : 1;
+      const prioB = sb.status === 'expired' ? 3 : sb.status === 'expiringSoon' ? 2 : 1;
+      return prioB - prioA;
+    });
 
-  const handleQuickAddFromInventory = async (invItem: typeof inventoryItems[0]) => {
+  const handleAddFromInventory = async (invItem: typeof inventoryItems[0]) => {
     try {
       await addItem(invItem.name, invItem.quantity || 1, invItem.unit, invItem.category);
     } catch {
-      Alert.alert('Error', 'No se pudo agregar el producto sugerido.');
+      Alert.alert('Error', 'No se pudo agregar el producto a la lista.');
     }
   };
 
@@ -157,56 +170,11 @@ export default function ShoppingListScreen() {
             </View>
           </View>
 
-          {/* ── Sugerencias desde Despensa (Por vencer o reponer) ── */}
-          {inventorySuggestions.length > 0 && (
-            <View style={styles.suggestionsContainer}>
-              <View style={styles.suggestionsHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="sparkles" size={14} color="#B94E35" style={{ marginRight: 5 }} />
-                  <Text style={styles.suggestionsTitle}>Sugeridos de tu Despensa</Text>
-                </View>
-                <Text style={styles.suggestionsSubtitle}>Por vencer o reponer</Text>
-              </View>
-
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionsScroll}>
-                {inventorySuggestions.map((inv) => {
-                  const s = getExpirationStatus(inv.expirationDate);
-                  return (
-                    <Pressable
-                      key={inv.id}
-                      onPress={() => handleQuickAddFromInventory(inv)}
-                      style={({ pressed }) => [
-                        styles.suggestionCard,
-                        pressed && styles.cardPressed,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Agregar ${inv.name} a la lista de compras`}
-                    >
-                      <View style={styles.suggestionTopRow}>
-                        <Text style={styles.suggestionName} numberOfLines={1}>
-                          {inv.name}
-                        </Text>
-                        <Ionicons name="add-circle" size={18} color="#B94E35" />
-                      </View>
-                      <Text style={[
-                        styles.suggestionStatus,
-                        s.status === 'expired' && { color: '#A93632' },
-                        s.status === 'expiringSoon' && { color: '#8A5A00' },
-                      ]}>
-                        {s.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
           {/* ── Botón / Formulario Rápido de Añadir ── */}
           {!isAdding ? (
             <Pressable
               style={({ pressed }) => [styles.addTriggerButton, pressed && styles.cardPressed]}
-              onPress={() => setIsAdding(true)}
+              onPress={() => setIsAddChooserVisible(true)}
               accessibilityRole="button"
               accessibilityLabel="Agregar producto a comprar"
             >
@@ -396,11 +364,11 @@ export default function ShoppingListScreen() {
                 </View>
               ))}
 
-              {/* Botón de Migración a Despensa */}
-              <View style={{ marginTop: 14 }}>
+              {/* Botón Mover a Inventario */}
+              <View style={{ marginTop: 16, marginBottom: 12 }}>
                 <PrimaryButton
-                  title={`Pasar ${boughtItems.length} comprado(s) a mi despensa`}
-                  iconName="archive-outline"
+                  title={`Pasar ${boughtItems.length} a mi despensa`}
+                  iconName="arrow-up-circle"
                   onPress={handleMoveToInventory}
                   isLoading={isMoving}
                 />
@@ -409,6 +377,143 @@ export default function ShoppingListScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Selector de Tipo de Adición (BUG/Feature UI) ── */}
+      <ActionSheetModal
+        visible={isAddChooserVisible}
+        onClose={() => setIsAddChooserVisible(false)}
+        title="Agregar a la lista de compras"
+        description="¿Cómo deseas agregar este producto?"
+        actions={[
+          {
+            label: 'Elegir de mi despensa / inventario',
+            icon: 'basket-outline',
+            onPress: () => {
+              setIsAddChooserVisible(false);
+              setIsInventoryPickerVisible(true);
+            },
+          },
+          {
+            label: 'Crear nuevo producto personalizado',
+            icon: 'add-circle-outline',
+            onPress: () => {
+              setIsAddChooserVisible(false);
+              setIsAdding(true);
+            },
+          },
+        ]}
+      />
+
+      {/* ── Modal de Selección desde Inventario ── */}
+      <Modal
+        visible={isInventoryPickerVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsInventoryPickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={styles.modalIconWrap}>
+                  <Ionicons name="basket" size={20} color="#B94E35" />
+                </View>
+                <View>
+                  <Text style={styles.modalTitle}>Agregar desde tu Despensa</Text>
+                  <Text style={styles.modalSubtitle}>Toca un alimento para añadirlo</Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => setIsInventoryPickerVisible(false)}
+                hitSlop={10}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={22} color="#66534A" />
+              </Pressable>
+            </View>
+
+            <View style={{ marginBottom: 12 }}>
+              <SearchInput
+                value={inventorySearch}
+                onChangeText={setInventorySearch}
+                placeholder="Buscar en tu despensa..."
+              />
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 360 }}>
+              {filteredInventory.length === 0 ? (
+                <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                  <Ionicons name="basket-outline" size={32} color="#96857C" />
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#66534A', marginTop: 8 }}>
+                    {inventorySearch.trim()
+                      ? 'No hay alimentos que coincidan'
+                      : 'No tienes alimentos en tu inventario'}
+                  </Text>
+                </View>
+              ) : (
+                filteredInventory.map((inv) => {
+                  const s = getExpirationStatus(inv.expirationDate);
+                  const isAlreadyInList = pendingItems.some(
+                    (p) => p.name.toLowerCase() === inv.name.toLowerCase()
+                  );
+
+                  return (
+                    <Pressable
+                      key={inv.id}
+                      onPress={() => handleAddFromInventory(inv)}
+                      style={({ pressed }) => [
+                        styles.invPickerRow,
+                        pressed && styles.cardPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Agregar ${inv.name} a compras`}
+                    >
+                      <View style={[styles.invPickerIcon, { backgroundColor: '#FBE9E2' }]}>
+                        <Ionicons name="nutrition-outline" size={18} color="#B94E35" />
+                      </View>
+
+                      <View style={{ flex: 1, marginHorizontal: 10 }}>
+                        <Text style={styles.invPickerName} numberOfLines={1}>
+                          {inv.name}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                          {inv.quantity !== null && (
+                            <Text style={styles.invPickerQty}>
+                              Stock: {inv.quantity} {inv.unit}
+                            </Text>
+                          )}
+                          <StatusBadge status={s.status} label={s.label} />
+                        </View>
+                      </View>
+
+                      <View
+                        style={[
+                          styles.invPickerAddBtn,
+                          isAlreadyInList && styles.invPickerAddBtnAdded,
+                        ]}
+                      >
+                        <Ionicons
+                          name={isAlreadyInList ? 'checkmark' : 'add'}
+                          size={18}
+                          color={isAlreadyInList ? '#28613C' : '#FFFFFF'}
+                        />
+                      </View>
+                    </Pressable>
+                  );
+                })
+              )}
+            </ScrollView>
+
+            <View style={{ marginTop: 14 }}>
+              <SecondaryButton
+                title="Listo"
+                variant="outline"
+                onPress={() => setIsInventoryPickerVisible(false)}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </AppScreen>
   );
 }
@@ -418,7 +523,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -469,84 +574,106 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#66534A',
   },
-  suggestionsContainer: {
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#EBDDD2',
-    shadowColor: '#2B211D',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  suggestionsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  suggestionsTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2B211D',
-  },
-  suggestionsSubtitle: {
-    fontSize: 11,
-    color: '#863626',
-    fontWeight: '600',
-  },
-  suggestionsScroll: {
-    gap: 8,
-  },
-  suggestionCard: {
-    backgroundColor: '#FFF9F2',
-    borderWidth: 1,
-    borderColor: '#EBDDD2',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minWidth: 130,
-  },
-  suggestionTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 3,
-  },
-  suggestionName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#2B211D',
-    flex: 1,
-    marginRight: 4,
-  },
-  suggestionStatus: {
-    fontSize: 11,
-    color: '#66534A',
-    fontWeight: '500',
-  },
   addTriggerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#EBDDD2',
-    borderRadius: 16,
+    borderColor: '#F0E4D8',
+    borderRadius: 999,
+    minHeight: 52,
     paddingVertical: 14,
+    paddingHorizontal: 20,
     marginBottom: 18,
     shadowColor: '#B94E35',
     shadowOpacity: 0.08,
     shadowRadius: 6,
-    elevation: 1,
+    elevation: 2,
   },
   addTriggerText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#B94E35',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    maxHeight: '85%',
+    padding: 20,
+    paddingBottom: 32,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FBE9E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#2B211D',
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: '#66534A',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  invPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#F0E4D8',
+  },
+  invPickerIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  invPickerName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2B211D',
+  },
+  invPickerQty: {
+    fontSize: 12,
+    color: '#66534A',
+    fontWeight: '500',
+  },
+  invPickerAddBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#B94E35',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  invPickerAddBtnAdded: {
+    backgroundColor: '#EAF4ED',
+    borderWidth: 1,
+    borderColor: '#C2DFCB',
   },
   cardPressed: {
     opacity: 0.85,

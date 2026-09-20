@@ -10,3 +10,4 @@ export * from './IngredientCard';
 export * from './RecipeCard';
 export * from './ActionSheetModal';
 export * from './StaggerView';
+export * from './AppBottomNav';
