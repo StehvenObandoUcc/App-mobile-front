@@ -23,6 +23,7 @@ import {
   ErrorState,
   PrimaryButton,
   ActionSheetModal,
+  StaggerView,
 } from '../src/components';
 import { getExpirationStatus } from '../src/components/IngredientCard';
 
@@ -388,17 +389,19 @@ export default function InventoryScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <IngredientCard
-              ingredient={item}
-              isSelectMode={isSelectMode}
-              isSelected={selectedIds.has(item.id)}
-              onToggleSelect={() => toggleSelectItem(item.id)}
-              onLongPress={() => toggleSelectItem(item.id)}
-              onPress={() => (isSelectMode ? toggleSelectItem(item.id) : openEditModal(item))}
-              onDelete={() => handleDelete(item.id, item.name)}
-              onConsume={() => handleConsume(item.id, item.name)}
-            />
+          renderItem={({ item, index }) => (
+            <StaggerView index={Math.min(index, 8)}>
+              <IngredientCard
+                ingredient={item}
+                isSelectMode={isSelectMode}
+                isSelected={selectedIds.has(item.id)}
+                onToggleSelect={() => toggleSelectItem(item.id)}
+                onLongPress={() => toggleSelectItem(item.id)}
+                onPress={() => (isSelectMode ? toggleSelectItem(item.id) : openEditModal(item))}
+                onDelete={() => handleDelete(item.id, item.name)}
+                onConsume={() => handleConsume(item.id, item.name)}
+              />
+            </StaggerView>
           )}
           ListEmptyComponent={
             searchQuery.trim() || selectedCategory !== 'all' ? (
@@ -645,15 +648,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
+    minHeight: 52,
     marginTop: 12,
-    borderRadius: 12,
-    backgroundColor: '#FEF2F2',
+    borderRadius: 999,
+    backgroundColor: '#FBE5E3',
+    borderWidth: 1,
+    borderColor: '#F4BCB8',
   },
   modalDeleteText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#DC2626',
+    fontWeight: '700',
+    color: '#A93632',
   },
   categoriesWrapper: {
     marginBottom: 8,
@@ -666,8 +672,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 36,
-    paddingHorizontal: 14,
+    height: 40,
+    paddingHorizontal: 16,
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -720,10 +726,11 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     maxHeight: '85%',
-    padding: 20,
+    padding: 24,
+    paddingBottom: 32,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -733,7 +740,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#2B211D',
   },
   modalBody: {
@@ -741,18 +748,18 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#2B211D',
     marginBottom: 6,
     marginTop: 10,
   },
   modalInput: {
-    height: 48,
-    backgroundColor: '#FFF9F2',
+    height: 52,
+    backgroundColor: '#F8EDE2',
     borderWidth: 1,
     borderColor: '#EBDDD2',
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderRadius: 14,
+    paddingHorizontal: 16,
     fontSize: 15,
     color: '#2B211D',
   },
@@ -765,8 +772,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   smallPill: {
-    height: 34,
-    paddingHorizontal: 14,
+    height: 38,
+    paddingHorizontal: 16,
     borderRadius: 999,
     backgroundColor: '#F8EDE2',
     marginRight: 8,

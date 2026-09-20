@@ -24,6 +24,7 @@ import {
   SearchInput,
   PrimaryButton,
   ActionSheetModal,
+  StaggerView,
 } from '../src/components';
 import { sortRecipes } from '../src/utils/recipe-sorter';
 import { getValidTimeOptionsForFocus } from '../src/utils/recipe-validation';
@@ -409,21 +410,23 @@ export default function RecipesScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <RecipeCard
-              recipe={item}
-              onPress={() =>
-                router.push({
-                  pathname: '/recipe-detail',
-                  params: { recipeId: item.id },
-                })
-              }
-              onSave={() => toggleSave(item.id)}
-              onLongPress={() => handleLongPress(item)}
-              isSelectMode={isSelectMode}
-              isSelected={selectedIds.has(item.id)}
-              onToggleSelect={() => toggleSelectRecipe(item.id)}
-            />
+          renderItem={({ item, index }) => (
+            <StaggerView index={Math.min(index, 8)}>
+              <RecipeCard
+                recipe={item}
+                onPress={() =>
+                  router.push({
+                    pathname: '/recipe-detail',
+                    params: { recipeId: item.id },
+                  })
+                }
+                onSave={() => toggleSave(item.id)}
+                onLongPress={() => handleLongPress(item)}
+                isSelectMode={isSelectMode}
+                isSelected={selectedIds.has(item.id)}
+                onToggleSelect={() => toggleSelectRecipe(item.id)}
+              />
+            </StaggerView>
           )}
           ListEmptyComponent={
             searchQuery.trim() || activeTab !== 'all' ? (
@@ -655,13 +658,13 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   aiBanner: {
-    borderRadius: 20,
+    borderRadius: 28,
     overflow: 'hidden',
     shadowColor: '#B94E35',
     shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    elevation: 4,
   },
   aiBannerPressed: {
     opacity: 0.92,
@@ -670,8 +673,8 @@ const styles = StyleSheet.create({
   aiBannerGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
   },
   aiBannerIconWrap: {
     width: 44,
@@ -683,9 +686,9 @@ const styles = StyleSheet.create({
   },
   aiTagBadge: {
     backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
     alignSelf: 'flex-start',
     marginBottom: 2,
   },
@@ -713,9 +716,9 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   selectToggleBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 52,
+    height: 52,
+    borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#EBDDD2',
@@ -734,8 +737,8 @@ const styles = StyleSheet.create({
   tabPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    height: 40,
+    paddingHorizontal: 16,
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -770,12 +773,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sortPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    height: 36,
+    paddingHorizontal: 14,
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#EBDDD2',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sortPillActive: {
     backgroundColor: '#B94E35',
@@ -825,11 +830,11 @@ const styles = StyleSheet.create({
   },
   modalSheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 32,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    paddingBottom: 36,
     maxHeight: '90%',
     shadowColor: '#2B211D',
     shadowOpacity: 0.15,
@@ -881,8 +886,9 @@ const styles = StyleSheet.create({
   },
   timePill: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: 9,
-    borderRadius: 12,
+    borderRadius: 999,
     backgroundColor: '#F8EDE2',
     alignItems: 'center',
     justifyContent: 'center',
@@ -908,8 +914,8 @@ const styles = StyleSheet.create({
   focusCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    borderRadius: 16,
+    padding: 16,
+    borderRadius: 22,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#EBDDD2',
