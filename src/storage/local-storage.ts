@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ingredient, Recipe, ShoppingItem, IngredientCategory } from '../types';
 import { mockIngredients } from '../mocks/ingredients.mock';
 import { mockRecipes } from '../mocks/recipes.mock';
-import { findSimilarItem } from '../utils/text-matching';
+import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
 
 export const DEFAULT_SHELF_LIFE_DAYS: Record<IngredientCategory, number> = {
   fruit: 7,
@@ -105,11 +105,23 @@ export const LocalStorage = {
         deletedRecipeIds = new Set();
       }
 
-      memoryInventory = savedInv ? JSON.parse(savedInv) : [];
+      const rawInv = savedInv ? JSON.parse(savedInv) : [];
+      memoryInventory = Array.isArray(rawInv)
+        ? rawInv.map((item: any) => {
+            const { unit, quantity } = normalizeItemUnitAndQty(item?.unit, item?.quantity);
+            return { ...item, unit, quantity };
+          })
+        : [];
       memoryRecipes = savedRec
         ? (JSON.parse(savedRec) as Recipe[]).filter((r) => !deletedRecipeIds.has(r.id))
         : [];
-      memoryShoppingList = savedShop ? JSON.parse(savedShop) : [];
+      const rawShop = savedShop ? JSON.parse(savedShop) : [];
+      memoryShoppingList = Array.isArray(rawShop)
+        ? rawShop.map((item: any) => {
+            const { unit, quantity } = normalizeItemUnitAndQty(item?.unit, item?.quantity);
+            return { ...item, unit, quantity };
+          })
+        : [];
 
       emitChange();
     } catch (err) {
@@ -370,14 +382,17 @@ export const LocalStorage = {
         .toISOString()
         .split('T')[0];
 
+      const { unit: cleanUnit, quantity: cleanQty } = normalizeItemUnitAndQty(bought.unit, bought.quantity);
+
       if (match && match.isExact) {
         // Fusión segura de producto existente
         const existing = match.item;
-        if (existing.quantity !== null && bought.quantity !== null) {
-          existing.quantity = Math.round((existing.quantity + bought.quantity) * 10) / 10;
-        } else if (bought.quantity !== null) {
-          existing.quantity = bought.quantity;
+        if (existing.quantity !== null && cleanQty !== null) {
+          existing.quantity = Math.round((existing.quantity + cleanQty) * 10) / 10;
+        } else if (cleanQty !== null) {
+          existing.quantity = cleanQty;
         }
+        existing.unit = cleanUnit;
 
         // Conservar la fecha más próxima si ambas existen
         if (existing.expirationDate && estimatedExp) {
@@ -393,8 +408,8 @@ export const LocalStorage = {
           id: `ing-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
           name: bought.name,
           category: bought.category,
-          quantity: bought.quantity, // Conserva null si es desconocida
-          unit: bought.unit,
+          quantity: cleanQty, // Conserva null si es desconocida
+          unit: cleanUnit,
           expirationDate: estimatedExp,
           confidence: 1.0,
           source: 'manual',

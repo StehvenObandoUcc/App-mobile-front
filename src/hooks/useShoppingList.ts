@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ShoppingItem, RecipeIngredient, IngredientUnit, IngredientCategory } from '../types';
 import { LocalStorage } from '../storage/local-storage';
-import { findSimilarItem } from '../utils/text-matching';
+import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
 
 export function useShoppingList() {
   const [items, setItems] = useState<ShoppingItem[]>([]);
@@ -39,11 +39,12 @@ export function useShoppingList() {
     category: IngredientCategory = 'other',
     recipeSource: string | null = null
   ): Promise<ShoppingItem> => {
+    const { unit: cleanUnit, quantity: cleanQty } = normalizeItemUnitAndQty(unit, quantity);
     const newItem: ShoppingItem = {
       id: `shop-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       name: name.trim(),
-      quantity,
-      unit,
+      quantity: cleanQty,
+      unit: cleanUnit,
       category,
       isBought: false,
       recipeSource,
@@ -55,8 +56,7 @@ export function useShoppingList() {
   };
 
   /**
-   * Agrega ingredientes faltantes desde una receta.
-   * Aplica deduplicación inteligente:
+   * Procesa la adición inteligente de ingredientes faltantes desde una receta:
    * - Si hay coincidencia exacta (o singular/plural, ej. "Tomate" y "Tomates"): fusiona sumando cantidades.
    * - Si la coincidencia es ambigua (ej. "Leche entera" vs "Leche deslactosada"): no fusiona automáticamente para no mezclar productos distintos.
    */
@@ -69,17 +69,19 @@ export function useShoppingList() {
     let mergedCount = 0;
 
     for (const missing of missingIngredients) {
+      const { unit: cleanUnit, quantity: cleanQty } = normalizeItemUnitAndQty(missing.unit, missing.quantity);
       const pending = currentList.filter((item) => !item.isBought);
       const match = findSimilarItem(missing.name, pending);
 
       if (match && match.isExact) {
         // Coincidencia exacta: fusionar sumando cantidades
         const target = match.item;
-        if (target.quantity !== null && missing.quantity !== null) {
-          target.quantity = Math.round((target.quantity + missing.quantity) * 10) / 10;
-        } else if (missing.quantity !== null) {
-          target.quantity = missing.quantity;
+        if (target.quantity !== null && cleanQty !== null) {
+          target.quantity = Math.round((target.quantity + cleanQty) * 10) / 10;
+        } else if (cleanQty !== null) {
+          target.quantity = cleanQty;
         }
+        target.unit = cleanUnit;
         await LocalStorage.updateShoppingItem(target);
         mergedCount++;
       } else {
@@ -87,8 +89,8 @@ export function useShoppingList() {
         const newItem: ShoppingItem = {
           id: `shop-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           name: missing.name,
-          quantity: missing.quantity, // Conserva null si es desconocida
-          unit: missing.unit || 'units',
+          quantity: cleanQty, // Conserva null si es desconocida
+          unit: cleanUnit,
           category: 'other',
           isBought: false,
           recipeSource: recipeTitle,

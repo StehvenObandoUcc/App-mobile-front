@@ -1,3 +1,5 @@
+import { IngredientUnit } from '../types';
+
 /**
  * Utilidades compartidas de normalización y coincidencia léxica 100% local.
  * Cero costos de red, cero tokens consumidos.
@@ -99,3 +101,60 @@ export function findSimilarItem<T extends { name: string }>(
     isAmbiguous: true,
   };
 }
+
+const UNIT_MAPPINGS: Record<string, { unit: IngredientUnit; factor: number }> = {
+  tablespoon: { unit: 'milliliters', factor: 15 },
+  tablespoons: { unit: 'milliliters', factor: 15 },
+  cucharada: { unit: 'milliliters', factor: 15 },
+  cucharadas: { unit: 'milliliters', factor: 15 },
+  teaspoon: { unit: 'grams', factor: 5 },
+  teaspoons: { unit: 'grams', factor: 5 },
+  cucharadita: { unit: 'grams', factor: 5 },
+  cucharaditas: { unit: 'grams', factor: 5 },
+  pinch: { unit: 'grams', factor: 1 },
+  pizca: { unit: 'grams', factor: 1 },
+  cup: { unit: 'milliliters', factor: 240 },
+  cups: { unit: 'milliliters', factor: 240 },
+  taza: { unit: 'milliliters', factor: 240 },
+  tazas: { unit: 'milliliters', factor: 240 },
+  ounce: { unit: 'grams', factor: 28 },
+  ounces: { unit: 'grams', factor: 28 },
+  oz: { unit: 'grams', factor: 28 },
+  pound: { unit: 'grams', factor: 454 },
+  pounds: { unit: 'grams', factor: 454 },
+  lb: { unit: 'grams', factor: 454 },
+  lbs: { unit: 'grams', factor: 454 },
+};
+
+const VALID_UNITS_SET = new Set<string>([
+  'units',
+  'grams',
+  'kilograms',
+  'milliliters',
+  'liters',
+  'package',
+  'unknown',
+]);
+
+export function normalizeItemUnitAndQty(
+  rawUnit?: string | null,
+  rawQty?: number | null
+): { unit: IngredientUnit; quantity: number | null } {
+  const u = (rawUnit || 'units').toLowerCase().trim();
+  let q = rawQty !== null && rawQty !== undefined ? Number(rawQty) : null;
+  if (q !== null && q <= 0) {
+    q = 1;
+  }
+  if (UNIT_MAPPINGS[u]) {
+    const map = UNIT_MAPPINGS[u];
+    return {
+      unit: map.unit,
+      quantity: q !== null ? Math.round(q * map.factor * 10) / 10 : null,
+    };
+  }
+  if (!VALID_UNITS_SET.has(u)) {
+    return { unit: 'units', quantity: q };
+  }
+  return { unit: u as IngredientUnit, quantity: q };
+}
+
