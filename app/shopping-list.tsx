@@ -12,6 +12,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useShoppingList } from '../src/hooks/useShoppingList';
+import { useInventory } from '../src/hooks/useInventory';
+import { getExpirationStatus } from '../src/components/IngredientCard';
 import { AppScreen, PrimaryButton, SecondaryButton } from '../src/components';
 import { IngredientCategory, IngredientUnit, ShoppingItem } from '../src/types';
 
@@ -45,6 +47,7 @@ export default function ShoppingListScreen() {
     clearBought,
     moveBoughtToInventory,
   } = useShoppingList();
+  const { items: inventoryItems } = useInventory();
 
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -52,6 +55,25 @@ export default function ShoppingListScreen() {
   const [category, setCategory] = useState<IngredientCategory>('other');
   const [isAdding, setIsAdding] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
+
+  // Sugerencias inteligentes basadas en inventario (vencidos, por vencer o sin stock)
+  const expiringOrDepletedInventory = inventoryItems.filter((inv) => {
+    const s = getExpirationStatus(inv.expirationDate);
+    const isLowOrZero = inv.quantity !== null && inv.quantity <= 1;
+    return s.status === 'expired' || s.status === 'expiringSoon' || isLowOrZero;
+  });
+
+  const inventorySuggestions = expiringOrDepletedInventory.filter(
+    (inv) => !pendingItems.some((p) => p.name.toLowerCase() === inv.name.toLowerCase())
+  );
+
+  const handleQuickAddFromInventory = async (invItem: typeof inventoryItems[0]) => {
+    try {
+      await addItem(invItem.name, invItem.quantity || 1, invItem.unit, invItem.category);
+    } catch {
+      Alert.alert('Error', 'No se pudo agregar el producto sugerido.');
+    }
+  };
 
   const handleAddItem = async () => {
     if (!name.trim()) {
@@ -116,7 +138,7 @@ export default function ShoppingListScreen() {
           <View style={styles.summaryRow}>
             <View style={[styles.summaryCard, styles.summaryPending]}>
               <View style={styles.summaryIconCirclePending}>
-                <Ionicons name="cart-outline" size={20} color="#D97706" />
+                <Ionicons name="cart-outline" size={20} color="#B94E35" />
               </View>
               <View>
                 <Text style={styles.summaryNum}>{pendingItems.length}</Text>
@@ -126,7 +148,7 @@ export default function ShoppingListScreen() {
 
             <View style={[styles.summaryCard, styles.summaryBought]}>
               <View style={styles.summaryIconCircleBought}>
-                <Ionicons name="checkmark-done" size={20} color="#059669" />
+                <Ionicons name="checkmark-done" size={20} color="#28613C" />
               </View>
               <View>
                 <Text style={styles.summaryNum}>{boughtItems.length}</Text>
@@ -135,15 +157,60 @@ export default function ShoppingListScreen() {
             </View>
           </View>
 
+          {/* ── Sugerencias desde Despensa (Por vencer o reponer) ── */}
+          {inventorySuggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <View style={styles.suggestionsHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="sparkles" size={14} color="#B94E35" style={{ marginRight: 5 }} />
+                  <Text style={styles.suggestionsTitle}>Sugeridos de tu Despensa</Text>
+                </View>
+                <Text style={styles.suggestionsSubtitle}>Por vencer o reponer</Text>
+              </View>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionsScroll}>
+                {inventorySuggestions.map((inv) => {
+                  const s = getExpirationStatus(inv.expirationDate);
+                  return (
+                    <Pressable
+                      key={inv.id}
+                      onPress={() => handleQuickAddFromInventory(inv)}
+                      style={({ pressed }) => [
+                        styles.suggestionCard,
+                        pressed && styles.cardPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Agregar ${inv.name} a la lista de compras`}
+                    >
+                      <View style={styles.suggestionTopRow}>
+                        <Text style={styles.suggestionName} numberOfLines={1}>
+                          {inv.name}
+                        </Text>
+                        <Ionicons name="add-circle" size={18} color="#B94E35" />
+                      </View>
+                      <Text style={[
+                        styles.suggestionStatus,
+                        s.status === 'expired' && { color: '#A93632' },
+                        s.status === 'expiringSoon' && { color: '#8A5A00' },
+                      ]}>
+                        {s.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
           {/* ── Botón / Formulario Rápido de Añadir ── */}
           {!isAdding ? (
             <Pressable
-              style={styles.addTriggerButton}
+              style={({ pressed }) => [styles.addTriggerButton, pressed && styles.cardPressed]}
               onPress={() => setIsAdding(true)}
               accessibilityRole="button"
               accessibilityLabel="Agregar producto a comprar"
             >
-              <Ionicons name="add-circle" size={22} color="#10B981" style={{ marginRight: 8 }} />
+              <Ionicons name="add-circle" size={22} color="#B94E35" style={{ marginRight: 8 }} />
               <Text style={styles.addTriggerText}>Agregar producto a la lista</Text>
             </Pressable>
           ) : (
@@ -151,7 +218,7 @@ export default function ShoppingListScreen() {
               <View style={styles.formHeader}>
                 <Text style={styles.formTitle}>Nuevo Producto</Text>
                 <Pressable onPress={() => setIsAdding(false)} hitSlop={10}>
-                  <Ionicons name="close-circle-outline" size={22} color="#9CA3AF" />
+                  <Ionicons name="close-circle-outline" size={22} color="#66534A" />
                 </Pressable>
               </View>
 
@@ -159,7 +226,7 @@ export default function ShoppingListScreen() {
                 value={name}
                 onChangeText={setName}
                 placeholder="Nombre (ej. Leche, Tomates, Huevos)"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor="#96857C"
                 style={styles.textInput}
                 autoFocus
               />
@@ -169,7 +236,7 @@ export default function ShoppingListScreen() {
                   value={quantity}
                   onChangeText={setQuantity}
                   placeholder="Cant. (opcional)"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor="#96857C"
                   keyboardType="decimal-pad"
                   style={[styles.textInput, { flex: 1, marginRight: 10 }]}
                 />
@@ -260,7 +327,7 @@ export default function ShoppingListScreen() {
                 <Text style={styles.itemName}>{item.name}</Text>
                 {item.recipeSource && (
                   <View style={styles.sourceBadge}>
-                    <Ionicons name="restaurant-outline" size={11} color="#059669" style={{ marginRight: 3 }} />
+                    <Ionicons name="restaurant-outline" size={11} color="#863626" style={{ marginRight: 3 }} />
                     <Text style={styles.sourceText} numberOfLines={1}>
                       Receta: {item.recipeSource}
                     </Text>
@@ -281,7 +348,7 @@ export default function ShoppingListScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Eliminar ${item.name}`}
               >
-                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                <Ionicons name="trash-outline" size={18} color="#A93632" />
               </Pressable>
             </View>
           ))}
@@ -290,7 +357,7 @@ export default function ShoppingListScreen() {
           {boughtItems.length > 0 && (
             <View style={{ marginTop: 24 }}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: '#059669' }]}>
+                <Text style={[styles.sectionTitle, { color: '#28613C' }]}>
                   Comprados ({boughtItems.length})
                 </Text>
                 <Pressable onPress={clearBought}>
@@ -324,7 +391,7 @@ export default function ShoppingListScreen() {
                     style={styles.deleteButton}
                     hitSlop={8}
                   >
-                    <Ionicons name="trash-outline" size={18} color="#9CA3AF" />
+                    <Ionicons name="trash-outline" size={18} color="#96857C" />
                   </Pressable>
                 </View>
               ))}
@@ -347,7 +414,7 @@ export default function ShoppingListScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#F9FAFB' },
+  screen: { backgroundColor: '#FFF9F2' },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -367,18 +434,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   summaryPending: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FEF3C7',
+    backgroundColor: '#FFF1E3',
+    borderColor: '#FCE2CC',
   },
   summaryBought: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#D1FAE5',
+    backgroundColor: '#EAF4ED',
+    borderColor: '#C2DFCB',
   },
   summaryIconCirclePending: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#FBE9E2',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -387,7 +454,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#D7ECD9',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -395,12 +462,71 @@ const styles = StyleSheet.create({
   summaryNum: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
+    color: '#2B211D',
   },
   summaryLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#66534A',
+  },
+  suggestionsContainer: {
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#EBDDD2',
+    shadowColor: '#2B211D',
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  suggestionsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  suggestionsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2B211D',
+  },
+  suggestionsSubtitle: {
+    fontSize: 11,
+    color: '#863626',
+    fontWeight: '600',
+  },
+  suggestionsScroll: {
+    gap: 8,
+  },
+  suggestionCard: {
+    backgroundColor: '#FFF9F2',
+    borderWidth: 1,
+    borderColor: '#EBDDD2',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 130,
+  },
+  suggestionTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  suggestionName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2B211D',
+    flex: 1,
+    marginRight: 4,
+  },
+  suggestionStatus: {
+    fontSize: 11,
+    color: '#66534A',
+    fontWeight: '500',
   },
   addTriggerButton: {
     flexDirection: 'row',
@@ -408,11 +534,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#D1FAE5',
+    borderColor: '#EBDDD2',
     borderRadius: 16,
     paddingVertical: 14,
     marginBottom: 18,
-    shadowColor: '#10B981',
+    shadowColor: '#B94E35',
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 1,
@@ -420,16 +546,20 @@ const styles = StyleSheet.create({
   addTriggerText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#059669',
+    color: '#B94E35',
+  },
+  cardPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.97 }],
   },
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: '#2B211D',
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
@@ -443,17 +573,17 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: '#2B211D',
   },
   textInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F2',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 46,
     fontSize: 14,
-    color: '#111827',
+    color: '#2B211D',
     marginBottom: 10,
   },
   qtyRow: {
@@ -470,15 +600,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
   },
   unitChipSelected: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#B94E35',
   },
   unitChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#66534A',
   },
   unitChipTextSelected: {
     color: '#FFFFFF',
@@ -494,15 +624,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
   },
   categoryChipSelected: {
-    backgroundColor: '#059669',
+    backgroundColor: '#B94E35',
   },
   categoryChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#66534A',
   },
   categoryChipTextSelected: {
     color: '#FFFFFF',
@@ -516,12 +646,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: '#2B211D',
   },
   clearText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#EF4444',
+    color: '#A93632',
   },
   itemCard: {
     flexDirection: 'row',
@@ -532,11 +662,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
   },
   itemCardBought: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
+    borderColor: '#EBDDD2',
     opacity: 0.8,
   },
   checkboxCircle: {
@@ -544,13 +674,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: '#EBDDD2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxCircleChecked: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#28613C',
+    borderColor: '#28613C',
   },
   checkboxInnerUnchecked: {
     width: 0,
@@ -559,16 +689,16 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: '#2B211D',
   },
   itemNameBought: {
     textDecorationLine: 'line-through',
-    color: '#9CA3AF',
+    color: '#96857C',
   },
   sourceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FBE9E2',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -578,16 +708,16 @@ const styles = StyleSheet.create({
   sourceText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#065F46',
+    color: '#863626',
   },
   itemQty: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#66534A',
     marginRight: 10,
   },
   itemQtyBought: {
-    color: '#9CA3AF',
+    color: '#96857C',
   },
   deleteButton: {
     padding: 4,
@@ -600,18 +730,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
     borderStyle: 'dashed',
   },
   emptyTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#374151',
+    color: '#2B211D',
     marginTop: 10,
   },
   emptySubtitle: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#66534A',
     textAlign: 'center',
     marginTop: 4,
     lineHeight: 18,
