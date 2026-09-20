@@ -6,14 +6,13 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Alert,
   Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInventory } from '../src/hooks/useInventory';
 import { Ingredient, IngredientCategory, IngredientUnit } from '../src/types';
-import { AppScreen, PrimaryButton, SecondaryButton } from '../src/components';
+import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog } from '../src/components';
 import { findSimilarItem } from '../src/utils/text-matching';
 
 const UNITS: IngredientUnit[] = [
@@ -67,6 +66,23 @@ export default function ScanResultScreen() {
     return [];
   });
 
+  const [dialogConfig, setDialogConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'info' | 'warning' | 'error' | 'success';
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: () => {},
+  });
+
   // Intercepción universal de salida (BUG-16: botón físico, gestos iOS/Android, header)
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -76,21 +92,22 @@ export default function ScanResultScreen() {
 
       e.preventDefault();
 
-      Alert.alert(
-        '¿Descartar alimentos detectados?',
-        `Tienes ${detectedItems.length} alimento(s) sin guardar en tu inventario. Si sales ahora, se perderán estos datos.`,
-        [
-          { text: 'Continuar revisando', style: 'cancel' },
-          {
-            text: 'Descartar y salir',
-            style: 'destructive',
-            onPress: () => {
-              hasConfirmedRef.current = true;
-              navigation.dispatch(e.data.action);
-            },
-          },
-        ]
-      );
+      setDialogConfig({
+        visible: true,
+        title: '¿Descartar alimentos detectados?',
+        message: `Tienes ${detectedItems.length} alimento(s) sin guardar en tu inventario. Si sales ahora, se perderán estos datos.`,
+        type: 'warning',
+        confirmText: 'Descartar y salir',
+        cancelText: 'Continuar revisando',
+        onConfirm: () => {
+          hasConfirmedRef.current = true;
+          setDialogConfig((prev) => ({ ...prev, visible: false }));
+          navigation.dispatch(e.data.action);
+        },
+        onCancel: () => {
+          setDialogConfig((prev) => ({ ...prev, visible: false }));
+        },
+      });
     });
 
     return unsubscribe;
@@ -164,11 +181,43 @@ export default function ScanResultScreen() {
   };
 
   const handleSaveModal = () => {
-    if (!editName.trim()) {
-      Alert.alert('Campo requerido', 'Ingresa el nombre del alimento.');
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      setDialogConfig({
+        visible: true,
+        title: 'Nombre requerido',
+        message: 'Por favor ingresa el nombre del alimento.',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
       return;
     }
-    const parsedQty = editQty.trim() ? parseFloat(editQty) : null;
+    if (trimmedName.length > 60) {
+      setDialogConfig({
+        visible: true,
+        title: 'Nombre demasiado largo',
+        message: 'El nombre del alimento no puede exceder 60 caracteres.',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
+      return;
+    }
+
+    let parsedQty: number | null = null;
+    if (editQty.trim()) {
+      const q = parseFloat(editQty.trim());
+      if (isNaN(q) || q <= 0 || q > 99999) {
+        setDialogConfig({
+          visible: true,
+          title: 'Cantidad inválida',
+          message: 'La cantidad debe ser un número positivo mayor a 0 y menor a 99,999.',
+          type: 'warning',
+          onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        });
+        return;
+      }
+      parsedQty = q;
+    }
 
     if (editingIndex !== null) {
       // Actualizar existente
@@ -177,7 +226,7 @@ export default function ScanResultScreen() {
           i === editingIndex
             ? {
                 ...item,
-                name: editName.trim(),
+                name: trimmedName,
                 quantity: parsedQty,
                 unit: editUnit,
                 category: editCat,
@@ -189,7 +238,7 @@ export default function ScanResultScreen() {
       // Agregar manual
       const newItem: Ingredient = {
         id: `manual-${Date.now()}`,
-        name: editName.trim(),
+        name: trimmedName,
         quantity: parsedQty,
         unit: editUnit,
         category: editCat,
@@ -206,7 +255,13 @@ export default function ScanResultScreen() {
   const handleConfirmAll = async () => {
     const itemsToAdd = detectedItems.filter((i) => i.confirmed);
     if (itemsToAdd.length === 0) {
-      Alert.alert('Sin selección', 'Selecciona al menos un alimento para agregar al inventario.');
+      setDialogConfig({
+        visible: true,
+        title: 'Sin selección',
+        message: 'Selecciona al menos un alimento para agregar al inventario.',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
       return;
     }
 
@@ -245,20 +300,25 @@ export default function ScanResultScreen() {
 
       hasConfirmedRef.current = true;
 
-      Alert.alert(
-        '¡Inventario Actualizado!',
-        `Se han procesado ${itemsToAdd.length} alimento(s) en tu inventario correctamente.`,
-        [
-          {
-            text: 'Ver inventario',
-            onPress: () => {
-              router.replace({ pathname: '/inventory', params: { from: 'scan' } });
-            },
-          },
-        ]
-      );
+      setDialogConfig({
+        visible: true,
+        title: '¡Inventario Actualizado!',
+        message: `Se han procesado ${itemsToAdd.length} alimento(s) en tu inventario correctamente.`,
+        type: 'success',
+        confirmText: 'Ver inventario',
+        onConfirm: () => {
+          setDialogConfig((prev) => ({ ...prev, visible: false }));
+          router.replace({ pathname: '/inventory', params: { from: 'scan' } });
+        },
+      });
     } catch {
-      Alert.alert('Error', 'No se pudieron guardar todos los alimentos.');
+      setDialogConfig({
+        visible: true,
+        title: 'Error al guardar',
+        message: 'No se pudieron guardar los alimentos en el inventario. Inténtalo nuevamente.',
+        type: 'error',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
     }
   };
 
@@ -434,6 +494,7 @@ export default function ScanResultScreen() {
                 onChangeText={setEditName}
                 placeholder="Ej. Tomates cherry"
                 placeholderTextColor="#9CA3AF"
+                maxLength={60}
                 style={styles.input}
               />
 
@@ -442,10 +503,11 @@ export default function ScanResultScreen() {
                   <Text style={styles.label}>Cantidad</Text>
                   <TextInput
                     value={editQty}
-                    onChangeText={setEditQty}
+                    onChangeText={(val) => setEditQty(val.replace(/[^0-9.]/g, ''))}
                     keyboardType="numeric"
                     placeholder="1"
                     placeholderTextColor="#9CA3AF"
+                    maxLength={8}
                     style={styles.input}
                   />
                 </View>
@@ -483,6 +545,18 @@ export default function ScanResultScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Diálogo Emergente M3 Expressive ── */}
+      <M3Dialog
+        visible={dialogConfig.visible}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={dialogConfig.onCancel}
+      />
     </AppScreen>
   );
 }

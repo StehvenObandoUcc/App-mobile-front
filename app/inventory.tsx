@@ -26,6 +26,8 @@ import {
   ActionSheetModal,
   StaggerView,
   getBottomContentPadding,
+  M3Dialog,
+  M3DatePickerModal,
 } from '../src/components';
 import { getExpirationStatus } from '../src/components/IngredientCard';
 
@@ -97,6 +99,21 @@ export default function InventoryScreen() {
   const [unit, setUnit] = useState<IngredientUnit>('units');
   const [category, setCategory] = useState<IngredientCategory>('vegetable');
   const [expirationDate, setExpirationDate] = useState('');
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+
+  const [dialogConfig, setDialogConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type?: 'success' | 'info' | 'warning' | 'error';
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: () => {},
+  });
 
   // Modal de confirmación compartido (BUG-08)
   const [confirmModal, setConfirmModal] = useState<{
@@ -192,17 +209,84 @@ export default function InventoryScreen() {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Campo requerido', 'Por favor ingresa el nombre del alimento.');
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setDialogConfig({
+        visible: true,
+        title: 'Campo requerido',
+        message: 'Por favor ingresa el nombre del alimento.',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
       return;
     }
 
-    const parsedQty = quantity.trim() ? parseFloat(quantity) : null;
+    if (trimmedName.length > 60) {
+      setDialogConfig({
+        visible: true,
+        title: 'Nombre muy largo',
+        message: 'El nombre del alimento no puede superar los 60 caracteres.',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
+      return;
+    }
+
+    let parsedQty: number | null = null;
+    if (quantity.trim()) {
+      const q = parseFloat(quantity.trim());
+      if (isNaN(q) || q <= 0) {
+        setDialogConfig({
+          visible: true,
+          title: 'Cantidad inválida',
+          message: 'La cantidad debe ser un número positivo mayor que cero.',
+          type: 'warning',
+          onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        });
+        return;
+      }
+      if (q > 99999) {
+        setDialogConfig({
+          visible: true,
+          title: 'Cantidad excedida',
+          message: 'La cantidad no puede superar 99,999.',
+          type: 'warning',
+          onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        });
+        return;
+      }
+      parsedQty = q;
+    }
+
+    if (expirationDate.trim()) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(expirationDate.trim())) {
+        setDialogConfig({
+          visible: true,
+          title: 'Formato de fecha inválido',
+          message: 'Por favor usa el selector de fecha para elegir un día válido.',
+          type: 'warning',
+          onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        });
+        return;
+      }
+      const [y] = expirationDate.trim().split('-').map(Number);
+      if (y < 2024 || y > 2099) {
+        setDialogConfig({
+          visible: true,
+          title: 'Año fuera de rango',
+          message: 'El año de vencimiento debe estar entre 2024 y 2099.',
+          type: 'warning',
+          onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        });
+        return;
+      }
+    }
+
     const itemData: Ingredient = {
       id: editingItem ? editingItem.id : `ing-${Date.now()}`,
-      name: name.trim(),
+      name: trimmedName,
       category,
-      quantity: parsedQty !== null && !isNaN(parsedQty) ? parsedQty : null,
+      quantity: parsedQty,
       unit,
       expirationDate: expirationDate.trim() || null,
       confidence: editingItem ? editingItem.confidence : null,
@@ -219,7 +303,13 @@ export default function InventoryScreen() {
       }
       setModalVisible(false);
     } catch {
-      Alert.alert('Error', 'No se pudo guardar el alimento en el inventario.');
+      setDialogConfig({
+        visible: true,
+        title: 'Error',
+        message: 'No se pudo guardar el alimento en el inventario.',
+        type: 'error',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
     }
   };
 
@@ -463,24 +553,26 @@ export default function InventoryScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
-              <Text style={styles.label}>Nombre del alimento *</Text>
+              <Text style={styles.label}>Nombre del alimento * (máx 60 caracteres)</Text>
               <TextInput
                 value={name}
                 onChangeText={setName}
                 placeholder="Ej. Tomates cherry"
                 placeholderTextColor="#9CA3AF"
+                maxLength={60}
                 style={styles.modalInput}
               />
 
               <View style={styles.row}>
                 <View style={{ flex: 1, marginRight: 10 }}>
-                  <Text style={styles.label}>Cantidad</Text>
+                  <Text style={styles.label}>Cantidad (positiva)</Text>
                   <TextInput
                     value={quantity}
-                    onChangeText={setQuantity}
+                    onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
                     placeholder="1"
                     keyboardType="numeric"
                     placeholderTextColor="#9CA3AF"
+                    maxLength={8}
                     style={styles.modalInput}
                   />
                 </View>
@@ -518,14 +610,26 @@ export default function InventoryScreen() {
                 ))}
               </ScrollView>
 
-              <Text style={styles.label}>Fecha de vencimiento (AAAA-MM-DD)</Text>
-              <TextInput
-                value={expirationDate}
-                onChangeText={setExpirationDate}
-                placeholder="2026-09-25"
-                placeholderTextColor="#9CA3AF"
-                style={styles.modalInput}
-              />
+              <Text style={styles.label}>Fecha de vencimiento</Text>
+              <Pressable
+                onPress={() => setIsDatePickerVisible(true)}
+                style={[styles.modalInput, { justifyContent: 'center' }]}
+                accessibilityRole="button"
+                accessibilityLabel="Seleccionar fecha de vencimiento en el calendario"
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text
+                    style={{
+                      color: expirationDate ? '#2B211D' : '#9CA3AF',
+                      fontSize: 15,
+                      fontWeight: expirationDate ? '600' : '400',
+                    }}
+                  >
+                    {expirationDate || 'Seleccionar en el calendario'}
+                  </Text>
+                  <Ionicons name="calendar-outline" size={20} color="#B94E35" />
+                </View>
+              </Pressable>
 
               <View style={{ marginTop: 24, marginBottom: 16 }}>
                 <PrimaryButton
@@ -560,6 +664,23 @@ export default function InventoryScreen() {
         confirmDestructive={confirmModal.confirmDestructive}
         confirmText={confirmModal.confirmText}
         onConfirm={confirmModal.onConfirm}
+      />
+
+      {/* ── Mini Calendario M3 ── */}
+      <M3DatePickerModal
+        visible={isDatePickerVisible}
+        value={expirationDate}
+        onChange={setExpirationDate}
+        onClose={() => setIsDatePickerVisible(false)}
+      />
+
+      {/* ── Diálogo Emergente M3 ── */}
+      <M3Dialog
+        visible={dialogConfig.visible}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        onConfirm={dialogConfig.onConfirm}
       />
     </AppScreen>
   );

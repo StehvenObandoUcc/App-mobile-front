@@ -23,6 +23,7 @@ import {
   StatusBadge,
   ActionSheetModal,
   getBottomContentPadding,
+  M3Dialog,
 } from '../src/components';
 import { IngredientCategory, IngredientUnit, ShoppingItem } from '../src/types';
 import { Modal } from 'react-native';
@@ -72,6 +73,23 @@ export default function ShoppingListScreen() {
   const [isInventoryPickerVisible, setIsInventoryPickerVisible] = useState(false);
   const [inventorySearch, setInventorySearch] = useState('');
 
+  const [dialogConfig, setDialogConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type?: 'success' | 'info' | 'warning' | 'error';
+    confirmText?: string;
+    onConfirm: () => void;
+    cancelText?: string;
+    onCancel?: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: () => {},
+  });
+
   // Inventario filtrado y ordenado para el picker
   const filteredInventory = inventoryItems
     .filter((inv) => inv.name.toLowerCase().includes(inventorySearch.toLowerCase().trim()))
@@ -87,60 +105,124 @@ export default function ShoppingListScreen() {
     try {
       await addItem(invItem.name, invItem.quantity || 1, invItem.unit, invItem.category);
     } catch {
-      Alert.alert('Error', 'No se pudo agregar el producto a la lista.');
+      setDialogConfig({
+        visible: true,
+        title: 'Error',
+        message: 'No se pudo agregar el producto a la lista.',
+        type: 'error',
+        onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
+      });
     }
   };
 
   const handleAddItem = async () => {
-    if (!name.trim()) {
-      Alert.alert('Nombre requerido', 'Por favor ingresa el nombre del producto a comprar.');
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setDialogConfig({
+        visible: true,
+        title: 'Nombre requerido',
+        message: 'Por favor ingresa el nombre del producto a comprar.',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
+      });
       return;
     }
 
-    const parsedQty = quantity.trim() ? parseFloat(quantity.replace(',', '.')) : null;
+    if (trimmed.length > 60) {
+      setDialogConfig({
+        visible: true,
+        title: 'Nombre muy largo',
+        message: 'El nombre del producto no puede superar los 60 caracteres.',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
+      });
+      return;
+    }
+
+    let parsedQty: number | null = null;
+    if (quantity.trim()) {
+      const q = parseFloat(quantity.trim().replace(',', '.'));
+      if (isNaN(q) || q <= 0) {
+        setDialogConfig({
+          visible: true,
+          title: 'Cantidad inválida',
+          message: 'La cantidad debe ser un número positivo mayor que cero.',
+          type: 'warning',
+          onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
+        });
+        return;
+      }
+      if (q > 99999) {
+        setDialogConfig({
+          visible: true,
+          title: 'Cantidad excedida',
+          message: 'La cantidad no puede superar 99,999.',
+          type: 'warning',
+          onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
+        });
+        return;
+      }
+      parsedQty = q;
+    }
 
     try {
-      await addItem(name.trim(), isNaN(parsedQty as number) ? null : parsedQty, unit, category);
+      await addItem(trimmed, parsedQty, unit, category);
       setName('');
       setQuantity('');
       setIsAdding(false);
     } catch {
-      Alert.alert('Error', 'No se pudo agregar el producto a la lista.');
+      setDialogConfig({
+        visible: true,
+        title: 'Error',
+        message: 'No se pudo agregar el producto a la lista.',
+        type: 'error',
+        onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
+      });
     }
   };
 
   const handleMoveToInventory = async () => {
     if (boughtItems.length === 0) return;
 
-    Alert.alert(
-      'Pasar a mi despensa',
-      `¿Deseas transferir ${boughtItems.length} producto(s) comprados a tu inventario? Se calculará su fecha estimada de caducidad.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sí, transferir',
-          style: 'default',
-          onPress: async () => {
-            setIsMoving(true);
-            try {
-              const movedCount = await moveBoughtToInventory();
-              Alert.alert(
-                '¡Despensa actualizada!',
-                `Se han agregado ${movedCount} alimento(s) a tu inventario con caducidad estimada.`,
-                [
-                  { text: 'Ver inventario', onPress: () => router.push('/inventory') },
-                  { text: 'Continuar en lista', style: 'cancel' },
-                ]
-              );
-            } catch {
-              Alert.alert('Error', 'No se pudieron mover los productos al inventario.');
-            } finally {
-              setIsMoving(false);
-            }
-          },
-        },
-      ]
-    );
+    setDialogConfig({
+      visible: true,
+      title: 'Pasar a mi despensa',
+      message: `¿Deseas transferir ${boughtItems.length} producto(s) comprados a tu inventario? Se calculará su fecha estimada de caducidad.`,
+      type: 'info',
+      confirmText: 'Sí, transferir',
+      cancelText: 'Cancelar',
+      onCancel: () => setDialogConfig((p) => ({ ...p, visible: false })),
+      onConfirm: async () => {
+        setDialogConfig((p) => ({ ...p, visible: false }));
+        setIsMoving(true);
+        try {
+          const movedCount = await moveBoughtToInventory();
+          setDialogConfig({
+            visible: true,
+            title: '¡Despensa actualizada!',
+            message: `Se han agregado ${movedCount} alimento(s) a tu inventario con caducidad estimada.`,
+            type: 'success',
+            confirmText: 'Ver inventario',
+            cancelText: 'Continuar en lista',
+            onCancel: () => setDialogConfig((p) => ({ ...p, visible: false })),
+            onConfirm: () => {
+              setDialogConfig((p) => ({ ...p, visible: false }));
+              router.push('/inventory');
+            },
+          });
+        } catch {
+          setDialogConfig({
+            visible: true,
+            title: 'Error',
+            message: 'No se pudieron mover los productos al inventario.',
+            type: 'error',
+            onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
+          });
+        } finally {
+          setIsMoving(false);
+        }
+      },
+    });
   };
 
   return (
@@ -204,6 +286,7 @@ export default function ShoppingListScreen() {
                 onChangeText={setName}
                 placeholder="Nombre (ej. Leche, Tomates, Huevos)"
                 placeholderTextColor="#96857C"
+                maxLength={60}
                 style={styles.textInput}
                 autoFocus
               />
@@ -211,10 +294,11 @@ export default function ShoppingListScreen() {
               <View style={styles.qtyRow}>
                 <TextInput
                   value={quantity}
-                  onChangeText={setQuantity}
-                  placeholder="Cant. (opcional)"
+                  onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
+                  placeholder="Cant. (positiva)"
                   placeholderTextColor="#96857C"
-                  keyboardType="decimal-pad"
+                  keyboardType="numeric"
+                  maxLength={8}
                   style={[styles.textInput, { flex: 1, marginRight: 10 }]}
                 />
 
@@ -523,6 +607,17 @@ export default function ShoppingListScreen() {
           </View>
         </View>
       </Modal>
+
+      <M3Dialog
+        visible={dialogConfig.visible}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={dialogConfig.onCancel}
+      />
     </AppScreen>
   );
 }

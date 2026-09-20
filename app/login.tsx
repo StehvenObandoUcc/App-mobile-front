@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../src/hooks/useAuth';
-import { AppScreen, PrimaryButton, SecondaryButton } from '../src/components';
+import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog } from '../src/components';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -28,18 +28,36 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [tabsWidth, setTabsWidth] = useState(0);
 
+  const [dialogConfig, setDialogConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type?: 'success' | 'info' | 'warning' | 'error';
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: () => {},
+  });
+
   const nameInputRef = useRef<TextInput>(null);
   const indicatorAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
+  const demoAnim = useRef(new Animated.Value(1)).current;
+  const formPulseAnim = useRef(new Animated.Value(1)).current;
   const logoutScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     return () => {
       indicatorAnim.stopAnimation();
       formAnim.stopAnimation();
+      demoAnim.stopAnimation();
+      formPulseAnim.stopAnimation();
       logoutScale.stopAnimation();
     };
-  }, [indicatorAnim, formAnim, logoutScale]);
+  }, [indicatorAnim, formAnim, demoAnim, formPulseAnim, logoutScale]);
 
   const handleModeChange = (newMode: 'login' | 'register') => {
     if (newMode === mode) return;
@@ -63,26 +81,104 @@ export default function LoginScreen() {
       duration: 220,
       useNativeDriver: true,
     }).start();
+
+    demoAnim.stopAnimation();
+    Animated.timing(demoAnim, {
+      toValue: newMode === 'login' ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+
+    formPulseAnim.setValue(0.98);
+    Animated.spring(formPulseAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 100,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handleSubmit = async () => {
-    if (!email.trim() || !password) {
-      Alert.alert('Campos incompletos', 'Por favor ingresa tu correo y contraseña.');
+    const emailTrimmed = email.trim();
+    if (!emailTrimmed || !password) {
+      setDialogConfig({
+        visible: true,
+        title: 'Campos incompletos',
+        message: 'Por favor ingresa tu correo electrónico y contraseña para continuar.',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailTrimmed)) {
+      setDialogConfig({
+        visible: true,
+        title: 'Correo inválido',
+        message: 'Por favor introduce un correo electrónico válido (ejemplo: usuario@correo.com).',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      setDialogConfig({
+        visible: true,
+        title: 'Contraseña muy corta',
+        message: 'La contraseña debe tener al menos 6 caracteres por seguridad.',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
+      return;
+    }
+
+    if (mode === 'register' && name.trim().length < 2) {
+      setDialogConfig({
+        visible: true,
+        title: 'Nombre requerido',
+        message: 'Por favor ingresa tu nombre (al menos 2 caracteres).',
+        type: 'warning',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
       return;
     }
 
     try {
       if (mode === 'login') {
-        await login(email, password);
-        Alert.alert('¡Bienvenido!', 'Sesión iniciada correctamente.');
-        router.replace('/');
+        await login(emailTrimmed, password);
+        setDialogConfig({
+          visible: true,
+          title: '¡Bienvenido!',
+          message: 'Sesión iniciada correctamente. Todo listo en tu cocina.',
+          type: 'success',
+          onConfirm: () => {
+            setDialogConfig((prev) => ({ ...prev, visible: false }));
+            router.replace('/');
+          },
+        });
       } else {
-        await register(email, password, name);
-        Alert.alert('¡Cuenta creada!', 'Tu cuenta ha sido registrada con éxito.');
-        router.replace('/');
+        await register(emailTrimmed, password, name.trim());
+        setDialogConfig({
+          visible: true,
+          title: '¡Cuenta creada!',
+          message: 'Tu cuenta ha sido registrada con éxito. ¡Bienvenido a Food AI!',
+          type: 'success',
+          onConfirm: () => {
+            setDialogConfig((prev) => ({ ...prev, visible: false }));
+            router.replace('/');
+          },
+        });
       }
     } catch (err: any) {
-      // El hook useAuth ya maneja el estado de error
+      setDialogConfig({
+        visible: true,
+        title: 'No se pudo iniciar sesión',
+        message: err?.message || 'Verifica tus credenciales e intenta nuevamente.',
+        type: 'error',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
     }
   };
 
@@ -129,7 +225,13 @@ export default function LoginScreen() {
                 setEmail('');
                 setPassword('');
                 handleModeChange('login');
-                Alert.alert('Sesión cerrada', 'Has cerrado tu sesión correctamente.');
+                setDialogConfig({
+                  visible: true,
+                  title: 'Sesión cerrada',
+                  message: 'Has cerrado tu sesión correctamente.',
+                  type: 'info',
+                  onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+                });
               }}
               style={styles.logoutButton}
               accessibilityRole="button"
@@ -220,8 +322,8 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          {/* ── Formulario ── */}
-          <View style={styles.formCard}>
+          {/* ── Formulario con pulso coreografiado ── */}
+          <Animated.View style={[styles.formCard, { transform: [{ scale: formPulseAnim }] }]}>
             {error && (
               <View style={styles.errorBanner}>
                 <Ionicons name="alert-circle" size={18} color="#DC2626" style={{ marginRight: 6 }} />
@@ -261,6 +363,7 @@ export default function LoginScreen() {
                   onChangeText={setName}
                   placeholder="Ej. Chef Carlos"
                   placeholderTextColor="#96857C"
+                  maxLength={50}
                   style={styles.textInput}
                   autoFocus={false}
                   editable={mode === 'register'}
@@ -279,6 +382,7 @@ export default function LoginScreen() {
                   placeholderTextColor="#96857C"
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  maxLength={100}
                   style={styles.textInput}
                 />
               </View>
@@ -295,6 +399,7 @@ export default function LoginScreen() {
                   placeholderTextColor="#96857C"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
+                  maxLength={128}
                   style={styles.textInput}
                 />
                 <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={10}>
@@ -324,18 +429,41 @@ export default function LoginScreen() {
               iconName={mode === 'login' ? 'log-in-outline' : 'person-add-outline'}
             />
 
-            {/* Acceso Rápido Cuenta Demo */}
-            {mode === 'login' && (
+            {/* Acceso Rápido Cuenta Demo con transición animada suave */}
+            <Animated.View
+              style={{
+                height: mode === 'login' ? undefined : 0,
+                overflow: 'hidden',
+                opacity: demoAnim,
+                transform: [
+                  {
+                    translateY: demoAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [10, 0],
+                    }),
+                  },
+                ],
+              }}
+              pointerEvents={mode === 'login' ? 'auto' : 'none'}
+            >
               <Pressable onPress={handleFillDemo} style={styles.demoButton}>
                 <Ionicons name="sparkles" size={15} color="#B94E35" style={{ marginRight: 6 }} />
                 <Text style={styles.demoButtonText}>
                   Usar credenciales de prueba (<Text style={{ fontWeight: '700' }}>demo@foodai.com</Text>)
                 </Text>
               </Pressable>
-            )}
-          </View>
+            </Animated.View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <M3Dialog
+        visible={dialogConfig.visible}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        onConfirm={dialogConfig.onConfirm}
+      />
     </AppScreen>
   );
 }
