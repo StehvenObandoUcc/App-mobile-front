@@ -328,7 +328,7 @@ export default function InventoryScreen() {
                     : 'square-outline'
                 }
                 size={16}
-                color="#10B981"
+                color="#B94E35"
                 style={{ marginRight: 5 }}
               />
               <Text style={styles.bulkActionBtnText}>
@@ -558,7 +558,7 @@ export default function InventoryScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F2',
   },
   searchSection: {
     paddingHorizontal: 16,
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#EBDDD2',
     marginBottom: 8,
     gap: 8,
   },
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#EBDDD2',
   },
   bulkInfo: {
     flexDirection: 'row',
@@ -597,12 +597,12 @@ const styles = StyleSheet.create({
   bulkCountText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: '#2B211D',
   },
   bulkSelectedText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#10B981',
+    color: '#B94E35',
   },
   bulkActionBtn: {
     flexDirection: 'row',
@@ -610,12 +610,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FBE9E2',
   },
   bulkActionBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#059669',
+    color: '#863626',
   },
   bulkDeleteBtn: {
     flexDirection: 'row',
@@ -623,23 +623,23 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FBE5E3',
   },
   bulkDeleteBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#DC2626',
+    color: '#A93632',
   },
   bulkCancelBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
   },
   bulkCancelBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#66534A',
   },
   modalDeleteBtn: {
     flexDirection: 'row',
@@ -671,20 +671,20 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
   },
   catPillSelected: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#B94E35',
+    borderColor: '#B94E35',
   },
   catPillExpiring: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#FFF2D7',
     borderColor: '#FDE68A',
   },
   catText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#66534A',
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 18,
@@ -704,10 +704,10 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: '#10B981',
+    backgroundColor: '#B94E35',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#10B981',
+    shadowColor: '#B94E35',
     shadowOpacity: 0.35,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: '#2B211D',
   },
   modalBody: {
     maxHeight: 500,
@@ -742,19 +742,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: '#2B211D',
     marginBottom: 6,
     marginTop: 10,
   },
   modalInput: {
     height: 48,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F2',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
     borderRadius: 12,
     paddingHorizontal: 14,
     fontSize: 15,
-    color: '#111827',
+    color: '#2B211D',
   },
   row: {
     flexDirection: 'row',
@@ -768,18 +768,18 @@ const styles = StyleSheet.create({
     height: 34,
     paddingHorizontal: 14,
     borderRadius: 999,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
     marginRight: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   smallPillActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#B94E35',
   },
   smallPillText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#66534A',
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 18,

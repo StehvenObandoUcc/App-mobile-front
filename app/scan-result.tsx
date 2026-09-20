@@ -267,7 +267,7 @@ export default function ScanResultScreen() {
       {/* ── Banner de IA ── */}
       <View style={styles.headerCard}>
         <View style={styles.aiBadge}>
-          <Ionicons name="sparkles" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+          <Ionicons name="sparkles" size={14} color="#863626" style={{ marginRight: 5 }} />
           <Text style={styles.aiBadgeText}>Análisis de IA Completado</Text>
         </View>
         <Text style={styles.headerTitle}>Revisa los alimentos detectados</Text>
@@ -279,7 +279,7 @@ export default function ScanResultScreen() {
       {/* ── Warnings de escaneo si existen ── */}
       {warnings.length > 0 && (
         <View style={styles.warningBox}>
-          <Ionicons name="information-circle-outline" size={18} color="#D97706" style={{ marginRight: 8 }} />
+          <Ionicons name="information-circle-outline" size={18} color="#8A5A00" style={{ marginRight: 8 }} />
           <Text style={styles.warningText}>{warnings[0]}</Text>
         </View>
       )}
@@ -294,7 +294,7 @@ export default function ScanResultScreen() {
             accessibilityRole="button"
             accessibilityLabel="Agregar otro alimento manualmente"
           >
-            <Ionicons name="add-circle-outline" size={18} color="#059669" style={{ marginRight: 4 }} />
+            <Ionicons name="add-circle-outline" size={18} color="#B94E35" style={{ marginRight: 4 }} />
             <Text style={styles.addManualText}>Añadir manual</Text>
           </Pressable>
         </View>
@@ -347,7 +347,7 @@ export default function ScanResultScreen() {
                         </View>
                       ) : (
                         <View style={styles.highConfidenceBadge}>
-                          <Ionicons name="checkmark-circle" size={12} color="#059669" style={{ marginRight: 2 }} />
+                          <Ionicons name="checkmark-circle" size={12} color="#28613C" style={{ marginRight: 2 }} />
                           <Text style={styles.highConfidenceText}>{Math.round(item.confidence * 100)}%</Text>
                         </View>
                       )
@@ -363,10 +363,10 @@ export default function ScanResultScreen() {
 
                 {/* Acciones */}
                 <Pressable onPress={() => openEditModal(index)} style={styles.iconBtn}>
-                  <Ionicons name="pencil-outline" size={18} color="#6B7280" />
+                  <Ionicons name="pencil-outline" size={18} color="#66534A" />
                 </Pressable>
                 <Pressable onPress={() => removeItem(index)} style={styles.iconBtn}>
-                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                  <Ionicons name="trash-outline" size={18} color="#A93632" />
                 </Pressable>
               </View>
 
@@ -374,7 +374,7 @@ export default function ScanResultScreen() {
               {similarItem && (
                 <View style={styles.similarItemContainer}>
                   <View style={styles.similarItemHeader}>
-                    <Ionicons name="repeat" size={14} color="#059669" style={{ marginRight: 5 }} />
+                    <Ionicons name="repeat" size={14} color="#B94E35" style={{ marginRight: 5 }} />
                     <Text style={styles.similarItemTitle}>
                       Ya en inventario: {similarItem.name} ({similarItem.quantity ?? 1} {similarItem.unit || 'uds'})
                     </Text>
@@ -501,28 +501,30 @@ const styles = StyleSheet.create({
   aiBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: '#FBE9E2',
+    borderWidth: 1,
+    borderColor: '#F5D6C8',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
     alignSelf: 'flex-start',
     marginBottom: 8,
   },
-  aiBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  headerSubtitle: { fontSize: 14, color: '#6B7280', lineHeight: 20 },
+  aiBadgeText: { color: '#863626', fontSize: 11, fontWeight: '800' },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#2B211D', marginBottom: 4 },
+  headerSubtitle: { fontSize: 14, color: '#66534A', lineHeight: 20 },
   warningBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#FFF2D7',
     marginHorizontal: 16,
     marginTop: 10,
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#FEF3C7',
+    borderColor: '#FDE68A',
   },
-  warningText: { fontSize: 13, color: '#B45309', flex: 1 },
+  warningText: { fontSize: 13, color: '#8A5A00', flex: 1 },
   listSection: { marginHorizontal: 16, marginTop: 18 },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -530,20 +532,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#2B211D' },
   addManualBtn: { flexDirection: 'row', alignItems: 'center' },
-  addManualText: { fontSize: 13, color: '#059669', fontWeight: '600' },
+  addManualText: { fontSize: 13, color: '#B94E35', fontWeight: '700' },
   itemCardContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: '#2B211D',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     elevation: 2,
   },
   itemRow: {
@@ -552,9 +554,9 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   similarItemContainer: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#FFF1E3',
     borderTopWidth: 1,
-    borderTopColor: '#DCFCE7',
+    borderTopColor: '#FCE2CC',
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
@@ -566,7 +568,7 @@ const styles = StyleSheet.create({
   similarItemTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#065F46',
+    color: '#863626',
   },
   mergeCheckboxRow: {
     flexDirection: 'row',
@@ -578,18 +580,18 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: '#059669',
+    borderColor: '#B94E35',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
     backgroundColor: '#FFFFFF',
   },
   miniCheckboxChecked: {
-    backgroundColor: '#059669',
+    backgroundColor: '#B94E35',
   },
   mergeCheckboxText: {
     fontSize: 12,
-    color: '#047857',
+    color: '#863626',
     flex: 1,
     fontWeight: '500',
   },
@@ -598,12 +600,12 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: '#EBDDD2',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  checkboxChecked: { backgroundColor: '#10B981', borderColor: '#10B981' },
+  checkboxChecked: { backgroundColor: '#B94E35', borderColor: '#B94E35' },
   itemInfo: { flex: 1 },
   itemNameRow: {
     flexDirection: 'row',
@@ -611,13 +613,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
-  itemName: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  itemUnconfirmed: { color: '#9CA3AF', textDecorationLine: 'line-through' },
-  itemMeta: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  itemName: { fontSize: 15, fontWeight: '600', color: '#2B211D' },
+  itemUnconfirmed: { color: '#96857C', textDecorationLine: 'line-through' },
+  itemMeta: { fontSize: 12, color: '#66534A', marginTop: 2 },
   highConfidenceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#EAF4ED',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -625,35 +627,35 @@ const styles = StyleSheet.create({
   highConfidenceText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#059669',
+    color: '#28613C',
   },
   mediumConfidenceBadge: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#FFF2D7',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#FEF3C7',
+    borderColor: '#FDE68A',
   },
   mediumConfidenceText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#D97706',
+    color: '#8A5A00',
   },
   lowConfidenceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FBE5E3',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: '#F4BCB8',
   },
   lowConfidenceText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#DC2626',
+    color: '#A93632',
   },
   iconBtn: { padding: 6, marginLeft: 4 },
   bottomActions: { paddingHorizontal: 16, marginTop: 24, paddingBottom: 40 },
@@ -671,33 +673,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 10 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#2B211D' },
+  label: { fontSize: 13, fontWeight: '600', color: '#2B211D', marginBottom: 6, marginTop: 10 },
   input: {
     height: 48,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F2',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
     borderRadius: 12,
     paddingHorizontal: 14,
     fontSize: 15,
-    color: '#111827',
+    color: '#2B211D',
   },
   row: { flexDirection: 'row', alignItems: 'center' },
   pill: {
     height: 34,
     paddingHorizontal: 14,
     borderRadius: 999,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
     marginRight: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pillActive: { backgroundColor: '#10B981' },
+  pillActive: { backgroundColor: '#B94E35' },
   pillText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#66534A',
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 18,

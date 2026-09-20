@@ -190,7 +190,7 @@ export default function RecipesScreen() {
           accessibilityLabel="Abrir generador de recetas con inteligencia artificial"
         >
           <LinearGradient
-            colors={['#10B981', '#059669']}
+            colors={['#B94E35', '#863626']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.aiBannerGradient}
@@ -255,7 +255,7 @@ export default function RecipesScreen() {
             <Ionicons
               name="sparkles"
               size={13}
-              color={activeTab === 'high_match' ? '#FFFFFF' : '#10B981'}
+              color={activeTab === 'high_match' ? '#FFFFFF' : '#B94E35'}
               style={{ marginRight: 5 }}
             />
             <Text style={[styles.tabText, activeTab === 'high_match' && styles.tabTextActive]}>
@@ -367,7 +367,7 @@ export default function RecipesScreen() {
                     : 'square-outline'
                 }
                 size={16}
-                color="#10B981"
+                color="#B94E35"
                 style={{ marginRight: 5 }}
               />
               <Text style={styles.bulkActionBtnText}>
@@ -471,7 +471,7 @@ export default function RecipesScreen() {
 
             <View style={styles.modalHeader}>
               <View style={styles.modalIconWrap}>
-                <Ionicons name="sparkles" size={22} color="#10B981" />
+                <Ionicons name="sparkles" size={22} color="#B94E35" />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.modalTitle}>Chef Inteligente IA</Text>
@@ -525,7 +525,7 @@ export default function RecipesScreen() {
                 <Ionicons
                   name="leaf-outline"
                   size={20}
-                  color={selectedFocus === 'waste_reduction' ? '#10B981' : '#6B7280'}
+                  color={selectedFocus === 'waste_reduction' ? '#B94E35' : '#66534A'}
                 />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text
@@ -552,7 +552,7 @@ export default function RecipesScreen() {
                 <Ionicons
                   name="flash-outline"
                   size={20}
-                  color={selectedFocus === 'quick' ? '#10B981' : '#6B7280'}
+                  color={selectedFocus === 'quick' ? '#B94E35' : '#66534A'}
                 />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text
@@ -649,7 +649,7 @@ export default function RecipesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#F9FAFB' },
+  screen: { backgroundColor: '#FFF9F2' },
   aiBannerWrapper: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
   aiBanner: {
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#10B981',
+    shadowColor: '#B94E35',
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -718,13 +718,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectToggleBtnActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#B94E35',
+    borderColor: '#B94E35',
   },
   tabsWrapper: { marginBottom: 8 },
   tabsList: {
@@ -739,16 +739,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
   },
   tabPillActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#B94E35',
+    borderColor: '#B94E35',
   },
   tabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#66534A',
   },
   tabTextActive: {
     color: '#FFFFFF',
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
   sortBarLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: '#66534A',
     marginRight: 8,
   },
   sortList: {
@@ -775,16 +775,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
   },
   sortPillActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#B94E35',
+    borderColor: '#B94E35',
   },
   sortText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#66534A',
   },
   sortTextActive: {
     color: '#FFFFFF',
@@ -799,16 +799,16 @@ const styles = StyleSheet.create({
   validationHintText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#059669',
+    color: '#8A5A00',
     marginTop: 2,
   },
   timePillDisabled: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#E5E7EB',
+    backgroundColor: '#F8EDE2',
+    borderColor: '#EBDDD2',
     opacity: 0.4,
   },
   timePillTextDisabled: {
-    color: '#9CA3AF',
+    color: '#96857C',
   },
   listContainer: {
     paddingHorizontal: 16,
@@ -830,7 +830,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 36,
-    shadowColor: '#000',
+    shadowColor: '#2B211D',
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
@@ -839,7 +839,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: '#EBDDD2',
     alignSelf: 'center',
     marginBottom: 16,
   },
@@ -852,24 +852,24 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FBE9E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: '#2B211D',
   },
   modalSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#66534A',
     marginTop: 2,
   },
   modalSectionLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: '#2B211D',
     marginBottom: 8,
     marginTop: 8,
   },
@@ -882,23 +882,23 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 9,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
   },
   timePillActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#10B981',
+    backgroundColor: '#FBE9E2',
+    borderColor: '#B94E35',
   },
   timePillText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#66534A',
   },
   timePillTextActive: {
-    color: '#059669',
+    color: '#B94E35',
     fontWeight: '700',
   },
   focusOptions: {
@@ -909,25 +909,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderRadius: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
   },
   focusCardActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#10B981',
+    backgroundColor: '#FBE9E2',
+    borderColor: '#B94E35',
   },
   focusTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#374151',
+    color: '#2B211D',
   },
   focusTitleActive: {
-    color: '#065F46',
+    color: '#863626',
   },
   focusDesc: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#66534A',
     marginTop: 2,
   },
   bulkToolbar: {
@@ -936,7 +936,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#EBDDD2',
     marginBottom: 8,
     gap: 8,
   },
@@ -952,7 +952,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#EBDDD2',
   },
   bulkInfo: {
     flexDirection: 'row',
@@ -962,12 +962,12 @@ const styles = StyleSheet.create({
   bulkCountText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: '#2B211D',
   },
   bulkSelectedText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#10B981',
+    color: '#B94E35',
   },
   bulkActionBtn: {
     flexDirection: 'row',
@@ -975,12 +975,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FBE9E2',
   },
   bulkActionBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#059669',
+    color: '#863626',
   },
   bulkDeleteBtn: {
     flexDirection: 'row',
@@ -988,22 +988,22 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FBE5E3',
   },
   bulkDeleteBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#DC2626',
+    color: '#A93632',
   },
   bulkCancelBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
   },
   bulkCancelBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#66534A',
   },
 });

@@ -44,7 +44,7 @@ export default function ScanScreen() {
       <AppScreen style={styles.permissionScreen}>
         <View style={styles.permissionContainer}>
           <View style={styles.permissionIconCircle}>
-            <Ionicons name="camera-outline" size={48} color="#10B981" />
+            <Ionicons name="camera-outline" size={48} color="#B94E35" />
           </View>
           <Text style={styles.permissionTitle}>Permiso de cámara necesario</Text>
           <Text style={styles.permissionSubtitle}>
@@ -188,7 +188,7 @@ export default function ScanScreen() {
       {/* ── Overlay de análisis en progreso (BUG-01) ── */}
       {isAnalyzing && (
         <View style={styles.analyzingOverlay}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color="#B94E35" />
           <Text style={styles.analyzingText}>Analizando tu foto con IA...</Text>
           <Text style={styles.analyzingHint}>Identificando ingredientes...</Text>
         </View>
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   permissionScreen: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F2',
   },
   permissionContainer: {
     flex: 1,
@@ -253,21 +253,23 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FBE9E2',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: '#F5D6C8',
   },
   permissionTitle: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '800',
+    color: '#2B211D',
     textAlign: 'center',
     marginBottom: 8,
   },
   permissionSubtitle: {
     fontSize: 15,
-    color: '#6B7280',
+    color: '#66534A',
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -286,7 +288,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: CORNER_SIZE,
     height: CORNER_SIZE,
-    borderColor: '#10B981',
+    borderColor: '#B94E35',
   },
   cornerTL: { top: 0, left: 0, borderTopWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH },
   cornerTR: { top: 0, right: 0, borderTopWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH },
@@ -351,9 +353,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(16, 185, 129, 0.3)',
+    backgroundColor: 'rgba(185, 78, 53, 0.3)',
     borderWidth: 4,
-    borderColor: '#10B981',
+    borderColor: '#B94E35',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -364,6 +366,6 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: '#10B981',
+    backgroundColor: '#B94E35',
   },
 });
