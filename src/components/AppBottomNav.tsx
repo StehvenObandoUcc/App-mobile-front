@@ -5,6 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShoppingList } from '../hooks/useShoppingList';
 
+export const NAV_HEIGHT = 64;
+export const NAV_BOTTOM_OFFSET = 12;
+
+export const getBottomContentPadding = (bottomInset: number) =>
+  NAV_HEIGHT + Math.max(bottomInset, 0) + NAV_BOTTOM_OFFSET + 16;
+
 export function AppBottomNav() {
   const router = useRouter();
   const pathname = usePathname();
@@ -16,10 +22,11 @@ export function AppBottomNav() {
   const isRecipes = pathname.startsWith('/recipes');
   const isShopping = pathname.startsWith('/shopping-list');
 
-  const bottomInset = Math.max(insets.bottom, 10);
+  const bottomInset = Math.max(insets.bottom, 0);
+  const bottomPosition = bottomInset + NAV_BOTTOM_OFFSET;
 
   return (
-    <View style={[styles.bottomNavWrapper, { bottom: bottomInset }]}>
+    <View style={[styles.bottomNavWrapper, { bottom: bottomPosition }]}>
       <View style={styles.bottomNavContainer}>
         {/* 1. Inicio */}
         <Pressable

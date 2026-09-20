@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRecipes } from '../src/hooks/useRecipes';
 import { useInventory } from '../src/hooks/useInventory';
 import { Recipe, RecipeSortOption, RecipeDifficultyFilter, RecipeDifficulty } from '../src/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AppScreen,
   RecipeCard,
@@ -25,6 +26,7 @@ import {
   PrimaryButton,
   ActionSheetModal,
   StaggerView,
+  getBottomContentPadding,
 } from '../src/components';
 import { sortRecipes } from '../src/utils/recipe-sorter';
 import { getValidTimeOptionsForFocus } from '../src/utils/recipe-validation';
@@ -33,6 +35,7 @@ type FilterTab = 'all' | 'high_match' | 'quick' | 'saved';
 
 export default function RecipesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { items } = useInventory();
   const {
     recipes,
@@ -408,7 +411,10 @@ export default function RecipesScreen() {
         <FlatList
           data={filteredRecipes}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[
+            styles.listContainer,
+            { paddingBottom: Math.max(110, getBottomContentPadding(insets.bottom)) },
+          ]}
           showsVerticalScrollIndicator={false}
           renderItem={({ item, index }) => (
             <StaggerView index={Math.min(index, 8)}>

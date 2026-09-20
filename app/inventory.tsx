@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInventory } from '../src/hooks/useInventory';
 import { Ingredient, IngredientCategory, IngredientUnit } from '../src/types';
 import {
@@ -24,6 +25,7 @@ import {
   PrimaryButton,
   ActionSheetModal,
   StaggerView,
+  getBottomContentPadding,
 } from '../src/components';
 import { getExpirationStatus } from '../src/components/IngredientCard';
 
@@ -60,6 +62,7 @@ const UNITS: IngredientUnit[] = [
 export default function InventoryScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ filter?: string; from?: string }>();
   const { items, status, error, reload, addItem, updateItem, deleteItem, deleteMultipleItems, consumeItem } =
     useInventory();
@@ -387,7 +390,10 @@ export default function InventoryScreen() {
         <FlatList
           data={filteredItems}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[
+            styles.listContainer,
+            { paddingBottom: Math.max(100, getBottomContentPadding(insets.bottom)) },
+          ]}
           showsVerticalScrollIndicator={false}
           renderItem={({ item, index }) => (
             <StaggerView index={Math.min(index, 8)}>

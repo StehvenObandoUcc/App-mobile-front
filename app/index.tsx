@@ -2,16 +2,26 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInventory } from '../src/hooks/useInventory';
 import { useRecipes } from '../src/hooks/useRecipes';
 import { Recipe } from '../src/types';
 import { getExpirationStatus } from '../src/components/IngredientCard';
-import { AppScreen, RecipeCard, PrimaryButton, SecondaryButton, StatusBadge, StaggerView } from '../src/components';
+import {
+  AppScreen,
+  RecipeCard,
+  PrimaryButton,
+  SecondaryButton,
+  StatusBadge,
+  StaggerView,
+  getBottomContentPadding,
+} from '../src/components';
 import { useAuth } from '../src/hooks/useAuth';
 import { useShoppingList } from '../src/hooks/useShoppingList';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { items } = useInventory();
   const { recipes, toggleSave, deleteRecipe } = useRecipes();
   const { pendingItems } = useShoppingList();
@@ -51,7 +61,14 @@ export default function HomeScreen() {
     : 'Mi Cocina';
 
   return (
-    <AppScreen scrollable style={styles.screen} contentContainerStyle={styles.scrollContent}>
+    <AppScreen
+      scrollable
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingBottom: Math.max(110, getBottomContentPadding(insets.bottom)) },
+      ]}
+    >
       {/* ── 1. Header Editorial ── */}
       <StaggerView index={0}>
         <View style={styles.header}>

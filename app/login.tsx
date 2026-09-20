@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,20 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Alert,
+  Animated,
+  Platform,
+  UIManager,
+  LayoutAnimation,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../src/hooks/useAuth';
 import { AppScreen, PrimaryButton, SecondaryButton } from '../src/components';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -24,6 +32,44 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [tabsWidth, setTabsWidth] = useState(0);
+
+  const nameInputRef = useRef<TextInput>(null);
+  const indicatorAnim = useRef(new Animated.Value(0)).current;
+  const formAnim = useRef(new Animated.Value(0)).current;
+  const logoutScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    return () => {
+      indicatorAnim.stopAnimation();
+      formAnim.stopAnimation();
+      logoutScale.stopAnimation();
+    };
+  }, [indicatorAnim, formAnim, logoutScale]);
+
+  const handleModeChange = (newMode: 'login' | 'register') => {
+    if (newMode === mode) return;
+    if (newMode === 'login') {
+      nameInputRef.current?.blur();
+    }
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setMode(newMode);
+
+    indicatorAnim.stopAnimation();
+    Animated.spring(indicatorAnim, {
+      toValue: newMode === 'login' ? 0 : 1,
+      friction: 8,
+      tension: 70,
+      useNativeDriver: true,
+    }).start();
+
+    formAnim.stopAnimation();
+    Animated.timing(formAnim, {
+      toValue: newMode === 'login' ? 0 : 1,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  };
 
   const handleSubmit = async () => {
     if (!email.trim() || !password) {
@@ -49,7 +95,7 @@ export default function LoginScreen() {
   const handleFillDemo = () => {
     setEmail('demo@foodai.com');
     setPassword('123456');
-    setMode('login');
+    handleModeChange('login');
   };
 
   if (isAuthenticated && user) {
@@ -68,21 +114,37 @@ export default function LoginScreen() {
           </View>
 
           <View style={{ height: 28, width: '100%' }} />
-          <Pressable
-            onPress={async () => {
-              await logout();
-              setEmail('');
-              setPassword('');
-              setMode('login');
-              Alert.alert('Sesión cerrada', 'Has cerrado tu sesión correctamente.');
-            }}
-            style={styles.logoutButton}
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar sesión"
-          >
-            <Ionicons name="log-out-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.logoutButtonText}>Cerrar sesión</Text>
-          </Pressable>
+          <Animated.View style={{ transform: [{ scale: logoutScale }], width: '100%' }}>
+            <Pressable
+              onPressIn={() => {
+                Animated.spring(logoutScale, {
+                  toValue: 0.96,
+                  useNativeDriver: true,
+                }).start();
+              }}
+              onPressOut={() => {
+                Animated.spring(logoutScale, {
+                  toValue: 1.0,
+                  friction: 4,
+                  tension: 80,
+                  useNativeDriver: true,
+                }).start();
+              }}
+              onPress={async () => {
+                await logout();
+                setEmail('');
+                setPassword('');
+                handleModeChange('login');
+                Alert.alert('Sesión cerrada', 'Has cerrado tu sesión correctamente.');
+              }}
+              style={styles.logoutButton}
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar sesión"
+            >
+              <Ionicons name="log-out-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.logoutButtonText}>Cerrar sesión</Text>
+            </Pressable>
+          </Animated.View>
 
           <View style={{ height: 12 }} />
           <SecondaryButton
@@ -117,19 +179,46 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          {/* ── Selector de Modo (Login / Registro) ── */}
-          <View style={styles.tabsContainer}>
+          {/* ── Selector de Modo (Login / Registro) con Píldora Animada ── */}
+          <View
+            style={styles.tabsContainer}
+            onLayout={(e) => setTabsWidth(e.nativeEvent.layout.width)}
+          >
+            {tabsWidth > 0 && (
+              <Animated.View
+                style={[
+                  styles.tabIndicator,
+                  {
+                    width: (tabsWidth - 8) / 2,
+                    transform: [
+                      {
+                        translateX: indicatorAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, (tabsWidth - 8) / 2],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
+            )}
             <Pressable
-              onPress={() => setMode('login')}
-              style={[styles.tabButton, mode === 'login' && styles.tabButtonActive]}
+              onPress={() => handleModeChange('login')}
+              style={styles.tabButton}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: mode === 'login' }}
+              accessibilityLabel="Iniciar Sesión"
             >
               <Text style={[styles.tabButtonText, mode === 'login' && styles.tabButtonTextActive]}>
                 Iniciar Sesión
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => setMode('register')}
-              style={[styles.tabButton, mode === 'register' && styles.tabButtonActive]}
+              onPress={() => handleModeChange('register')}
+              style={styles.tabButton}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: mode === 'register' }}
+              accessibilityLabel="Crear Cuenta"
             >
               <Text style={[styles.tabButtonText, mode === 'register' && styles.tabButtonTextActive]}>
                 Crear Cuenta
@@ -146,21 +235,44 @@ export default function LoginScreen() {
               </View>
             )}
 
-            {mode === 'register' && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Tu Nombre</Text>
-                <View style={styles.inputWrapper}>
-                  <Ionicons name="person-outline" size={20} color="#66534A" style={styles.inputIcon} />
-                  <TextInput
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="Ej. Chef Carlos"
-                    placeholderTextColor="#96857C"
-                    style={styles.textInput}
-                  />
-                </View>
+            {/* Campo "Tu Nombre" con control estricto de foco, accesibilidad y animación */}
+            <Animated.View
+              style={[
+                styles.inputGroup,
+                {
+                  height: mode === 'register' ? undefined : 0,
+                  overflow: 'hidden',
+                  opacity: formAnim,
+                  transform: [
+                    {
+                      translateY: formAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [-8, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+              pointerEvents={mode === 'register' ? 'auto' : 'none'}
+              importantForAccessibility={mode === 'register' ? 'auto' : 'no-hide-descendants'}
+              accessibilityElementsHidden={mode !== 'register'}
+              aria-hidden={mode !== 'register'}
+            >
+              <Text style={styles.inputLabel}>Tu Nombre</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="person-outline" size={20} color="#66534A" style={styles.inputIcon} />
+                <TextInput
+                  ref={nameInputRef}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Ej. Chef Carlos"
+                  placeholderTextColor="#96857C"
+                  style={styles.textInput}
+                  autoFocus={false}
+                  editable={mode === 'register'}
+                />
               </View>
-            )}
+            </Animated.View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Correo Electrónico</Text>
@@ -279,6 +391,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 4,
     marginBottom: 20,
+    position: 'relative',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    bottom: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#2B211D',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tabButton: {
     flex: 1,
@@ -286,13 +411,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-  },
-  tabButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#2B211D',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    zIndex: 1,
   },
   tabButtonText: {
     fontSize: 14,

@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useShoppingList } from '../src/hooks/useShoppingList';
 import { useInventory } from '../src/hooks/useInventory';
 import { getExpirationStatus } from '../src/components/IngredientCard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AppScreen,
   PrimaryButton,
@@ -21,6 +22,7 @@ import {
   SearchInput,
   StatusBadge,
   ActionSheetModal,
+  getBottomContentPadding,
 } from '../src/components';
 import { IngredientCategory, IngredientUnit, ShoppingItem } from '../src/types';
 import { Modal } from 'react-native';
@@ -45,6 +47,7 @@ const UNITS: { label: string; value: IngredientUnit }[] = [
 
 export default function ShoppingListScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
     items,
     pendingItems,
@@ -146,7 +149,13 @@ export default function ShoppingListScreen() {
         behavior="height"
         style={{ flex: 1 }}
       >
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: Math.max(110, getBottomContentPadding(insets.bottom)) },
+          ]}
+        >
           {/* ── Resumen Estadístico ── */}
           <View style={styles.summaryRow}>
             <View style={[styles.summaryCard, styles.summaryPending]}>
