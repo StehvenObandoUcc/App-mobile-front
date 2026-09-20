@@ -26,10 +26,10 @@ export function PrimaryButton({
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.96,
+      toValue: 0.95,
       useNativeDriver: true,
-      speed: 24,
-      bounciness: 4,
+      friction: 4,
+      tension: 100,
     }).start();
   };
 
@@ -37,8 +37,8 @@ export function PrimaryButton({
     Animated.spring(scaleAnim, {
       toValue: 1,
       useNativeDriver: true,
-      speed: 20,
-      bounciness: 6,
+      friction: 4,
+      tension: 100,
     }).start();
   };
 
@@ -75,16 +75,16 @@ export function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 48,
+    minHeight: 52,
     backgroundColor: '#B94E35',
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
     shadowColor: '#B94E35',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },

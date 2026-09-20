@@ -6,7 +6,7 @@ import { useInventory } from '../src/hooks/useInventory';
 import { useRecipes } from '../src/hooks/useRecipes';
 import { Recipe } from '../src/types';
 import { getExpirationStatus } from '../src/components/IngredientCard';
-import { AppScreen, RecipeCard, PrimaryButton, SecondaryButton, StatusBadge } from '../src/components';
+import { AppScreen, RecipeCard, PrimaryButton, SecondaryButton, StatusBadge, StaggerView } from '../src/components';
 import { useAuth } from '../src/hooks/useAuth';
 import { useShoppingList } from '../src/hooks/useShoppingList';
 
@@ -53,282 +53,302 @@ export default function HomeScreen() {
   return (
     <AppScreen scrollable style={styles.screen} contentContainerStyle={styles.scrollContent}>
       {/* ── 1. Header Editorial ── */}
-      <View style={styles.header}>
-        <View style={{ flex: 1, marginRight: 12 }}>
-          <Text style={styles.subtitle}>Aprovecha mejor tu despensa hoy</Text>
-          <Text style={styles.title}>{displayName}</Text>
+      <StaggerView index={0}>
+        <View style={styles.header}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={styles.subtitle}>Aprovecha mejor tu despensa hoy</Text>
+            <Text style={styles.title}>{displayName}</Text>
+          </View>
+
+          <View style={styles.headerActions}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.avatarButton,
+                user && styles.avatarButtonActive,
+                pressed && styles.cardPressed,
+              ]}
+              onPress={() => router.push('/login')}
+              accessibilityRole="button"
+              accessibilityLabel={user ? `Sesión de ${user.name}` : 'Iniciar sesión'}
+            >
+              <Ionicons name={user ? 'person' : 'person-outline'} size={20} color="#B94E35" />
+              {user && <View style={styles.onlineDot} />}
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.avatarButton,
+                pressed && styles.cardPressed,
+              ]}
+              onPress={() => router.push('/inventory')}
+              accessibilityRole="button"
+              accessibilityLabel="Ver despensa"
+            >
+              <Ionicons name="basket-outline" size={20} color="#B94E35" />
+              {ingredientCount > 0 && (
+                <View style={styles.badgeCount}>
+                  <Text style={styles.badgeCountText}>{ingredientCount}</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
         </View>
+      </StaggerView>
 
-        <View style={styles.headerActions}>
+      {/* ── 2. Acción Principal: Escanear Alimentos (Hero Editorial Card) ── */}
+      <StaggerView index={1}>
+        <View style={styles.heroActionCard}>
+          <View style={{ flex: 1, paddingRight: 16 }}>
+            <View style={styles.heroBadge}>
+              <Ionicons name="sparkles" size={11} color="#863626" style={{ marginRight: 4 }} />
+              <Text style={styles.heroBadgeText}>IA DE VISIÓN</Text>
+            </View>
+            <Text style={styles.heroActionTitle}>Escanea tus alimentos</Text>
+            <Text style={styles.heroActionSubtitle}>
+              Toma una foto para detectar ingredientes y actualizar tu despensa al instante.
+            </Text>
+          </View>
+
           <Pressable
             style={({ pressed }) => [
-              styles.avatarButton,
-              user && styles.avatarButtonActive,
-              pressed && styles.cardPressed,
+              styles.scanCircularButton,
+              pressed && styles.scanCircularButtonPressed,
             ]}
-            onPress={() => router.push('/login')}
+            onPress={() => router.push('/scan')}
             accessibilityRole="button"
-            accessibilityLabel={user ? `Sesión de ${user.name}` : 'Iniciar sesión'}
+            accessibilityLabel="Escanear alimentos con la cámara"
           >
-            <Ionicons name={user ? 'person' : 'person-outline'} size={20} color="#B94E35" />
-            {user && <View style={styles.onlineDot} />}
+            <Ionicons name="camera" size={26} color="#FFFFFF" />
           </Pressable>
+        </View>
+      </StaggerView>
 
+      {/* ── 3. Resumen de Despensa Táctil (3 Tarjetas Material You) ── */}
+      <StaggerView index={2}>
+        <View style={styles.pantryGrid}>
           <Pressable
             style={({ pressed }) => [
-              styles.avatarButton,
+              styles.pantryCard,
+              styles.pantryCardItems,
               pressed && styles.cardPressed,
             ]}
             onPress={() => router.push('/inventory')}
             accessibilityRole="button"
-            accessibilityLabel="Ver despensa"
+            accessibilityLabel={`Inventario con ${ingredientCount} alimentos`}
           >
-            <Ionicons name="basket-outline" size={20} color="#B94E35" />
-            {ingredientCount > 0 && (
-              <View style={styles.badgeCount}>
-                <Text style={styles.badgeCountText}>{ingredientCount}</Text>
-              </View>
-            )}
+            <View style={[styles.pantryIconBadge, { backgroundColor: '#FAD8C7' }]}>
+              <Ionicons name="cube" size={18} color="#B94E35" />
+            </View>
+            <Text style={styles.pantryNum}>{ingredientCount}</Text>
+            <Text style={styles.pantryLabel}>Alimentos</Text>
           </Pressable>
-        </View>
-      </View>
 
-      {/* ── 2. Acción Principal: Escanear Alimentos (Hero Editorial Card) ── */}
-      <View style={styles.heroActionCard}>
-        <View style={{ flex: 1, paddingRight: 16 }}>
-          <View style={styles.heroBadge}>
-            <Ionicons name="sparkles" size={11} color="#863626" style={{ marginRight: 4 }} />
-            <Text style={styles.heroBadgeText}>IA DE VISIÓN</Text>
-          </View>
-          <Text style={styles.heroActionTitle}>Escanea tus alimentos</Text>
-          <Text style={styles.heroActionSubtitle}>
-            Toma una foto para detectar ingredientes y actualizar tu despensa al instante.
-          </Text>
-        </View>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.scanCircularButton,
-            pressed && styles.scanCircularButtonPressed,
-          ]}
-          onPress={() => router.push('/scan')}
-          accessibilityRole="button"
-          accessibilityLabel="Escanear alimentos con la cámara"
-        >
-          <Ionicons name="camera" size={26} color="#FFFFFF" />
-        </Pressable>
-      </View>
-
-      {/* ── 3. Resumen de Despensa Táctil (3 Tarjetas Material You) ── */}
-      <View style={styles.pantryGrid}>
-        <Pressable
-          style={({ pressed }) => [styles.pantryCard, pressed && styles.cardPressed]}
-          onPress={() => router.push('/inventory')}
-          accessibilityRole="button"
-          accessibilityLabel={`Inventario con ${ingredientCount} alimentos`}
-        >
-          <View style={[styles.pantryIconBadge, { backgroundColor: '#FBE9E2' }]}>
-            <Ionicons name="cube-outline" size={18} color="#B94E35" />
-          </View>
-          <Text style={styles.pantryNum}>{ingredientCount}</Text>
-          <Text style={styles.pantryLabel}>Alimentos</Text>
-        </Pressable>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.pantryCard,
-            expiringCount > 0 && styles.pantryCardAlert,
-            pressed && styles.cardPressed,
-          ]}
-          onPress={() =>
-            router.push({
-              pathname: '/inventory',
-              params: { filter: 'expiring' },
-            })
-          }
-          accessibilityRole="button"
-          accessibilityLabel={`${expiringCount} alimentos por vencer`}
-        >
-          <View
-            style={[
-              styles.pantryIconBadge,
-              { backgroundColor: expiringCount > 0 ? '#FFF2D7' : '#F8EDE2' },
-            ]}
-          >
-            <Ionicons
-              name="time-outline"
-              size={18}
-              color={expiringCount > 0 ? '#8A5A00' : '#66534A'}
-            />
-          </View>
-          <Text style={[styles.pantryNum, expiringCount > 0 && { color: '#8A5A00' }]}>
-            {expiringCount}
-          </Text>
-          <Text style={[styles.pantryLabel, expiringCount > 0 && { color: '#8A5A00' }]}>
-            Por vencer
-          </Text>
-        </Pressable>
-
-        <Pressable
-          style={({ pressed }) => [styles.pantryCard, pressed && styles.cardPressed]}
-          onPress={() => router.push('/shopping-list')}
-          accessibilityRole="button"
-          accessibilityLabel={`${pendingItems.length} compras pendientes`}
-        >
-          <View style={[styles.pantryIconBadge, { backgroundColor: '#FFF1E3' }]}>
-            <Ionicons name="cart-outline" size={18} color="#E58A45" />
-          </View>
-          <Text style={[styles.pantryNum, { color: '#E58A45' }]}>{pendingItems.length}</Text>
-          <Text style={styles.pantryLabel}>Por comprar</Text>
-        </Pressable>
-      </View>
-
-      {/* ── 4. Sección Contextual: "Para hoy" ── */}
-      <View style={styles.contextualCard}>
-        <View style={styles.contextualHeader}>
-          <Text style={styles.contextualTag}>PARA HOY</Text>
-          {featuredRecipe && (
-            <View style={styles.matchPill}>
-              <Ionicons name="sparkles" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
-              <Text style={styles.matchPillText}>{featuredRecipe.matchScore}% con tu despensa</Text>
-            </View>
-          )}
-        </View>
-
-        {featuredRecipe ? (
-          <View>
-            <Text style={styles.contextualTitle}>{featuredRecipe.title}</Text>
-            <Text style={styles.contextualDesc} numberOfLines={2}>
-              {featuredRecipe.description}
-            </Text>
-
-            <View style={styles.contextualFooter}>
-              <View style={styles.metaRow}>
-                <Ionicons name="time-outline" size={14} color="#66534A" style={{ marginRight: 4 }} />
-                <Text style={styles.metaText}>{featuredRecipe.prepTimeMinutes || 25} min</Text>
-              </View>
-
-              <Pressable
-                style={({ pressed }) => [styles.contextualButton, pressed && styles.cardPressed]}
-                onPress={() =>
-                  router.push({
-                    pathname: '/recipe-detail',
-                    params: { recipeId: featuredRecipe.id },
-                  })
-                }
-              >
-                <Text style={styles.contextualButtonText}>Ver receta</Text>
-                <Ionicons name="arrow-forward" size={15} color="#B94E35" style={{ marginLeft: 4 }} />
-              </Pressable>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.contextualEmpty}>
-            <View style={styles.contextualEmptyHeader}>
-              <View style={styles.contextualIconCircle}>
-                <Ionicons name="restaurant-outline" size={24} color="#B94E35" />
-              </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.contextualEmptyTitle}>¿Qué cocinamos hoy?</Text>
-                <Text style={styles.contextualEmptyText}>
-                  Agrega ingredientes a tu despensa para sugerirte la receta ideal para ti.
-                </Text>
-              </View>
-            </View>
-            <View style={{ marginTop: 14 }}>
-              <SecondaryButton
-                title="Ver despensa"
-                variant="outline"
-                iconName="basket-outline"
-                onPress={() => router.push('/inventory')}
-              />
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* ── 5. Sección: "Aprovecha primero" (Productos por vencer) ── */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Aprovecha primero</Text>
-        {expiringCount > 0 && (
           <Pressable
+            style={({ pressed }) => [
+              styles.pantryCard,
+              expiringCount > 0 ? styles.pantryCardAlert : styles.pantryCardExpiringNormal,
+              pressed && styles.cardPressed,
+            ]}
             onPress={() =>
               router.push({
                 pathname: '/inventory',
                 params: { filter: 'expiring' },
               })
             }
+            accessibilityRole="button"
+            accessibilityLabel={`${expiringCount} alimentos por vencer`}
           >
-            <Text style={styles.seeAllText}>Ver todos ({expiringCount})</Text>
+            <View
+              style={[
+                styles.pantryIconBadge,
+                { backgroundColor: expiringCount > 0 ? '#FFE6A8' : '#EBDCD2' },
+              ]}
+            >
+              <Ionicons
+                name="time"
+                size={18}
+                color={expiringCount > 0 ? '#8A5A00' : '#66534A'}
+              />
+            </View>
+            <Text style={[styles.pantryNum, expiringCount > 0 && { color: '#8A5A00' }]}>
+              {expiringCount}
+            </Text>
+            <Text style={[styles.pantryLabel, expiringCount > 0 && { color: '#8A5A00' }]}>
+              Por vencer
+            </Text>
           </Pressable>
-        )}
-      </View>
 
-      {expiringCount > 0 ? (
-        <View style={styles.expiringContainer}>
-          {expiringItems.slice(0, 3).map((item) => {
-            const expiry = getExpirationStatus(item.expirationDate);
-            return (
-              <Pressable
-                key={item.id}
-                style={({ pressed }) => [styles.expiringRow, pressed && styles.cardPressed]}
-                onPress={() =>
-                  router.push({
-                    pathname: '/inventory',
-                    params: { filter: 'expiring' },
-                  })
-                }
-                accessibilityRole="button"
-              >
-                <View style={styles.expiringDot} />
-                <View style={{ flex: 1, marginHorizontal: 10 }}>
-                  <Text style={styles.expiringName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  {item.quantity !== null && (
-                    <Text style={styles.expiringQty}>
-                      {item.quantity} {item.unit}
-                    </Text>
-                  )}
+          <Pressable
+            style={({ pressed }) => [
+              styles.pantryCard,
+              styles.pantryCardShopping,
+              pressed && styles.cardPressed,
+            ]}
+            onPress={() => router.push('/shopping-list')}
+            accessibilityRole="button"
+            accessibilityLabel={`${pendingItems.length} compras pendientes`}
+          >
+            <View style={[styles.pantryIconBadge, { backgroundColor: '#FEDBB4' }]}>
+              <Ionicons name="cart" size={18} color="#C46814" />
+            </View>
+            <Text style={[styles.pantryNum, { color: '#C46814' }]}>{pendingItems.length}</Text>
+            <Text style={[styles.pantryLabel, { color: '#A04E08' }]}>Por comprar</Text>
+          </Pressable>
+        </View>
+      </StaggerView>
+
+      {/* ── 4. Sección Contextual: "Para hoy" ── */}
+      <StaggerView index={3}>
+        <View style={styles.contextualCard}>
+          <View style={styles.contextualHeader}>
+            <Text style={styles.contextualTag}>PARA HOY</Text>
+            {featuredRecipe && (
+              <View style={styles.matchPill}>
+                <Ionicons name="sparkles" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Text style={styles.matchPillText}>{featuredRecipe.matchScore}% con tu despensa</Text>
+              </View>
+            )}
+          </View>
+
+          {featuredRecipe ? (
+            <View>
+              <Text style={styles.contextualTitle}>{featuredRecipe.title}</Text>
+              <Text style={styles.contextualDesc} numberOfLines={2}>
+                {featuredRecipe.description}
+              </Text>
+
+              <View style={styles.contextualFooter}>
+                <View style={styles.metaRow}>
+                  <Ionicons name="time-outline" size={14} color="#66534A" style={{ marginRight: 4 }} />
+                  <Text style={styles.metaText}>{featuredRecipe.prepTimeMinutes || 25} min</Text>
                 </View>
-                <StatusBadge status={expiry.status} label={expiry.label} />
-              </Pressable>
-            );
-          })}
+
+                <Pressable
+                  style={({ pressed }) => [styles.contextualButton, pressed && styles.cardPressed]}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/recipe-detail',
+                      params: { recipeId: featuredRecipe.id },
+                    })
+                  }
+                >
+                  <Text style={styles.contextualButtonText}>Ver receta</Text>
+                  <Ionicons name="arrow-forward" size={15} color="#B94E35" style={{ marginLeft: 4 }} />
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.contextualEmpty}>
+              <View style={styles.contextualEmptyHeader}>
+                <View style={styles.contextualIconCircle}>
+                  <Ionicons name="restaurant-outline" size={24} color="#B94E35" />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.contextualEmptyTitle}>¿Qué cocinamos hoy?</Text>
+                  <Text style={styles.contextualEmptyText}>
+                    Agrega ingredientes a tu despensa para sugerirte la receta ideal para ti.
+                  </Text>
+                </View>
+              </View>
+              <View style={{ marginTop: 14 }}>
+                <SecondaryButton
+                  title="Ver despensa"
+                  variant="outline"
+                  iconName="basket-outline"
+                  onPress={() => router.push('/inventory')}
+                />
+              </View>
+            </View>
+          )}
         </View>
-      ) : (
-        <View style={styles.freshBanner}>
-          <Ionicons name="checkmark-circle-outline" size={20} color="#28613C" style={{ marginRight: 8 }} />
-          <Text style={styles.freshBannerText}>
-            Tu despensa está al día. No tienes productos próximos a vencer.
-          </Text>
+      </StaggerView>
+
+      {/* ── 5. Sección: "Aprovecha primero" (Productos por vencer) ── */}
+      <StaggerView index={4}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Aprovecha primero</Text>
+          {expiringCount > 0 && (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/inventory',
+                  params: { filter: 'expiring' },
+                })
+              }
+            >
+              <Text style={styles.seeAllText}>Ver todos ({expiringCount})</Text>
+            </Pressable>
+          )}
         </View>
-      )}
+
+        {expiringCount > 0 ? (
+          <View style={styles.expiringContainer}>
+            {expiringItems.slice(0, 3).map((item) => {
+              const expiry = getExpirationStatus(item.expirationDate);
+              return (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [styles.expiringRow, pressed && styles.cardPressed]}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/inventory',
+                      params: { filter: 'expiring' },
+                    })
+                  }
+                  accessibilityRole="button"
+                >
+                  <View style={styles.expiringDot} />
+                  <View style={{ flex: 1, marginHorizontal: 10 }}>
+                    <Text style={styles.expiringName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    {item.quantity !== null && (
+                      <Text style={styles.expiringQty}>
+                        {item.quantity} {item.unit}
+                      </Text>
+                    )}
+                  </View>
+                  <StatusBadge status={expiry.status} label={expiry.label} />
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.freshBanner}>
+            <Ionicons name="checkmark-circle-outline" size={20} color="#28613C" style={{ marginRight: 8 }} />
+            <Text style={styles.freshBannerText}>
+              Tu despensa está al día. No tienes productos próximos a vencer.
+            </Text>
+          </View>
+        )}
+      </StaggerView>
 
       {/* ── 6. Sección: "Ideas para cocinar" ── */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Ideas para cocinar</Text>
-        <Pressable onPress={() => router.push('/recipes')}>
-          <Text style={styles.seeAllText}>Ver todas ({recipes.length})</Text>
-        </Pressable>
-      </View>
+      <StaggerView index={5}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Ideas para cocinar</Text>
+          <Pressable onPress={() => router.push('/recipes')}>
+            <Text style={styles.seeAllText}>Ver todas ({recipes.length})</Text>
+          </Pressable>
+        </View>
 
-      <View style={{ paddingHorizontal: 16 }}>
-        {availableRecipes.slice(0, 2).map((recipe) => (
-          <RecipeCard
-            key={recipe.id}
-            recipe={recipe}
-            onPress={() =>
-              router.push({
-                pathname: '/recipe-detail',
-                params: { recipeId: recipe.id },
-              })
-            }
-            onSave={() => toggleSave(recipe.id)}
-            onLongPress={() => handleLongPressRecipe(recipe)}
-          />
-        ))}
-      </View>
+        <View style={{ paddingHorizontal: 16 }}>
+          {availableRecipes.slice(0, 2).map((recipe) => (
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              onPress={() =>
+                router.push({
+                  pathname: '/recipe-detail',
+                  params: { recipeId: recipe.id },
+                })
+              }
+              onSave={() => toggleSave(recipe.id)}
+              onLongPress={() => handleLongPressRecipe(recipe)}
+            />
+          ))}
+        </View>
+      </StaggerView>
 
       {/* ── 7. Navegación Inferior Estilo Material 3 Expressive ── */}
       <View style={styles.bottomNavWrapper}>
@@ -473,10 +493,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FBE9E2',
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#F5D6C8',
-    padding: 18,
+    borderRadius: 28,
+    padding: 20,
     marginHorizontal: 16,
     marginTop: 8,
   },
@@ -484,22 +502,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF2EA',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
     alignSelf: 'flex-start',
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: '#F2D8CB',
+    marginBottom: 8,
   },
   heroBadgeText: {
     fontSize: 10,
     fontWeight: '800',
     color: '#863626',
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
   },
   heroActionTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     color: '#863626',
     marginBottom: 4,
@@ -510,17 +526,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   scanCircularButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#B94E35',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#B94E35',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
   scanCircularButtonPressed: {
     opacity: 0.9,
@@ -534,42 +550,50 @@ const styles = StyleSheet.create({
   },
   pantryCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#EBDDD2',
-    paddingVertical: 14,
+    borderRadius: 24,
+    paddingVertical: 18,
     paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#2B211D',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
+  pantryCardItems: {
+    backgroundColor: '#FFF0E6',
+  },
+  pantryCardExpiringNormal: {
+    backgroundColor: '#F5EBE1',
+  },
   pantryCardAlert: {
-    borderColor: '#FDE68A',
-    backgroundColor: '#FFFDF9',
+    backgroundColor: '#FFF2D7',
+  },
+  pantryCardShopping: {
+    backgroundColor: '#FFF1E0',
   },
   pantryIconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   pantryNum: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 32,
+    fontWeight: '900',
     color: '#2B211D',
+    letterSpacing: -1,
   },
   pantryLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#66534A',
-    fontWeight: '600',
-    marginTop: 2,
+    fontWeight: '800',
+    marginTop: 4,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   cardPressed: {
     opacity: 0.85,
@@ -577,10 +601,8 @@ const styles = StyleSheet.create({
   },
   contextualCard: {
     backgroundColor: '#FFF1E3',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#FCE2CC',
-    padding: 16,
+    borderRadius: 28,
+    padding: 20,
     marginHorizontal: 16,
     marginTop: 14,
   },
@@ -588,21 +610,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   contextualTag: {
     fontSize: 11,
     fontWeight: '800',
     color: '#B26223',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   matchPill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#B94E35',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
   matchPillText: {
     color: '#FFFFFF',
@@ -610,7 +632,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   contextualTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     color: '#2B211D',
     marginBottom: 4,
@@ -619,19 +641,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#66534A',
     lineHeight: 18,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   contextualFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 8,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#FCE2CC',
+    borderTopColor: '#F2D8C7',
   },
   contextualButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FBE9E2',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
   },
   contextualButtonText: {
     fontSize: 13,
@@ -690,11 +716,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: '#EBDDD2',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   expiringDot: {
     width: 8,
@@ -716,7 +742,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#EAF4ED',
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: '#C2DFCB',
     paddingHorizontal: 14,
@@ -748,16 +774,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    borderRadius: 32,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    borderColor: '#F0E4D8',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     shadowColor: '#2B211D',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   navItem: {
     alignItems: 'center',
@@ -767,9 +793,9 @@ const styles = StyleSheet.create({
   },
   navActivePill: {
     backgroundColor: '#FBE9E2',
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 999,
     marginBottom: 2,
   },
   navLabel: {
@@ -791,9 +817,9 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   navFabCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#B94E35',
     alignItems: 'center',
     justifyContent: 'center',

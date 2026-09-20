@@ -30,18 +30,18 @@ export function SecondaryButton({
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
       toValue: 0.96,
+      friction: 4,
+      tension: 100,
       useNativeDriver: true,
-      speed: 24,
-      bounciness: 4,
     }).start();
   };
 
   const handlePressOut = () => {
     Animated.spring(scaleAnim, {
       toValue: 1,
+      friction: 4,
+      tension: 100,
       useNativeDriver: true,
-      speed: 20,
-      bounciness: 6,
     }).start();
   };
 
@@ -86,11 +86,12 @@ export function SecondaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    height: 48,
-    borderRadius: 14,
+    minHeight: 52,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
   },
   buttonTint: {
     backgroundColor: '#FBE9E2',
@@ -106,11 +107,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   icon: {
-    marginRight: 6,
+    marginRight: 8,
   },
   title: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   titleTint: {
     color: '#B94E35',

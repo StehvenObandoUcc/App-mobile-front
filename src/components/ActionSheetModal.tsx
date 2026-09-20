@@ -139,8 +139,8 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 36,
@@ -201,7 +201,8 @@ const styles = StyleSheet.create({
   },
   confirmBtn: {
     backgroundColor: '#B94E35',
-    borderRadius: 14,
+    borderRadius: 999,
+    minHeight: 52,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -216,8 +217,9 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     backgroundColor: '#F8EDE2',
-    borderRadius: 14,
-    paddingVertical: 13,
+    borderRadius: 999,
+    minHeight: 52,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
@@ -225,6 +227,6 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     color: '#66534A',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

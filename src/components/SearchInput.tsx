@@ -49,17 +49,17 @@ export function SearchInput({
 
 const styles = StyleSheet.create({
   container: {
-    height: 48,
+    height: 52,
     backgroundColor: '#F8EDE2',
-    borderRadius: 14,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: '#EBDDD2',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 18,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   input: {
     flex: 1,
