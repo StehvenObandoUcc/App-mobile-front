@@ -38,7 +38,7 @@ export function AppScreen({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F2',
   },
   container: {
     flex: 1,

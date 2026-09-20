@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Text, StyleSheet, ActivityIndicator, View, Animated, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export type SecondaryButtonProps = {
@@ -25,58 +25,80 @@ export function SecondaryButton({
 }: SecondaryButtonProps) {
   const isDisabled = disabled || isLoading;
   const isOutline = variant === 'outline';
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      speed: 24,
+      bounciness: 4,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 6,
+    }).start();
+  };
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={isDisabled}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel || title}
-      accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled: isDisabled, busy: isLoading }}
-      style={({ pressed }) => [
-        styles.button,
-        isOutline ? styles.buttonOutline : styles.buttonTint,
-        isDisabled && styles.disabled,
-        pressed && !isDisabled && styles.pressed,
-      ]}
-    >
-      {isLoading ? (
-        <ActivityIndicator color="#059669" size="small" />
-      ) : (
-        <View style={styles.content}>
-          {iconName && (
-            <Ionicons
-              name={iconName}
-              size={18}
-              color={isOutline ? '#374151' : '#059669'}
-              style={styles.icon}
-            />
-          )}
-          <Text style={[styles.title, isOutline ? styles.titleOutline : styles.titleTint]}>
-            {title}
-          </Text>
-        </View>
-      )}
-    </Pressable>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={isDisabled}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel || title}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{ disabled: isDisabled, busy: isLoading }}
+        style={[
+          styles.button,
+          isOutline ? styles.buttonOutline : styles.buttonTint,
+          isDisabled && styles.disabled,
+        ]}
+      >
+        {isLoading ? (
+          <ActivityIndicator color="#B94E35" size="small" />
+        ) : (
+          <View style={styles.content}>
+            {iconName && (
+              <Ionicons
+                name={iconName}
+                size={18}
+                color={isOutline ? '#66534A' : '#B94E35'}
+                style={styles.icon}
+              />
+            )}
+            <Text style={[styles.title, isOutline ? styles.titleOutline : styles.titleTint]}>
+              {title}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
     height: 48,
-    borderRadius: 999,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
   buttonTint: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FBE9E2',
   },
   buttonOutline: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
   },
   content: {
     flexDirection: 'row',
@@ -91,16 +113,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   titleTint: {
-    color: '#059669',
+    color: '#B94E35',
   },
   titleOutline: {
-    color: '#374151',
+    color: '#2B211D',
   },
   disabled: {
     opacity: 0.5,
-  },
-  pressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
   },
 });

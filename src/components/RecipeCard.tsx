@@ -14,9 +14,9 @@ export type RecipeCardProps = {
 };
 
 const DIFFICULTY_MAP = {
-  easy: { label: 'Fácil', color: '#059669', bg: '#ECFDF5' },
-  medium: { label: 'Media', color: '#D97706', bg: '#FFFBEB' },
-  hard: { label: 'Difícil', color: '#DC2626', bg: '#FEF2F2' },
+  easy: { label: 'Fácil', color: '#28613C', bg: '#EAF4ED' },
+  medium: { label: 'Media', color: '#8A5A00', bg: '#FFF2D7' },
+  hard: { label: 'Difícil', color: '#A93632', bg: '#FBE5E3' },
 };
 
 export function RecipeCard({
@@ -200,7 +200,7 @@ export function RecipeCard({
             <Ionicons
               name={recipe.missingIngredients.length === 0 ? 'checkmark-circle' : 'restaurant-outline'}
               size={15}
-              color={recipe.missingIngredients.length === 0 ? '#10B981' : '#F59E0B'}
+              color={recipe.missingIngredients.length === 0 ? '#28613C' : '#E58A45'}
               style={{ marginRight: 6 }}
             />
             <Text style={styles.inventoryText}>
@@ -210,7 +210,7 @@ export function RecipeCard({
           <Ionicons
             name={isSelectMode ? (isSelected ? 'checkmark-circle' : 'ellipse-outline') : 'chevron-forward'}
             size={18}
-            color={isSelected ? '#10B981' : '#9CA3AF'}
+            color={isSelected ? '#B94E35' : '#66534A'}
           />
         </View>
       </Pressable>
@@ -221,34 +221,34 @@ export function RecipeCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1.5,
-    borderColor: '#F3F4F6',
-    shadowColor: '#000',
+    borderWidth: 1,
+    borderColor: '#EBDDD2',
+    shadowColor: '#2B211D',
     shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
   cardSelected: {
-    borderColor: '#10B981',
-    backgroundColor: '#F0FDF4',
+    borderColor: '#B94E35',
+    backgroundColor: '#FDF5F2',
   },
   checkbox: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#EBDDD2',
   },
   checkboxActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#B94E35',
+    borderColor: '#B94E35',
   },
   topRow: {
     flexDirection: 'row',
@@ -259,10 +259,10 @@ const styles = StyleSheet.create({
   matchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: '#B94E35',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: 10,
   },
   matchText: {
     color: '#FFFFFF',
@@ -273,20 +273,20 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8EDE2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#111827',
+    color: '#2B211D',
     marginBottom: 4,
     lineHeight: 22,
   },
   description: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#66534A',
     lineHeight: 18,
     marginBottom: 12,
   },
@@ -299,14 +299,14 @@ const styles = StyleSheet.create({
   metaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
     paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: 10,
   },
   metaText: {
     fontSize: 12,
-    color: '#4B5563',
+    color: '#66534A',
     fontWeight: '600',
   },
   footer: {
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#EBDDD2',
   },
   inventoryInfo: {
     flexDirection: 'row',
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
   inventoryText: {
     fontSize: 12,
-    color: '#374151',
+    color: '#66534A',
     fontWeight: '600',
   },
 });

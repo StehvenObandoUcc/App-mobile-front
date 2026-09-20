@@ -17,12 +17,12 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <View style={styles.container}>
-      <Ionicons name="search-outline" size={20} color="#9CA3AF" style={styles.searchIcon} />
+      <Ionicons name="search-outline" size={20} color="#66534A" style={styles.searchIcon} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor="#96857C"
         style={styles.input}
         returnKeyType="search"
         accessibilityRole="search"
@@ -40,7 +40,7 @@ export function SearchInput({
           hitSlop={8}
           style={styles.clearButton}
         >
-          <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+          <Ionicons name="close-circle" size={18} color="#66534A" />
         </Pressable>
       )}
     </View>
@@ -50,11 +50,13 @@ export function SearchInput({
 const styles = StyleSheet.create({
   container: {
     height: 48,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 999,
+    backgroundColor: '#F8EDE2',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#EBDDD2',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
   },
   searchIcon: {
     marginRight: 8,
@@ -63,7 +65,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     fontSize: 15,
-    color: '#111827',
+    color: '#2B211D',
   },
   clearButton: {
     padding: 4,

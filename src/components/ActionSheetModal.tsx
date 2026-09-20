@@ -83,7 +83,7 @@ export function ActionSheetModal({
                   <Ionicons
                     name={action.icon}
                     size={20}
-                    color={action.isDestructive ? '#DC2626' : '#10B981'}
+                    color={action.isDestructive ? '#A93632' : '#B94E35'}
                     style={styles.actionIcon}
                   />
                   <Text
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#EBDDD2',
     gap: 12,
   },
   actionIcon: {
@@ -190,24 +190,24 @@ const styles = StyleSheet.create({
   actionLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: '#2B211D',
   },
   destructiveLabel: {
-    color: '#DC2626',
+    color: '#A93632',
   },
   confirmationActions: {
     marginTop: 12,
     marginBottom: 8,
   },
   confirmBtn: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#B94E35',
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   confirmBtnDestructive: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#A93632',
   },
   confirmBtnText: {
     color: '#FFFFFF',
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   cancelBtn: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8EDE2',
     borderRadius: 14,
     paddingVertical: 13,
     alignItems: 'center',
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   cancelBtnText: {
-    color: '#4B5563',
+    color: '#66534A',
     fontSize: 15,
     fontWeight: '600',
   },

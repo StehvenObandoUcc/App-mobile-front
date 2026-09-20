@@ -10,29 +10,33 @@ export type StatusBadgeProps = {
 
 const STATUS_CONFIG: Record<
   ExpirationStatus,
-  { bg: string; text: string; icon: keyof typeof Ionicons.glyphMap; defaultLabel: string }
+  { bg: string; border: string; text: string; icon: keyof typeof Ionicons.glyphMap; defaultLabel: string }
 > = {
   fresh: {
-    bg: '#ECFDF5',
-    text: '#059669',
+    bg: '#EAF4ED',
+    border: '#C2DFCB',
+    text: '#28613C',
     icon: 'checkmark-circle-outline',
     defaultLabel: 'Fresco',
   },
   expiringSoon: {
-    bg: '#FFFBEB',
-    text: '#D97706',
+    bg: '#FFF2D7',
+    border: '#F8DC9E',
+    text: '#8A5A00',
     icon: 'time-outline',
     defaultLabel: 'Próximo a vencer',
   },
   expired: {
-    bg: '#FEF2F2',
-    text: '#DC2626',
+    bg: '#FBE5E3',
+    border: '#F4BCB8',
+    text: '#A93632',
     icon: 'alert-circle-outline',
     defaultLabel: 'Vencido',
   },
   unknown: {
-    bg: '#F3F4F6',
-    text: '#6B7280',
+    bg: '#F1ECE7',
+    border: '#DED6CE',
+    text: '#665B54',
     icon: 'help-circle-outline',
     defaultLabel: 'Sin fecha',
   },
@@ -43,7 +47,7 @@ export function StatusBadge({ status, label }: StatusBadgeProps) {
 
   return (
     <View
-      style={[styles.badge, { backgroundColor: config.bg }]}
+      style={[styles.badge, { backgroundColor: config.bg, borderColor: config.border }]}
       accessibilityRole="text"
       accessibilityLabel={`Estado: ${label || config.defaultLabel}`}
     >
@@ -58,9 +62,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
     alignSelf: 'flex-start',
   },
   text: {
