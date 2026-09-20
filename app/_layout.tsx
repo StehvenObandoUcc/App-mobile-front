@@ -24,7 +24,7 @@ export default function Layout() {
     return (
       <View style={styles.splashContainer}>
         <View style={styles.iconCircle}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color="#B94E35" />
         </View>
         <Text style={styles.splashTitle}>Food AI Assistant</Text>
         <Text style={styles.splashSubtitle}>Verificando credenciales seguras...</Text>
@@ -33,9 +33,17 @@ export default function Layout() {
   }
 
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: '#FFF9F2' },
+        headerTintColor: '#2B211D',
+        headerTitleStyle: { fontWeight: '700', fontSize: 18 },
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: '#FFF9F2' },
+      }}
+    >
       <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="index" options={{ title: 'Food AI' }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen
         name="shopping-list"
         options={{ title: 'Lista de Compras' }}
@@ -67,7 +75,7 @@ export default function Layout() {
 const styles = StyleSheet.create({
   splashContainer: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F2',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -76,7 +84,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FBE9E2',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -84,11 +92,11 @@ const styles = StyleSheet.create({
   splashTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
+    color: '#2B211D',
     marginBottom: 6,
   },
   splashSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#66534A',
   },
 });

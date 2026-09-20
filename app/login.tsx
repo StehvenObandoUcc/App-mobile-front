@@ -57,14 +57,14 @@ export default function LoginScreen() {
       <AppScreen style={styles.screen}>
         <View style={styles.profileCard}>
           <View style={styles.avatarLarge}>
-            <Ionicons name="person" size={40} color="#10B981" />
+            <Ionicons name="person" size={40} color="#B94E35" />
           </View>
           <Text style={styles.profileName}>{user.name}</Text>
           <Text style={styles.profileEmail}>{user.email}</Text>
 
           <View style={styles.securityTag}>
-            <Ionicons name="shield-checkmark" size={16} color="#059669" style={{ marginRight: 6 }} />
-            <Text style={styles.securityTagText}>Sesión activa con Token JWT seguro</Text>
+            <Ionicons name="shield-checkmark" size={16} color="#66534A" style={{ marginRight: 6 }} />
+            <Text style={styles.securityTagText}>Sesión activa con token seguro</Text>
           </View>
 
           <View style={{ height: 28, width: '100%' }} />
@@ -109,7 +109,7 @@ export default function LoginScreen() {
           {/* ── Cabecera Hero ── */}
           <View style={styles.heroSection}>
             <View style={styles.iconCircle}>
-              <Ionicons name="restaurant" size={32} color="#FFFFFF" />
+              <Ionicons name="restaurant" size={30} color="#B94E35" />
             </View>
             <Text style={styles.heroTitle}>Food AI Assistant</Text>
             <Text style={styles.heroSubtitle}>
@@ -150,12 +150,12 @@ export default function LoginScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Tu Nombre</Text>
                 <View style={styles.inputWrapper}>
-                  <Ionicons name="person-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                  <Ionicons name="person-outline" size={20} color="#66534A" style={styles.inputIcon} />
                   <TextInput
                     value={name}
                     onChangeText={setName}
                     placeholder="Ej. Chef Carlos"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor="#96857C"
                     style={styles.textInput}
                   />
                 </View>
@@ -165,12 +165,12 @@ export default function LoginScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Correo Electrónico</Text>
               <View style={styles.inputWrapper}>
-                <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                <Ionicons name="mail-outline" size={20} color="#66534A" style={styles.inputIcon} />
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
                   placeholder="tu@correo.com"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor="#96857C"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   style={styles.textInput}
@@ -181,12 +181,12 @@ export default function LoginScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Contraseña</Text>
               <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                <Ionicons name="lock-closed-outline" size={20} color="#66534A" style={styles.inputIcon} />
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
                   placeholder="Mínimo 6 caracteres"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor="#96857C"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   style={styles.textInput}
@@ -195,7 +195,7 @@ export default function LoginScreen() {
                   <Ionicons
                     name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                     size={20}
-                    color="#6B7280"
+                    color="#66534A"
                   />
                 </Pressable>
               </View>
@@ -203,7 +203,7 @@ export default function LoginScreen() {
 
             {/* Aviso de seguridad amigable */}
             <View style={styles.cryptoNotice}>
-              <Ionicons name="shield-checkmark" size={14} color="#059669" style={{ marginRight: 6 }} />
+              <Ionicons name="shield-checkmark" size={14} color="#66534A" style={{ marginRight: 6 }} />
               <Text style={styles.cryptoNoticeText}>
                 Tus datos viajan cifrados y protegidos.
               </Text>
@@ -221,7 +221,7 @@ export default function LoginScreen() {
             {/* Acceso Rápido Cuenta Demo */}
             {mode === 'login' && (
               <Pressable onPress={handleFillDemo} style={styles.demoButton}>
-                <Ionicons name="information-circle-outline" size={16} color="#059669" style={{ marginRight: 6 }} />
+                <Ionicons name="sparkles" size={15} color="#B94E35" style={{ marginRight: 6 }} />
                 <Text style={styles.demoButtonText}>
                   Usar credenciales de prueba (<Text style={{ fontWeight: '700' }}>demo@foodai.com</Text>)
                 </Text>
@@ -235,7 +235,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#F9FAFB' },
+  screen: { backgroundColor: '#FFF9F2' },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 24,
@@ -249,32 +249,34 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#10B981',
+    backgroundColor: '#FBE9E2',
+    borderWidth: 1.5,
+    borderColor: '#F5D6C8',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    shadowColor: '#10B981',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    shadowColor: '#2B211D',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   heroTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#111827',
+    color: '#2B211D',
     letterSpacing: -0.5,
   },
   heroSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#66534A',
     marginTop: 4,
     textAlign: 'center',
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#E5E7EB',
-    borderRadius: 999,
+    backgroundColor: '#F8EDE2',
+    borderRadius: 16,
     padding: 4,
     marginBottom: 20,
   },
@@ -283,45 +285,48 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 999,
+    borderRadius: 12,
   },
   tabButtonActive: {
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
+    shadowColor: '#2B211D',
+    shadowOpacity: 0.06,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 1,
   },
   tabButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#66534A',
   },
   tabButtonTextActive: {
-    color: '#111827',
+    color: '#B94E35',
     fontWeight: '700',
   },
   formCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderColor: '#EBDDD2',
+    shadowColor: '#2B211D',
     shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#FBE5E3',
+    borderWidth: 1,
+    borderColor: '#F4BCB8',
     padding: 12,
     borderRadius: 12,
     marginBottom: 16,
   },
   errorText: {
-    color: '#B91C1C',
+    color: '#A93632',
     fontSize: 13,
     fontWeight: '600',
     flex: 1,
@@ -332,15 +337,15 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: '#2B211D',
     marginBottom: 6,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F2',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#EBDDD2',
     borderRadius: 14,
     paddingHorizontal: 14,
     height: 50,
@@ -351,19 +356,19 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 15,
-    color: '#111827',
+    color: '#2B211D',
   },
   cryptoNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#F8EDE2',
     padding: 10,
     borderRadius: 10,
     marginTop: 4,
   },
   cryptoNoticeText: {
     fontSize: 11,
-    color: '#065F46',
+    color: '#66534A',
     flex: 1,
     lineHeight: 16,
   },
@@ -376,7 +381,7 @@ const styles = StyleSheet.create({
   },
   demoButtonText: {
     fontSize: 13,
-    color: '#059669',
+    color: '#B94E35',
   },
   profileCard: {
     flex: 1,
@@ -388,27 +393,27 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FBE9E2',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#10B981',
+    borderColor: '#B94E35',
   },
   profileName: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: '#2B211D',
   },
   profileEmail: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#66534A',
     marginTop: 4,
   },
   securityTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#F8EDE2',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
@@ -416,22 +421,22 @@ const styles = StyleSheet.create({
   },
   securityTagText: {
     fontSize: 12,
-    color: '#059669',
+    color: '#66534A',
     fontWeight: '700',
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#DC2626',
-    borderRadius: 16,
+    backgroundColor: '#B94E35',
+    borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 24,
     width: '100%',
-    shadowColor: '#DC2626',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: '#2B211D',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   logoutButtonText: {
     color: '#FFFFFF',
