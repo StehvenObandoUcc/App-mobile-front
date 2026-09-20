@@ -1,114 +1,101 @@
 import { Dimensions } from 'react-native';
+import { colors } from './colors';
+import { typography } from './typography';
+import { spacing } from './spacing';
+import { radii, elevations } from './radii';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export const SCREEN = { WIDTH: SCREEN_WIDTH, HEIGHT: SCREEN_HEIGHT };
 
-// ─── Palette ──────────────────────────────────────────────────────────────────
+// ─── Warm Material Editorial Theme ───────────────────────────────────────────
+export const theme = {
+  colors,
+  typography,
+  spacing,
+  radii,
+  elevations,
+} as const;
+
+export type Theme = typeof theme;
+
+// ─── Exportaciones Directas de Tokens ─────────────────────────────────────────
+export { colors, typography, spacing, radii, elevations };
+
+// ─── Alias Retrocompatibles (Garantizan cero roturas en código existente) ────
 export const COLORS = {
-  // Brand greens
-  primary:     '#1B4332',
-  primaryMid:  '#2D6A4F',
-  primaryLight:'#40916C',
-  accent:      '#52B788',
-  accentLight: '#74C69D',
+  // Brand
+  primary: colors.primary,
+  primaryMid: colors.primaryDark,
+  primaryLight: colors.primaryContainer,
+  accent: colors.secondary,
+  accentLight: colors.secondaryContainer,
 
   // Warm accent
-  orange:  '#F4A261',
-  orangeDeep: '#E76F51',
+  orange: colors.secondary,
+  orangeDeep: colors.primary,
 
   // Neutrals
-  bg:         '#F0F4F1',
-  surface:    '#FFFFFF',
-  surfaceAlt: '#EAF2EC',
-  border:     '#D4E6D9',
+  bg: colors.background,
+  surface: colors.surface,
+  surfaceAlt: colors.surfaceVariant,
+  border: colors.border,
 
   // Text
-  textPrimary:   '#1A2E22',
-  textSecondary: '#5A7468',
-  textMuted:     '#9BB8A8',
+  textPrimary: colors.textPrimary,
+  textSecondary: colors.textSecondary,
+  textMuted: colors.textMuted,
 
   // Status
-  success: '#34C759',
-  warning: '#FF9500',
-  danger:  '#FF3B30',
+  success: colors.functional.fresh.text,
+  warning: colors.functional.expiringSoon.text,
+  danger: colors.functional.expired.text,
 
-  // Gradients (start → end)
-  gradientHero:    ['#1B4332', '#40916C'] as [string, string],
-  gradientCard:    ['#2D6A4F', '#52B788'] as [string, string],
-  gradientWarm:    ['#F4A261', '#E76F51'] as [string, string],
-  gradientSurface: ['#FFFFFF', '#EAF2EC'] as [string, string],
+  // Functional objects
+  functional: colors.functional,
+
+  // Gradients (Mapeados a tonos suaves y neutros para evitar saturación)
+  gradientHero: [colors.primary, colors.primaryDark] as [string, string],
+  gradientCard: [colors.surface, colors.surfaceVariant] as [string, string],
+  gradientWarm: [colors.secondary, colors.primary] as [string, string],
+  gradientSurface: [colors.surface, colors.surfaceVariant] as [string, string],
 };
 
-// ─── Typography ──────────────────────────────────────────────────────────────
 export const FONT = {
   sizes: {
-    xs:  11,
-    sm:  13,
-    md:  15,
-    lg:  17,
-    xl:  20,
-    xxl: 24,
-    h1:  32,
-    h2:  28,
+    xs: typography.sizes.caption,
+    sm: typography.sizes.metadata,
+    md: typography.sizes.body,
+    lg: typography.sizes.cardTitle,
+    xl: typography.sizes.sectionTitle,
+    xxl: typography.sizes.screenTitle,
+    h1: 32,
+    h2: 28,
   },
-  weights: {
-    regular: '400' as const,
-    medium:  '500' as const,
-    semibold:'600' as const,
-    bold:    '700' as const,
-    heavy:   '800' as const,
-  },
+  weights: typography.weights,
 };
 
-// ─── Spacing ─────────────────────────────────────────────────────────────────
 export const SPACE = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-  xxxl: 48,
+  xs: spacing.xs,
+  sm: spacing.sm,
+  md: spacing.md,
+  lg: spacing.lg,
+  xl: spacing.xl,
+  xxl: spacing.xxl,
+  xxxl: spacing.xxxl,
 };
 
-// ─── Radius ──────────────────────────────────────────────────────────────────
 export const RADIUS = {
-  sm:   8,
-  md:   14,
-  lg:   20,
-  xl:   28,
-  pill: 999,
+  sm: radii.chips,
+  md: radii.buttons,
+  lg: radii.cards,
+  xl: radii.containers,
+  pill: radii.circular,
 };
 
-// ─── Shadows ─────────────────────────────────────────────────────────────────
 export const SHADOW = {
-  sm: {
-    shadowColor: '#1B4332',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  md: {
-    shadowColor: '#1B4332',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-  },
-  lg: {
-    shadowColor: '#1B4332',
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
-  },
-  colored: (color: string) => ({
-    shadowColor: color,
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 8,
-  }),
+  sm: elevations.sm,
+  md: elevations.md,
+  lg: elevations.lg,
+  colored: (_color: string) => elevations.md,
 };
