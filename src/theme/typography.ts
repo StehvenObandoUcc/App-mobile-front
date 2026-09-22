@@ -8,6 +8,7 @@
 export const typography = {
   sizes: {
     screenTitle: 30, // 28–32: Título de pantalla principal
+    headline: 24, // 24: Títulos destacados de bienvenida, escaneo y modales
     sectionTitle: 21, // 20–22: Título de sección editorial
     cardTitle: 17, // 16–18: Título de tarjetas e ingredientes
     body: 15, // 15–16: Cuerpo de texto y párrafos
@@ -15,6 +16,7 @@ export const typography = {
     metadata: 13, // 12–13: Metadatos, tiempos y dificultad
     label: 12, // 11–12: Chips, badges y etiquetas funcionales
     caption: 11, // 11: Notas al pie y microtextos auxiliares
+    micro: 10, // 9–10: Badges de conteo y microetiquetas numéricas
   },
   weights: {
     regular: '400' as const,
@@ -25,6 +27,7 @@ export const typography = {
   },
   lineHeights: {
     screenTitle: 36,
+    headline: 30,
     sectionTitle: 28,
     cardTitle: 24,
     body: 22,
@@ -32,6 +35,7 @@ export const typography = {
     metadata: 18,
     label: 16,
     caption: 14,
+    micro: 12,
   },
 } as const;
 
