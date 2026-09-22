@@ -12,8 +12,9 @@ import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInventory } from '../src/hooks/useInventory';
 import { Ingredient, IngredientCategory, IngredientUnit } from '../src/types';
-import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog } from '../src/components';
+import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog, EmptyState } from '../src/components';
 import { findSimilarItem } from '../src/utils/text-matching';
+import { colors, radii, spacing, typography } from '../src/theme';
 
 const UNITS: IngredientUnit[] = [
   'units',
@@ -293,7 +294,7 @@ export default function ScanResultScreen() {
           // Agregar como nuevo alimento
           await addItem({
             ...item,
-            id: `ing-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            id: `ing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           });
         }
       }
@@ -327,7 +328,7 @@ export default function ScanResultScreen() {
       {/* ── Banner de IA ── */}
       <View style={styles.headerCard}>
         <View style={styles.aiBadge}>
-          <Ionicons name="sparkles" size={14} color="#863626" style={{ marginRight: 5 }} />
+          <Ionicons name="sparkles" size={14} color={colors.primaryDark} style={{ marginRight: 5 }} />
           <Text style={styles.aiBadgeText}>Análisis de IA Completado</Text>
         </View>
         <Text style={styles.headerTitle}>Revisa los alimentos detectados</Text>
@@ -339,7 +340,7 @@ export default function ScanResultScreen() {
       {/* ── Warnings de escaneo si existen ── */}
       {warnings.length > 0 && (
         <View style={styles.warningBox}>
-          <Ionicons name="information-circle-outline" size={18} color="#8A5A00" style={{ marginRight: 8 }} />
+          <Ionicons name="information-circle-outline" size={18} color={colors.functional.expiringSoon.text} style={{ marginRight: spacing.sm }} />
           <Text style={styles.warningText}>{warnings[0]}</Text>
         </View>
       )}
@@ -354,21 +355,17 @@ export default function ScanResultScreen() {
             accessibilityRole="button"
             accessibilityLabel="Agregar otro alimento manualmente"
           >
-            <Ionicons name="add-circle-outline" size={18} color="#B94E35" style={{ marginRight: 4 }} />
+            <Ionicons name="add-circle-outline" size={18} color={colors.primary} style={{ marginRight: spacing.xs }} />
             <Text style={styles.addManualText}>Añadir manual</Text>
           </Pressable>
         </View>
 
         {detectedItems.length === 0 && (
-          <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-            <Ionicons name="alert-circle-outline" size={36} color="#9CA3AF" style={{ marginBottom: 8 }} />
-            <Text style={{ fontSize: 15, fontWeight: '700', color: '#374151', textAlign: 'center' }}>
-              No se detectaron alimentos en la foto
-            </Text>
-            <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 4, paddingHorizontal: 20 }}>
-              Prueba tomando la foto más de cerca o con mejor iluminación, o añade tu producto con el botón "Añadir manual".
-            </Text>
-          </View>
+          <EmptyState
+            iconName="alert-circle-outline"
+            title="No se detectaron alimentos en la foto"
+            description="Prueba tomando la foto más de cerca o con mejor iluminación, o añade tu producto con el botón 'Añadir manual'."
+          />
         )}
 
         {detectedItems.map((item, index) => {
@@ -385,7 +382,7 @@ export default function ScanResultScreen() {
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: item.confirmed }}
                 >
-                  {item.confirmed && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                  {item.confirmed && <Ionicons name="checkmark" size={16} color={colors.surface} />}
                 </Pressable>
 
                 {/* Datos del ingrediente */}
@@ -398,7 +395,7 @@ export default function ScanResultScreen() {
                     {item.source === 'ai' && item.confidence !== null && item.confidence !== undefined && (
                       item.confidence < 0.6 ? (
                         <View style={styles.lowConfidenceBadge}>
-                          <Ionicons name="alert-circle" size={12} color="#DC2626" style={{ marginRight: 3 }} />
+                          <Ionicons name="alert-circle" size={12} color={colors.error.text} style={{ marginRight: 3 }} />
                           <Text style={styles.lowConfidenceText}>Verifica este alimento</Text>
                         </View>
                       ) : item.confidence <= 0.8 ? (
@@ -407,7 +404,7 @@ export default function ScanResultScreen() {
                         </View>
                       ) : (
                         <View style={styles.highConfidenceBadge}>
-                          <Ionicons name="checkmark-circle" size={12} color="#28613C" style={{ marginRight: 2 }} />
+                          <Ionicons name="checkmark-circle" size={12} color={colors.functional.fresh.text} style={{ marginRight: 2 }} />
                           <Text style={styles.highConfidenceText}>{Math.round(item.confidence * 100)}%</Text>
                         </View>
                       )
@@ -422,11 +419,23 @@ export default function ScanResultScreen() {
                 </Pressable>
 
                 {/* Acciones */}
-                <Pressable onPress={() => openEditModal(index)} style={styles.iconBtn}>
-                  <Ionicons name="pencil-outline" size={18} color="#66534A" />
+                <Pressable
+                  onPress={() => openEditModal(index)}
+                  style={styles.iconBtn}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Editar alimento"
+                >
+                  <Ionicons name="pencil-outline" size={18} color={colors.textSecondary} />
                 </Pressable>
-                <Pressable onPress={() => removeItem(index)} style={styles.iconBtn}>
-                  <Ionicons name="trash-outline" size={18} color="#A93632" />
+                <Pressable
+                  onPress={() => removeItem(index)}
+                  style={styles.iconBtn}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Eliminar alimento"
+                >
+                  <Ionicons name="trash-outline" size={18} color={colors.error.text} />
                 </Pressable>
               </View>
 
@@ -434,7 +443,7 @@ export default function ScanResultScreen() {
               {similarItem && (
                 <View style={styles.similarItemContainer}>
                   <View style={styles.similarItemHeader}>
-                    <Ionicons name="repeat" size={14} color="#B94E35" style={{ marginRight: 5 }} />
+                    <Ionicons name="repeat" size={14} color={colors.primary} style={{ marginRight: 5 }} />
                     <Text style={styles.similarItemTitle}>
                       Ya en inventario: {similarItem.name} ({similarItem.quantity ?? 1} {similarItem.unit || 'uds'})
                     </Text>
@@ -446,7 +455,7 @@ export default function ScanResultScreen() {
                     accessibilityState={{ checked: isMergeChecked }}
                   >
                     <View style={[styles.miniCheckbox, isMergeChecked && styles.miniCheckboxChecked]}>
-                      {isMergeChecked && <Ionicons name="checkmark" size={12} color="#FFFFFF" />}
+                      {isMergeChecked && <Ionicons name="checkmark" size={12} color={colors.surface} />}
                     </View>
                     <Text style={styles.mergeCheckboxText}>
                       Sumar a existencia existente (+{item.quantity ?? 1} {item.unit || 'uds'}) y mantener fecha más próxima
@@ -483,7 +492,7 @@ export default function ScanResultScreen() {
                 {editingIndex !== null ? 'Ajustar alimento' : 'Añadir alimento manual'}
               </Text>
               <Pressable onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#6B7280" />
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
 
@@ -493,20 +502,20 @@ export default function ScanResultScreen() {
                 value={editName}
                 onChangeText={setEditName}
                 placeholder="Ej. Tomates cherry"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textMuted}
                 maxLength={60}
                 style={styles.input}
               />
 
               <View style={styles.row}>
-                <View style={{ flex: 1, marginRight: 8 }}>
+                <View style={{ flex: 1, marginRight: spacing.sm }}>
                   <Text style={styles.label}>Cantidad</Text>
                   <TextInput
                     value={editQty}
                     onChangeText={(val) => setEditQty(val.replace(/[^0-9.]/g, ''))}
                     keyboardType="numeric"
                     placeholder="1"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={colors.textMuted}
                     maxLength={8}
                     style={styles.input}
                   />
@@ -528,7 +537,7 @@ export default function ScanResultScreen() {
               </View>
 
               <Text style={styles.label}>Categoría</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 20 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: spacing.xl }}>
                 {CATEGORIES.map((c) => (
                   <Pressable
                     key={c.key}
@@ -562,61 +571,61 @@ export default function ScanResultScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#F9FAFB' },
+  screen: { backgroundColor: colors.background },
   headerCard: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.lg,
     marginTop: 14,
     padding: 18,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   aiBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FBE9E2',
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: '#F5D6C8',
+    borderColor: colors.border,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.circular,
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
-  aiBadgeText: { color: '#863626', fontSize: 11, fontWeight: '800' },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#2B211D', marginBottom: 4 },
-  headerSubtitle: { fontSize: 14, color: '#66534A', lineHeight: 20 },
+  aiBadgeText: { color: colors.primaryDark, fontSize: typography.sizes.caption, fontWeight: '800' },
+  headerTitle: { fontSize: typography.sizes.sectionTitle, fontWeight: '800', color: colors.textPrimary, marginBottom: spacing.xs },
+  headerSubtitle: { fontSize: typography.sizes.bodySmall, color: colors.textSecondary, lineHeight: 20 },
   warningBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF2D7',
-    marginHorizontal: 16,
+    backgroundColor: colors.functional.expiringSoon.background,
+    marginHorizontal: spacing.lg,
     marginTop: 10,
-    padding: 12,
-    borderRadius: 14,
+    padding: spacing.md,
+    borderRadius: radii.buttons,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.functional.expiringSoon.border,
   },
-  warningText: { fontSize: 13, color: '#8A5A00', flex: 1 },
-  listSection: { marginHorizontal: 16, marginTop: 18 },
+  warningText: { fontSize: typography.sizes.metadata, color: colors.functional.expiringSoon.text, flex: 1 },
+  listSection: { marginHorizontal: spacing.lg, marginTop: 18 },
   sectionTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#2B211D' },
+  sectionTitle: { fontSize: typography.sizes.body, fontWeight: '700', color: colors.textPrimary },
   addManualBtn: { flexDirection: 'row', alignItems: 'center' },
-  addManualText: { fontSize: 13, color: '#B94E35', fontWeight: '700' },
+  addManualText: { fontSize: typography.sizes.metadata, color: colors.primary, fontWeight: '700' },
   itemCardContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radii.cards,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
     overflow: 'hidden',
-    shadowColor: '#2B211D',
+    shadowColor: colors.textPrimary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
@@ -628,9 +637,9 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   similarItemContainer: {
-    backgroundColor: '#FFF1E3',
+    backgroundColor: colors.secondaryContainer,
     borderTopWidth: 1,
-    borderTopColor: '#FCE2CC',
+    borderTopColor: colors.border,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
@@ -640,9 +649,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   similarItemTitle: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '700',
-    color: '#863626',
+    color: colors.primaryDark,
   },
   mergeCheckboxRow: {
     flexDirection: 'row',
@@ -654,18 +663,18 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: '#B94E35',
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
-    backgroundColor: '#FFFFFF',
+    marginRight: spacing.sm,
+    backgroundColor: colors.surface,
   },
   miniCheckboxChecked: {
-    backgroundColor: '#B94E35',
+    backgroundColor: colors.primary,
   },
   mergeCheckboxText: {
-    fontSize: 12,
-    color: '#863626',
+    fontSize: typography.sizes.label,
+    color: colors.primaryDark,
     flex: 1,
     fontWeight: '500',
   },
@@ -674,12 +683,12 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
-  checkboxChecked: { backgroundColor: '#B94E35', borderColor: '#B94E35' },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
   itemInfo: { flex: 1 },
   itemNameRow: {
     flexDirection: 'row',
@@ -687,96 +696,96 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
-  itemName: { fontSize: 15, fontWeight: '600', color: '#2B211D' },
-  itemUnconfirmed: { color: '#96857C', textDecorationLine: 'line-through' },
-  itemMeta: { fontSize: 12, color: '#66534A', marginTop: 2 },
+  itemName: { fontSize: typography.sizes.body, fontWeight: '600', color: colors.textPrimary },
+  itemUnconfirmed: { color: colors.textMuted, textDecorationLine: 'line-through' },
+  itemMeta: { fontSize: typography.sizes.label, color: colors.textSecondary, marginTop: 2 },
   highConfidenceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EAF4ED',
+    backgroundColor: colors.functional.fresh.background,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
   },
   highConfidenceText: {
-    fontSize: 11,
+    fontSize: typography.sizes.caption,
     fontWeight: '700',
-    color: '#28613C',
+    color: colors.functional.fresh.text,
   },
   mediumConfidenceBadge: {
-    backgroundColor: '#FFF2D7',
+    backgroundColor: colors.functional.expiringSoon.background,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: colors.functional.expiringSoon.border,
   },
   mediumConfidenceText: {
-    fontSize: 11,
+    fontSize: typography.sizes.caption,
     fontWeight: '700',
-    color: '#8A5A00',
+    color: colors.functional.expiringSoon.text,
   },
   lowConfidenceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FBE5E3',
+    backgroundColor: colors.error.background,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#F4BCB8',
+    borderColor: colors.border,
   },
   lowConfidenceText: {
-    fontSize: 11,
+    fontSize: typography.sizes.caption,
     fontWeight: '700',
-    color: '#A93632',
+    color: colors.error.text,
   },
-  iconBtn: { padding: 6, marginLeft: 4 },
-  bottomActions: { paddingHorizontal: 16, marginTop: 24, paddingBottom: 40 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  iconBtn: { padding: 6, marginLeft: spacing.xs },
+  bottomActions: { paddingHorizontal: spacing.lg, marginTop: spacing.xxl, paddingBottom: spacing.section },
+  modalOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   modalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
-    padding: 20,
+    padding: spacing.xl,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#2B211D' },
-  label: { fontSize: 13, fontWeight: '600', color: '#2B211D', marginBottom: 6, marginTop: 10 },
+  modalTitle: { fontSize: typography.sizes.cardTitle, fontWeight: '700', color: colors.textPrimary },
+  label: { fontSize: typography.sizes.metadata, fontWeight: '600', color: colors.textPrimary, marginBottom: 6, marginTop: 10 },
   input: {
     height: 48,
-    backgroundColor: '#FFF9F2',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
-    borderRadius: 12,
+    borderColor: colors.border,
+    borderRadius: radii.buttons,
     paddingHorizontal: 14,
-    fontSize: 15,
-    color: '#2B211D',
+    fontSize: typography.sizes.body,
+    color: colors.textPrimary,
   },
   row: { flexDirection: 'row', alignItems: 'center' },
   pill: {
     height: 34,
     paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: '#F8EDE2',
-    marginRight: 8,
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
+    marginRight: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pillActive: { backgroundColor: '#B94E35' },
+  pillActive: { backgroundColor: colors.primary },
   pillText: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '600',
-    color: '#66534A',
+    color: colors.textSecondary,
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 18,
   },
-  pillTextActive: { color: '#FFFFFF' },
+  pillTextActive: { color: colors.textInverse },
 });

@@ -13,9 +13,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../src/hooks/useAuth';
 import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog } from '../src/components';
+import { colors, radii, spacing, typography, elevations } from '../src/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -26,6 +26,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<'name' | 'email' | 'password' | null>(null);
   const [tabsWidth, setTabsWidth] = useState(0);
 
   const [dialogConfig, setDialogConfig] = useState<{
@@ -193,13 +194,13 @@ export default function LoginScreen() {
       <AppScreen style={styles.screen}>
         <View style={styles.profileCard}>
           <View style={styles.avatarLarge}>
-            <Ionicons name="person" size={40} color="#B94E35" />
+            <Ionicons name="person" size={40} color={colors.primary} />
           </View>
           <Text style={styles.profileName}>{user.name}</Text>
           <Text style={styles.profileEmail}>{user.email}</Text>
 
           <View style={styles.securityTag}>
-            <Ionicons name="shield-checkmark" size={16} color="#66534A" style={{ marginRight: 6 }} />
+            <Ionicons name="shield-checkmark" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
             <Text style={styles.securityTagText}>Sesión activa con token seguro</Text>
           </View>
 
@@ -237,7 +238,7 @@ export default function LoginScreen() {
               accessibilityRole="button"
               accessibilityLabel="Cerrar sesión"
             >
-              <Ionicons name="log-out-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Ionicons name="log-out-outline" size={20} color={colors.surface} style={{ marginRight: spacing.sm }} />
               <Text style={styles.logoutButtonText}>Cerrar sesión</Text>
             </Pressable>
           </Animated.View>
@@ -267,7 +268,7 @@ export default function LoginScreen() {
           {/* ── Cabecera Hero ── */}
           <View style={styles.heroSection}>
             <View style={styles.iconCircle}>
-              <Ionicons name="restaurant" size={30} color="#B94E35" />
+              <Ionicons name="restaurant" size={30} color={colors.primary} />
             </View>
             <Text style={styles.heroTitle}>Food AI Assistant</Text>
             <Text style={styles.heroSubtitle}>
@@ -326,7 +327,7 @@ export default function LoginScreen() {
           <Animated.View style={[styles.formCard, { transform: [{ scale: formPulseAnim }] }]}>
             {error && (
               <View style={styles.errorBanner}>
-                <Ionicons name="alert-circle" size={18} color="#DC2626" style={{ marginRight: 6 }} />
+                <Ionicons name="alert-circle" size={18} color={colors.error.text} style={{ marginRight: 6 }} />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
@@ -355,58 +356,84 @@ export default function LoginScreen() {
               aria-hidden={mode !== 'register'}
             >
               <Text style={styles.inputLabel}>Tu Nombre</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="person-outline" size={20} color="#66534A" style={styles.inputIcon} />
+              <View style={[styles.inputWrapper, focusedField === 'name' && styles.inputWrapperFocused]}>
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={focusedField === 'name' ? colors.primary : colors.textSecondary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   ref={nameInputRef}
                   value={name}
                   onChangeText={setName}
                   placeholder="Ej. Chef Carlos"
-                  placeholderTextColor="#96857C"
+                  placeholderTextColor={colors.textMuted}
                   maxLength={50}
                   style={styles.textInput}
                   autoFocus={false}
                   editable={mode === 'register'}
+                  onFocus={() => setFocusedField('name')}
+                  onBlur={() => setFocusedField(null)}
                 />
               </View>
             </Animated.View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Correo Electrónico</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="mail-outline" size={20} color="#66534A" style={styles.inputIcon} />
+              <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputWrapperFocused]}>
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={focusedField === 'email' ? colors.primary : colors.textSecondary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
                   placeholder="tu@correo.com"
-                  placeholderTextColor="#96857C"
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   maxLength={100}
                   style={styles.textInput}
+                  onFocus={() => setFocusedField('email')}
+                  onBlur={() => setFocusedField(null)}
                 />
               </View>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Contraseña</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed-outline" size={20} color="#66534A" style={styles.inputIcon} />
+              <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputWrapperFocused]}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={focusedField === 'password' ? colors.primary : colors.textSecondary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
                   placeholder="Mínimo 6 caracteres"
-                  placeholderTextColor="#96857C"
+                  placeholderTextColor={colors.textMuted}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   maxLength={128}
                   style={styles.textInput}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField(null)}
                 />
-                <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={10}>
+                <Pressable
+                  onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
                   <Ionicons
                     name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                     size={20}
-                    color="#66534A"
+                    color={focusedField === 'password' ? colors.primary : colors.textSecondary}
                   />
                 </Pressable>
               </View>
@@ -414,7 +441,7 @@ export default function LoginScreen() {
 
             {/* Aviso de seguridad amigable */}
             <View style={styles.cryptoNotice}>
-              <Ionicons name="shield-checkmark" size={14} color="#66534A" style={{ marginRight: 6 }} />
+              <Ionicons name="shield-checkmark" size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
               <Text style={styles.cryptoNoticeText}>
                 Tus datos viajan cifrados y protegidos.
               </Text>
@@ -447,7 +474,7 @@ export default function LoginScreen() {
               pointerEvents={mode === 'login' ? 'auto' : 'none'}
             >
               <Pressable onPress={handleFillDemo} style={styles.demoButton}>
-                <Ionicons name="sparkles" size={15} color="#B94E35" style={{ marginRight: 6 }} />
+                <Ionicons name="sparkles" size={15} color={colors.primary} style={{ marginRight: 6 }} />
                 <Text style={styles.demoButtonText}>
                   Usar credenciales de prueba (<Text style={{ fontWeight: '700' }}>demo@foodai.com</Text>)
                 </Text>
@@ -469,50 +496,50 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#FFF9F2' },
+  screen: { backgroundColor: colors.background },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.section,
   },
   heroSection: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
   },
   iconCircle: {
     width: 64,
     height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FBE9E2',
+    borderRadius: radii.floatingNav,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
-    borderColor: '#F5D6C8',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
-    shadowColor: '#2B211D',
+    marginBottom: spacing.md,
+    shadowColor: colors.textPrimary,
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   heroTitle: {
-    fontSize: 24,
+    fontSize: typography.sizes.headline,
     fontWeight: '800',
-    color: '#2B211D',
+    color: colors.textPrimary,
     letterSpacing: -0.5,
   },
   heroSubtitle: {
-    fontSize: 14,
-    color: '#66534A',
-    marginTop: 4,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
     textAlign: 'center',
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F8EDE2',
-    borderRadius: 16,
-    padding: 4,
-    marginBottom: 20,
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: radii.cards,
+    padding: spacing.xs,
+    marginBottom: spacing.xl,
     position: 'relative',
   },
   tabIndicator: {
@@ -520,9 +547,9 @@ const styles = StyleSheet.create({
     top: 4,
     left: 4,
     bottom: 4,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    shadowColor: '#2B211D',
+    backgroundColor: colors.surface,
+    borderRadius: radii.chips,
+    shadowColor: colors.textPrimary,
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
@@ -532,84 +559,84 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    borderRadius: radii.chips,
     zIndex: 1,
   },
   tabButtonText: {
-    fontSize: 14,
+    fontSize: typography.sizes.bodySmall,
     fontWeight: '600',
-    color: '#66534A',
+    color: colors.textSecondary,
   },
   tabButtonTextActive: {
-    color: '#B94E35',
+    color: colors.primary,
     fontWeight: '700',
   },
   formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: colors.surface,
+    borderRadius: radii.containers,
+    padding: spacing.xl,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
-    shadowColor: '#2B211D',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    borderColor: colors.border,
+    ...elevations.sm,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FBE5E3',
+    backgroundColor: colors.error.background,
     borderWidth: 1,
-    borderColor: '#F4BCB8',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 16,
+    borderColor: colors.border,
+    padding: spacing.md,
+    borderRadius: radii.buttons,
+    marginBottom: spacing.lg,
   },
   errorText: {
-    color: '#A93632',
-    fontSize: 13,
+    color: colors.error.text,
+    fontSize: typography.sizes.metadata,
     fontWeight: '600',
     flex: 1,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   inputLabel: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '700',
-    color: '#2B211D',
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF9F2',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
-    borderRadius: 14,
+    borderColor: colors.border,
+    borderRadius: radii.buttons,
     paddingHorizontal: 14,
     height: 50,
+  },
+  inputWrapperFocused: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
   },
   inputIcon: {
     marginRight: 10,
   },
   textInput: {
     flex: 1,
-    fontSize: 15,
-    color: '#2B211D',
+    fontSize: typography.sizes.body,
+    color: colors.textPrimary,
   },
   cryptoNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8EDE2',
+    backgroundColor: colors.surfaceVariant,
     padding: 10,
-    borderRadius: 10,
-    marginTop: 4,
+    borderRadius: radii.chips,
+    marginTop: spacing.xs,
   },
   cryptoNoticeText: {
-    fontSize: 11,
-    color: '#66534A',
+    fontSize: typography.sizes.caption,
+    color: colors.textSecondary,
     flex: 1,
     lineHeight: 16,
   },
@@ -618,70 +645,67 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 18,
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   demoButtonText: {
-    fontSize: 13,
-    color: '#B94E35',
+    fontSize: typography.sizes.metadata,
+    color: colors.primary,
   },
   profileCard: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
   },
   avatarLarge: {
     width: 84,
     height: 84,
-    borderRadius: 42,
-    backgroundColor: '#FBE9E2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
     borderWidth: 2,
-    borderColor: '#B94E35',
+    borderColor: colors.primary,
   },
   profileName: {
-    fontSize: 22,
+    fontSize: typography.sizes.headline,
     fontWeight: '800',
-    color: '#2B211D',
+    color: colors.textPrimary,
   },
   profileEmail: {
-    fontSize: 14,
-    color: '#66534A',
-    marginTop: 4,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
   securityTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8EDE2',
-    paddingHorizontal: 12,
+    backgroundColor: colors.surfaceVariant,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: radii.circular,
     marginTop: 14,
   },
   securityTagText: {
-    fontSize: 12,
-    color: '#66534A',
+    fontSize: typography.sizes.label,
+    color: colors.textSecondary,
     fontWeight: '700',
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#B94E35',
-    borderRadius: 14,
+    backgroundColor: colors.primary,
+    borderRadius: radii.buttons,
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
     width: '100%',
-    shadowColor: '#2B211D',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
+    ...elevations.md,
   },
   logoutButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
+    color: colors.textInverse,
+    fontSize: typography.sizes.body,
     fontWeight: '700',
   },
 });

@@ -15,6 +15,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useScan } from '../src/hooks/useScan';
 import { AppScreen, PrimaryButton } from '../src/components';
+import { colors, radii, spacing, typography } from '../src/theme';
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -44,13 +45,13 @@ export default function ScanScreen() {
       <AppScreen style={styles.permissionScreen}>
         <View style={styles.permissionContainer}>
           <View style={styles.permissionIconCircle}>
-            <Ionicons name="camera-outline" size={48} color="#B94E35" />
+            <Ionicons name="camera-outline" size={48} color={colors.primary} />
           </View>
           <Text style={styles.permissionTitle}>Permiso de cámara necesario</Text>
           <Text style={styles.permissionSubtitle}>
             Food AI necesita acceso a tu cámara para escanear tus alimentos e identificar lo que tienes en tu nevera o despensa.
           </Text>
-          <View style={{ width: '100%', maxWidth: 240, marginTop: 24 }}>
+          <View style={{ width: '100%', maxWidth: 240, marginTop: spacing.xxl }}>
             <PrimaryButton title="Dar permiso de cámara" onPress={requestPermission} />
           </View>
         </View>
@@ -188,7 +189,7 @@ export default function ScanScreen() {
       {/* ── Overlay de análisis en progreso (BUG-01) ── */}
       {isAnalyzing && (
         <View style={styles.analyzingOverlay}>
-          <ActivityIndicator size="large" color="#B94E35" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.analyzingText}>Analizando tu foto con IA...</Text>
           <Text style={styles.analyzingHint}>Identificando ingredientes...</Text>
         </View>
@@ -204,7 +205,7 @@ export default function ScanScreen() {
             accessibilityRole="button"
             accessibilityLabel="Cambiar entre cámara frontal y trasera"
           >
-            <Ionicons name="camera-reverse-outline" size={26} color="#FFFFFF" />
+            <Ionicons name="camera-reverse-outline" size={26} color={colors.surface} />
           </Pressable>
 
           {/* Botón obturador */}
@@ -224,7 +225,7 @@ export default function ScanScreen() {
             accessibilityRole="button"
             accessibilityLabel="Seleccionar foto de la galería"
           >
-            <Ionicons name="images-outline" size={24} color="#FFFFFF" />
+            <Ionicons name="images-outline" size={24} color={colors.surface} />
           </Pressable>
         </View>
       )}
@@ -241,35 +242,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   permissionScreen: {
-    backgroundColor: '#FFF9F2',
+    backgroundColor: colors.background,
   },
   permissionContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxxl,
   },
   permissionIconCircle: {
     width: 96,
     height: 96,
-    borderRadius: 48,
-    backgroundColor: '#FBE9E2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
     borderWidth: 1.5,
-    borderColor: '#F5D6C8',
+    borderColor: colors.border,
   },
   permissionTitle: {
-    fontSize: 22,
+    fontSize: typography.sizes.headline,
     fontWeight: '800',
-    color: '#2B211D',
+    color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   permissionSubtitle: {
-    fontSize: 15,
-    color: '#66534A',
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -288,21 +289,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: CORNER_SIZE,
     height: CORNER_SIZE,
-    borderColor: '#B94E35',
+    borderColor: colors.primary,
   },
   cornerTL: { top: 0, left: 0, borderTopWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH },
   cornerTR: { top: 0, right: 0, borderTopWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH },
   cornerBL: { bottom: 0, left: 0, borderBottomWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH },
   cornerBR: { bottom: 0, right: 0, borderBottomWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH },
   hint: {
-    color: '#FFFFFF',
-    marginTop: 20,
-    fontSize: 14,
+    color: colors.textInverse,
+    marginTop: spacing.xl,
+    fontSize: typography.sizes.bodySmall,
     fontWeight: '600',
     backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: radii.circular,
   },
   overlayAnalyzing: {
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -317,18 +318,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
   },
   analyzingText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+    color: colors.textInverse,
+    fontSize: typography.sizes.cardTitle,
     fontWeight: '700',
-    marginTop: 16,
+    marginTop: spacing.lg,
     textAlign: 'center',
   },
   analyzingHint: {
-    color: '#D1D5DB',
-    fontSize: 14,
+    color: colors.textMuted,
+    fontSize: typography.sizes.bodySmall,
     marginTop: 6,
     textAlign: 'center',
   },
@@ -338,13 +339,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 36,
     paddingBottom: 48,
-    paddingTop: 16,
+    paddingTop: spacing.lg,
     backgroundColor: 'rgba(0,0,0,0.65)',
   },
   circleBtn: {
     width: 52,
     height: 52,
-    borderRadius: 26,
+    borderRadius: radii.circular,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -352,10 +353,10 @@ const styles = StyleSheet.create({
   shutterButton: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(185, 78, 53, 0.3)',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 4,
-    borderColor: '#B94E35',
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -365,7 +366,7 @@ const styles = StyleSheet.create({
   shutterInner: {
     width: 58,
     height: 58,
-    borderRadius: 29,
-    backgroundColor: '#B94E35',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primary,
   },
 });
