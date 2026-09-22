@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { useAuth } from '../src/hooks/useAuth';
 import { AppBottomNav } from '../src/components';
+import { colors, typography, spacing, radii } from '../src/theme';
 
 export default function Layout() {
   const { isAuthenticated, isHydrated } = useAuth();
@@ -26,7 +27,7 @@ export default function Layout() {
     return (
       <View style={styles.splashContainer}>
         <View style={styles.iconCircle}>
-          <ActivityIndicator size="large" color="#B94E35" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
         <Text style={styles.splashTitle}>Food AI Assistant</Text>
         <Text style={styles.splashSubtitle}>Verificando credenciales seguras...</Text>
@@ -38,14 +39,14 @@ export default function Layout() {
   const showBottomNav = isAuthenticated && !hideBottomNavOn.includes(pathname);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFF9F2' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: '#FFF9F2' },
-          headerTintColor: '#2B211D',
-          headerTitleStyle: { fontWeight: '700', fontSize: 18 },
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.textPrimary,
+          headerTitleStyle: { fontWeight: typography.weights.bold, fontSize: typography.sizes.cardTitle },
           headerShadowVisible: false,
-          contentStyle: { backgroundColor: '#FFF9F2' },
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Screen name="login" options={{ headerShown: false }} />
@@ -83,28 +84,28 @@ export default function Layout() {
 const styles = StyleSheet.create({
   splashContainer: {
     flex: 1,
-    backgroundColor: '#FFF9F2',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
   },
   iconCircle: {
     width: 64,
     height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FBE9E2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   splashTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#2B211D',
+    fontSize: typography.sizes.sectionTitle,
+    fontWeight: typography.weights.heavy,
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   splashSubtitle: {
-    fontSize: 13,
-    color: '#66534A',
+    fontSize: typography.sizes.metadata,
+    color: colors.textSecondary,
   },
 });

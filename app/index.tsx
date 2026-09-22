@@ -6,18 +6,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInventory } from '../src/hooks/useInventory';
 import { useRecipes } from '../src/hooks/useRecipes';
 import { Recipe } from '../src/types';
-import { getExpirationStatus } from '../src/components/IngredientCard';
+import { getExpirationStatus } from '../src/utils/expiration';
 import {
   AppScreen,
   RecipeCard,
   PrimaryButton,
   SecondaryButton,
-  StatusBadge,
+  Chip,
   StaggerView,
   getBottomContentPadding,
 } from '../src/components';
 import { useAuth } from '../src/hooks/useAuth';
 import { useShoppingList } from '../src/hooks/useShoppingList';
+import { colors, radii, spacing, typography, elevations } from '../src/theme';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -72,7 +73,7 @@ export default function HomeScreen() {
       {/* ── 1. Header Editorial ── */}
       <StaggerView index={0}>
         <View style={styles.header}>
-          <View style={{ flex: 1, marginRight: 12 }}>
+          <View style={{ flex: 1, marginRight: spacing.md }}>
             <Text style={styles.subtitle}>Aprovecha mejor tu despensa hoy</Text>
             <Text style={styles.title}>{displayName}</Text>
           </View>
@@ -88,7 +89,7 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel={user ? `Sesión de ${user.name}` : 'Iniciar sesión'}
             >
-              <Ionicons name={user ? 'person' : 'person-outline'} size={20} color="#B94E35" />
+              <Ionicons name={user ? 'person' : 'person-outline'} size={20} color={colors.primary} />
               {user && <View style={styles.onlineDot} />}
             </Pressable>
 
@@ -101,7 +102,7 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Ver despensa"
             >
-              <Ionicons name="basket-outline" size={20} color="#B94E35" />
+              <Ionicons name="basket-outline" size={20} color={colors.primary} />
               {ingredientCount > 0 && (
                 <View style={styles.badgeCount}>
                   <Text style={styles.badgeCountText}>{ingredientCount}</Text>
@@ -115,9 +116,9 @@ export default function HomeScreen() {
       {/* ── 2. Acción Principal: Escanear Alimentos (Hero Editorial Card) ── */}
       <StaggerView index={1}>
         <View style={styles.heroActionCard}>
-          <View style={{ flex: 1, paddingRight: 16 }}>
+          <View style={{ flex: 1, paddingRight: spacing.lg }}>
             <View style={styles.heroBadge}>
-              <Ionicons name="sparkles" size={11} color="#863626" style={{ marginRight: 4 }} />
+              <Ionicons name="sparkles" size={11} color={colors.primaryDark} style={{ marginRight: spacing.xs }} />
               <Text style={styles.heroBadgeText}>IA DE VISIÓN</Text>
             </View>
             <Text style={styles.heroActionTitle}>Escanea tus alimentos</Text>
@@ -135,7 +136,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Escanear alimentos con la cámara"
           >
-            <Ionicons name="camera" size={26} color="#FFFFFF" />
+            <Ionicons name="camera" size={26} color={colors.surface} />
           </Pressable>
         </View>
       </StaggerView>
@@ -153,8 +154,8 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel={`Inventario con ${ingredientCount} alimentos`}
           >
-            <View style={[styles.pantryIconBadge, { backgroundColor: '#FAD8C7' }]}>
-              <Ionicons name="cube" size={18} color="#B94E35" />
+            <View style={[styles.pantryIconBadge, { backgroundColor: colors.primaryContainer }]}>
+              <Ionicons name="cube" size={18} color={colors.primary} />
             </View>
             <Text style={styles.pantryNum}>{ingredientCount}</Text>
             <Text style={styles.pantryLabel}>Alimentos</Text>
@@ -178,19 +179,19 @@ export default function HomeScreen() {
             <View
               style={[
                 styles.pantryIconBadge,
-                { backgroundColor: expiringCount > 0 ? '#FFE6A8' : '#EBDCD2' },
+                { backgroundColor: expiringCount > 0 ? colors.functional.expiringSoon.background : colors.surfaceVariant },
               ]}
             >
               <Ionicons
                 name="time"
                 size={18}
-                color={expiringCount > 0 ? '#8A5A00' : '#66534A'}
+                color={expiringCount > 0 ? colors.functional.expiringSoon.text : colors.textSecondary}
               />
             </View>
-            <Text style={[styles.pantryNum, expiringCount > 0 && { color: '#8A5A00' }]}>
+            <Text style={[styles.pantryNum, expiringCount > 0 && { color: colors.functional.expiringSoon.text }]}>
               {expiringCount}
             </Text>
-            <Text style={[styles.pantryLabel, expiringCount > 0 && { color: '#8A5A00' }]}>
+            <Text style={[styles.pantryLabel, expiringCount > 0 && { color: colors.functional.expiringSoon.text }]}>
               Por vencer
             </Text>
           </Pressable>
@@ -205,11 +206,11 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel={`${pendingItems.length} compras pendientes`}
           >
-            <View style={[styles.pantryIconBadge, { backgroundColor: '#FEDBB4' }]}>
-              <Ionicons name="cart" size={18} color="#C46814" />
+            <View style={[styles.pantryIconBadge, { backgroundColor: colors.secondaryContainer }]}>
+              <Ionicons name="cart" size={18} color={colors.secondaryDark} />
             </View>
-            <Text style={[styles.pantryNum, { color: '#C46814' }]}>{pendingItems.length}</Text>
-            <Text style={[styles.pantryLabel, { color: '#A04E08' }]}>Por comprar</Text>
+            <Text style={[styles.pantryNum, { color: colors.secondaryDark }]}>{pendingItems.length}</Text>
+            <Text style={[styles.pantryLabel, { color: colors.secondaryDark }]}>Por comprar</Text>
           </Pressable>
         </View>
       </StaggerView>
@@ -221,7 +222,7 @@ export default function HomeScreen() {
             <Text style={styles.contextualTag}>PARA HOY</Text>
             {featuredRecipe && (
               <View style={styles.matchPill}>
-                <Ionicons name="sparkles" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Ionicons name="sparkles" size={12} color={colors.surface} style={{ marginRight: spacing.xs }} />
                 <Text style={styles.matchPillText}>{featuredRecipe.matchScore}% con tu despensa</Text>
               </View>
             )}
@@ -236,7 +237,7 @@ export default function HomeScreen() {
 
               <View style={styles.contextualFooter}>
                 <View style={styles.metaRow}>
-                  <Ionicons name="time-outline" size={14} color="#66534A" style={{ marginRight: 4 }} />
+                  <Ionicons name="time-outline" size={14} color={colors.textSecondary} style={{ marginRight: spacing.xs }} />
                   <Text style={styles.metaText}>{featuredRecipe.prepTimeMinutes || 25} min</Text>
                 </View>
 
@@ -250,7 +251,7 @@ export default function HomeScreen() {
                   }
                 >
                   <Text style={styles.contextualButtonText}>Ver receta</Text>
-                  <Ionicons name="arrow-forward" size={15} color="#B94E35" style={{ marginLeft: 4 }} />
+                  <Ionicons name="arrow-forward" size={15} color={colors.primary} style={{ marginLeft: spacing.xs }} />
                 </Pressable>
               </View>
             </View>
@@ -258,9 +259,9 @@ export default function HomeScreen() {
             <View style={styles.contextualEmpty}>
               <View style={styles.contextualEmptyHeader}>
                 <View style={styles.contextualIconCircle}>
-                  <Ionicons name="restaurant-outline" size={24} color="#B94E35" />
+                  <Ionicons name="restaurant-outline" size={24} color={colors.primary} />
                 </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
+                <View style={{ flex: 1, marginLeft: spacing.md }}>
                   <Text style={styles.contextualEmptyTitle}>¿Qué cocinamos hoy?</Text>
                   <Text style={styles.contextualEmptyText}>
                     Agrega ingredientes a tu despensa para sugerirte la receta ideal para ti.
@@ -325,14 +326,14 @@ export default function HomeScreen() {
                       </Text>
                     )}
                   </View>
-                  <StatusBadge status={expiry.status} label={expiry.label} />
+                  <Chip variant="status" status={expiry.status} label={expiry.label} />
                 </Pressable>
               );
             })}
           </View>
         ) : (
           <View style={styles.freshBanner}>
-            <Ionicons name="checkmark-circle-outline" size={20} color="#28613C" style={{ marginRight: 8 }} />
+            <Ionicons name="checkmark-circle-outline" size={20} color={colors.functional.fresh.text} style={{ marginRight: spacing.sm }} />
             <Text style={styles.freshBannerText}>
               Tu despensa está al día. No tienes productos próximos a vencer.
             </Text>
@@ -349,7 +350,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={{ paddingHorizontal: 16 }}>
+        <View style={{ paddingHorizontal: spacing.lg }}>
           {availableRecipes.slice(0, 2).map((recipe) => (
             <RecipeCard
               key={recipe.id}
@@ -372,7 +373,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#FFF9F2',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingBottom: 90,
@@ -381,41 +382,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#66534A',
+    fontSize: typography.sizes.metadata,
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   title: {
-    fontSize: 26,
+    fontSize: typography.sizes.headline,
     fontWeight: '800',
-    color: '#2B211D',
+    color: colors.textPrimary,
     letterSpacing: -0.5,
     marginTop: 2,
   },
   headerActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
     alignItems: 'center',
   },
   avatarButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radii.containers,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
     position: 'relative',
   },
   avatarButtonActive: {
-    backgroundColor: '#FBE9E2',
-    borderColor: '#F5D6C8',
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.border,
   },
   onlineDot: {
     position: 'absolute',
@@ -423,73 +424,73 @@ const styles = StyleSheet.create({
     right: 2,
     width: 8,
     height: 8,
-    borderRadius: 4,
-    backgroundColor: '#B94E35',
+    borderRadius: radii.xs,
+    backgroundColor: colors.primary,
     borderWidth: 1.5,
-    borderColor: '#FFFFFF',
+    borderColor: colors.surface,
   },
   badgeCount: {
     position: 'absolute',
     top: -3,
     right: -3,
-    backgroundColor: '#B94E35',
+    backgroundColor: colors.primary,
     minWidth: 18,
     height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 4,
+    borderRadius: radii.chips,
+    paddingHorizontal: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeCountText: {
-    color: '#FFFFFF',
-    fontSize: 10,
+    color: colors.textInverse,
+    fontSize: typography.sizes.micro,
     fontWeight: '700',
   },
   heroActionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FBE9E2',
-    borderRadius: 28,
-    padding: 20,
-    marginHorizontal: 16,
-    marginTop: 8,
+    backgroundColor: colors.primaryContainer,
+    borderRadius: radii.containers,
+    padding: spacing.xl,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
   },
   heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF2EA',
+    backgroundColor: colors.primaryContainer,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.circular,
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   heroBadgeText: {
-    fontSize: 10,
+    fontSize: typography.sizes.micro,
     fontWeight: '800',
-    color: '#863626',
+    color: colors.primaryDark,
     letterSpacing: 0.8,
   },
   heroActionTitle: {
-    fontSize: 18,
+    fontSize: typography.sizes.cardTitle,
     fontWeight: '800',
-    color: '#863626',
-    marginBottom: 4,
+    color: colors.primaryDark,
+    marginBottom: spacing.xs,
   },
   heroActionSubtitle: {
-    fontSize: 13,
-    color: '#66534A',
+    fontSize: typography.sizes.metadata,
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   scanCircularButton: {
     width: 60,
     height: 60,
-    borderRadius: 30,
-    backgroundColor: '#B94E35',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#B94E35',
+    shadowColor: colors.primary,
     shadowOpacity: 0.35,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -502,53 +503,49 @@ const styles = StyleSheet.create({
   pantryGrid: {
     flexDirection: 'row',
     gap: 10,
-    marginHorizontal: 16,
+    marginHorizontal: spacing.lg,
     marginTop: 14,
   },
   pantryCard: {
     flex: 1,
-    borderRadius: 24,
+    borderRadius: radii.containers,
     paddingVertical: 18,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2B211D',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    ...elevations.sm,
   },
   pantryCardItems: {
-    backgroundColor: '#FFF0E6',
+    backgroundColor: colors.primaryContainer,
   },
   pantryCardExpiringNormal: {
-    backgroundColor: '#F5EBE1',
+    backgroundColor: colors.surfaceVariant,
   },
   pantryCardAlert: {
-    backgroundColor: '#FFF2D7',
+    backgroundColor: colors.functional.expiringSoon.background,
   },
   pantryCardShopping: {
-    backgroundColor: '#FFF1E0',
+    backgroundColor: colors.secondaryContainer,
   },
   pantryIconBadge: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: radii.buttons,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   pantryNum: {
-    fontSize: 32,
+    fontSize: typography.sizes.screenTitle,
     fontWeight: '900',
-    color: '#2B211D',
+    color: colors.textPrimary,
     letterSpacing: -1,
   },
   pantryLabel: {
-    fontSize: 10,
-    color: '#66534A',
+    fontSize: typography.sizes.micro,
+    color: colors.textSecondary,
     fontWeight: '800',
-    marginTop: 4,
+    marginTop: spacing.xs,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
@@ -557,10 +554,10 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   contextualCard: {
-    backgroundColor: '#FFF1E3',
+    backgroundColor: colors.secondaryContainer,
     borderRadius: 28,
-    padding: 20,
-    marginHorizontal: 16,
+    padding: spacing.xl,
+    marginHorizontal: spacing.lg,
     marginTop: 14,
   },
   contextualHeader: {
@@ -570,35 +567,36 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   contextualTag: {
-    fontSize: 11,
+    fontSize: typography.sizes.caption,
     fontWeight: '800',
-    color: '#B26223',
+    color: colors.secondaryDark,
     letterSpacing: 0.8,
   },
   matchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#B94E35',
+    backgroundColor: colors.primary,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.circular,
   },
   matchPillText: {
-    color: '#FFFFFF',
-    fontSize: 11,
+    color: colors.textInverse,
+    fontSize: typography.sizes.caption,
     fontWeight: '700',
   },
   contextualTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#2B211D',
-    marginBottom: 4,
+    fontSize: typography.sizes.cardTitle,
+    lineHeight: typography.lineHeights.cardTitle,
+    fontWeight: typography.weights.heavy,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   contextualDesc: {
-    fontSize: 13,
-    color: '#66534A',
+    fontSize: typography.sizes.metadata,
+    color: colors.textSecondary,
     lineHeight: 18,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   contextualFooter: {
     flexDirection: 'row',
@@ -606,23 +604,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F2D8C7',
+    borderTopColor: colors.border,
   },
   contextualButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FBE9E2',
+    backgroundColor: colors.primaryContainer,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.circular,
   },
   contextualButtonText: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '700',
-    color: '#B94E35',
+    color: colors.primary,
   },
   contextualEmpty: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   contextualEmptyHeader: {
     flexDirection: 'row',
@@ -631,84 +629,85 @@ const styles = StyleSheet.create({
   contextualIconCircle: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FBE9E2',
+    borderRadius: radii.containers,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
   contextualEmptyTitle: {
-    fontSize: 15,
+    fontSize: typography.sizes.body,
     fontWeight: '800',
-    color: '#2B211D',
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   contextualEmptyText: {
-    fontSize: 12,
-    color: '#66534A',
+    fontSize: typography.sizes.label,
+    color: colors.textSecondary,
     lineHeight: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     marginTop: 22,
     marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2B211D',
+    fontSize: typography.sizes.sectionTitle,
+    lineHeight: typography.lineHeights.sectionTitle,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
   },
   seeAllText: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '600',
-    color: '#B94E35',
+    color: colors.primary,
   },
   expiringContainer: {
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   expiringRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
   },
   expiringDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#8A5A00',
+    backgroundColor: colors.functional.expiringSoon.text,
   },
   expiringName: {
-    fontSize: 14,
+    fontSize: typography.sizes.bodySmall,
     fontWeight: '600',
-    color: '#2B211D',
+    color: colors.textPrimary,
   },
   expiringQty: {
-    fontSize: 12,
-    color: '#66534A',
+    fontSize: typography.sizes.label,
+    color: colors.textSecondary,
     marginTop: 1,
   },
   freshBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EAF4ED',
+    backgroundColor: colors.functional.fresh.background,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#C2DFCB',
+    borderColor: colors.functional.fresh.border,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginHorizontal: 16,
+    paddingVertical: spacing.md,
+    marginHorizontal: spacing.lg,
   },
   freshBannerText: {
-    fontSize: 13,
-    color: '#28613C',
+    fontSize: typography.sizes.metadata,
+    color: colors.functional.fresh.text,
     fontWeight: '600',
     flex: 1,
   },
@@ -717,8 +716,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metaText: {
-    fontSize: 13,
-    color: '#66534A',
+    fontSize: typography.sizes.metadata,
+    color: colors.textSecondary,
     fontWeight: '500',
   },
 });

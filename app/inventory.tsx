@@ -28,8 +28,10 @@ import {
   getBottomContentPadding,
   M3Dialog,
   M3DatePickerModal,
+  Chip,
 } from '../src/components';
-import { getExpirationStatus } from '../src/components/IngredientCard';
+import { getExpirationStatus } from '../src/utils/expiration';
+import { colors, radii, spacing, typography } from '../src/theme';
 
 type CategoryFilter = 'all' | 'expiring' | IngredientCategory;
 
@@ -353,40 +355,16 @@ export default function InventoryScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesList}
         >
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.key;
-            return (
-              <Pressable
-                key={cat.key}
-                onPress={() => setSelectedCategory(cat.key)}
-                style={[
-                  styles.catPill,
-                  isSelected && styles.catPillSelected,
-                  cat.key === 'expiring' && !isSelected && styles.catPillExpiring,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Filtrar por ${cat.label}`}
-              >
-                {cat.icon && (
-                  <Ionicons
-                    name={cat.icon}
-                    size={14}
-                    color={isSelected ? '#FFFFFF' : '#D97706'}
-                    style={{ marginRight: 6 }}
-                  />
-                )}
-                <Text
-                  style={[
-                    styles.catText,
-                    isSelected && styles.catTextSelected,
-                    cat.key === 'expiring' && !isSelected && { color: '#B45309' },
-                  ]}
-                >
-                  {cat.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+          {CATEGORIES.map((cat) => (
+            <Chip
+              key={cat.key}
+              label={cat.label}
+              icon={cat.icon}
+              selected={selectedCategory === cat.key}
+              onPress={() => setSelectedCategory(cat.key)}
+              variant="filter"
+            />
+          ))}
         </ScrollView>
       </View>
 
@@ -422,7 +400,7 @@ export default function InventoryScreen() {
                     : 'square-outline'
                 }
                 size={16}
-                color="#B94E35"
+                color={colors.primary}
                 style={{ marginRight: 5 }}
               />
               <Text style={styles.bulkActionBtnText}>
@@ -441,7 +419,7 @@ export default function InventoryScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Eliminar alimentos seleccionados"
               >
-                <Ionicons name="trash-outline" size={15} color="#DC2626" style={{ marginRight: 4 }} />
+                <Ionicons name="trash-outline" size={15} color={colors.error.text} style={{ marginRight: spacing.xs }} />
                 <Text style={styles.bulkDeleteBtnText}>Eliminar ({selectedIds.size})</Text>
               </Pressable>
 
@@ -531,7 +509,7 @@ export default function InventoryScreen() {
         accessibilityRole="button"
         accessibilityLabel="Añadir alimento manualmente"
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <Ionicons name="add" size={28} color={colors.surface} />
       </Pressable>
 
       {/* ── Modal de Creación / Edición ── */}
@@ -548,7 +526,7 @@ export default function InventoryScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Cerrar modal"
               >
-                <Ionicons name="close" size={24} color="#6B7280" />
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
 
@@ -558,7 +536,7 @@ export default function InventoryScreen() {
                 value={name}
                 onChangeText={setName}
                 placeholder="Ej. Tomates cherry"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textMuted}
                 maxLength={60}
                 style={styles.modalInput}
               />
@@ -571,7 +549,7 @@ export default function InventoryScreen() {
                     onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
                     placeholder="1"
                     keyboardType="numeric"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={colors.textMuted}
                     maxLength={8}
                     style={styles.modalInput}
                   />
@@ -620,18 +598,18 @@ export default function InventoryScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Text
                     style={{
-                      color: expirationDate ? '#2B211D' : '#9CA3AF',
-                      fontSize: 15,
+                      color: expirationDate ? colors.textPrimary : colors.textMuted,
+                      fontSize: typography.sizes.body,
                       fontWeight: expirationDate ? '600' : '400',
                     }}
                   >
                     {expirationDate || 'Seleccionar en el calendario'}
                   </Text>
-                  <Ionicons name="calendar-outline" size={20} color="#B94E35" />
+                  <Ionicons name="calendar-outline" size={20} color={colors.primary} />
                 </View>
               </Pressable>
 
-              <View style={{ marginTop: 24, marginBottom: 16 }}>
+              <View style={{ marginTop: spacing.xxl, marginBottom: spacing.lg }}>
                 <PrimaryButton
                   title={editingItem ? 'Guardar cambios' : 'Añadir alimento'}
                   onPress={handleSave}
@@ -644,7 +622,7 @@ export default function InventoryScreen() {
                       handleDelete(editingItem.id, editingItem.name);
                     }}
                   >
-                    <Ionicons name="trash-outline" size={16} color="#DC2626" style={{ marginRight: 6 }} />
+                    <Ionicons name="trash-outline" size={16} color={colors.error.text} style={{ marginRight: 6 }} />
                     <Text style={styles.modalDeleteText}>Eliminar este alimento</Text>
                   </Pressable>
                 )}
@@ -688,20 +666,20 @@ export default function InventoryScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#FFF9F2',
+    backgroundColor: colors.background,
   },
   searchSection: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
   bulkToolbar: {
     flexDirection: 'column',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 6,
     backgroundColor: 'transparent',
     marginBottom: 6,
-    gap: 8,
+    gap: spacing.sm,
   },
   bulkTopRow: {
     flexDirection: 'row',
@@ -712,7 +690,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 8,
+    gap: spacing.sm,
     paddingTop: 6,
   },
   bulkInfo: {
@@ -721,55 +699,55 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   bulkCountText: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '700',
-    color: '#66534A',
+    color: colors.textSecondary,
   },
   bulkSelectedText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '600',
-    color: '#B94E35',
+    color: colors.primary,
   },
   bulkActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: '#FBE9E2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: '#F5D6C8',
+    borderColor: colors.border,
   },
   bulkActionBtnText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '700',
-    color: '#863626',
+    color: colors.primaryDark,
   },
   bulkDeleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: '#FBE5E3',
+    borderRadius: radii.circular,
+    backgroundColor: colors.error.background,
     borderWidth: 1,
-    borderColor: '#F4BCB8',
+    borderColor: colors.border,
   },
   bulkDeleteBtnText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '700',
-    color: '#A93632',
+    color: colors.error.text,
   },
   bulkCancelBtn: {
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: '#F8EDE2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
   },
   bulkCancelBtnText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '700',
-    color: '#66534A',
+    color: colors.textSecondary,
   },
   modalDeleteBtn: {
     flexDirection: 'row',
@@ -777,57 +755,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     minHeight: 52,
-    marginTop: 12,
-    borderRadius: 999,
-    backgroundColor: '#FBE5E3',
+    marginTop: spacing.md,
+    borderRadius: radii.circular,
+    backgroundColor: colors.error.background,
     borderWidth: 1,
-    borderColor: '#F4BCB8',
+    borderColor: colors.border,
   },
   modalDeleteText: {
-    fontSize: 14,
+    fontSize: typography.sizes.bodySmall,
     fontWeight: '700',
-    color: '#A93632',
+    color: colors.error.text,
   },
   categoriesWrapper: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   categoriesList: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  catPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 40,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#EBDDD2',
-  },
-  catPillSelected: {
-    backgroundColor: '#B94E35',
-    borderColor: '#B94E35',
-  },
-  catPillExpiring: {
-    backgroundColor: '#FFF2D7',
-    borderColor: '#FDE68A',
-  },
-  catText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#66534A',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 18,
-  },
-  catTextSelected: {
-    color: '#FFFFFF',
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   listContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: 110,
   },
   fab: {
@@ -836,11 +784,11 @@ const styles = StyleSheet.create({
     bottom: 96,
     width: 58,
     height: 58,
-    borderRadius: 29,
-    backgroundColor: '#B94E35',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#B94E35',
+    shadowColor: colors.primary,
     shadowOpacity: 0.35,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -848,47 +796,47 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.scrim,
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     maxHeight: '85%',
-    padding: 24,
-    paddingBottom: 32,
+    padding: spacing.xxl,
+    paddingBottom: spacing.xxxl,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: typography.sizes.cardTitle,
     fontWeight: '800',
-    color: '#2B211D',
+    color: colors.textPrimary,
   },
   modalBody: {
     maxHeight: 500,
   },
   label: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '700',
-    color: '#2B211D',
+    color: colors.textPrimary,
     marginBottom: 6,
     marginTop: 10,
   },
   modalInput: {
     height: 52,
-    backgroundColor: '#F8EDE2',
+    backgroundColor: colors.surfaceVariant,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: '#2B211D',
+    borderColor: colors.border,
+    borderRadius: radii.buttons,
+    paddingHorizontal: spacing.lg,
+    fontSize: typography.sizes.body,
+    color: colors.textPrimary,
   },
   row: {
     flexDirection: 'row',
@@ -896,29 +844,29 @@ const styles = StyleSheet.create({
   },
   unitScroll: {
     flexDirection: 'row',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   smallPill: {
     height: 38,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    backgroundColor: '#F8EDE2',
-    marginRight: 8,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
+    marginRight: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   smallPillActive: {
-    backgroundColor: '#B94E35',
+    backgroundColor: colors.primary,
   },
   smallPillText: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '600',
-    color: '#66534A',
+    color: colors.textSecondary,
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 18,
   },
   smallPillTextActive: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
   },
 });

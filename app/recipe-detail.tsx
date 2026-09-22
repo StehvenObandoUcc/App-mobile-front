@@ -8,6 +8,7 @@ import { AppScreen, PrimaryButton, SecondaryButton } from '../src/components';
 
 import { validateRecipeIngredients } from '../src/utils/recipe-validation';
 import { useShoppingList } from '../src/hooks/useShoppingList';
+import { colors, radii, spacing, typography } from '../src/theme';
 
 export default function RecipeDetailScreen() {
   const router = useRouter();
@@ -116,7 +117,7 @@ export default function RecipeDetailScreen() {
       {/* ── Banner Superior ── */}
       <View style={styles.heroCard}>
         <View style={styles.matchBadge}>
-          <Ionicons name="sparkles" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
+          <Ionicons name="sparkles" size={14} color={colors.surface} style={{ marginRight: spacing.xs }} />
           <Text style={styles.matchText}>{recipe.matchScore}% Coincidencia con tu inventario</Text>
         </View>
 
@@ -127,18 +128,18 @@ export default function RecipeDetailScreen() {
         <View style={styles.metaRow}>
           {recipe.prepTimeMinutes && (
             <View style={styles.metaPill}>
-              <Ionicons name="time-outline" size={14} color="#863626" style={{ marginRight: 4 }} />
+              <Ionicons name="time-outline" size={14} color={colors.primaryDark} style={{ marginRight: spacing.xs }} />
               <Text style={styles.metaText}>{recipe.prepTimeMinutes} min</Text>
             </View>
           )}
           {recipe.servings && (
             <View style={styles.metaPill}>
-              <Ionicons name="people-outline" size={14} color="#863626" style={{ marginRight: 4 }} />
+              <Ionicons name="people-outline" size={14} color={colors.primaryDark} style={{ marginRight: spacing.xs }} />
               <Text style={styles.metaText}>{recipe.servings} porciones</Text>
             </View>
           )}
           <View style={styles.metaPill}>
-            <Ionicons name="flame-outline" size={14} color="#863626" style={{ marginRight: 4 }} />
+            <Ionicons name="flame-outline" size={14} color={colors.primaryDark} style={{ marginRight: spacing.xs }} />
             <Text style={styles.metaText}>Dificultad {recipe.difficulty}</Text>
           </View>
         </View>
@@ -147,7 +148,7 @@ export default function RecipeDetailScreen() {
       {/* ── Sección de Ingredientes Disponibles ── */}
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
-          <Ionicons name="checkmark-circle" size={20} color="#28613C" style={{ marginRight: 6 }} />
+          <Ionicons name="checkmark-circle" size={20} color={colors.functional.fresh.text} style={{ marginRight: 6 }} />
           <Text style={styles.sectionTitle}>
             Ingredientes en tu cocina ({recipe.availableIngredients.length})
           </Text>
@@ -155,7 +156,7 @@ export default function RecipeDetailScreen() {
 
         {recipe.availableIngredients.map((ing) => (
           <View key={ing.id} style={styles.ingredientRow}>
-            <Ionicons name="checkmark-outline" size={16} color="#28613C" style={{ marginRight: 8 }} />
+            <Ionicons name="checkmark-outline" size={16} color={colors.functional.fresh.text} style={{ marginRight: spacing.sm }} />
             <Text style={styles.ingName}>{ing.name}</Text>
             <Text style={styles.ingQty}>
               {ing.quantity !== null ? `${ing.quantity} ${ing.unit}` : 'Al gusto'}
@@ -168,7 +169,7 @@ export default function RecipeDetailScreen() {
       {recipe.missingIngredients.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionTitleRow}>
-            <Ionicons name="alert-circle-outline" size={20} color="#F59E0B" style={{ marginRight: 6 }} />
+            <Ionicons name="alert-circle-outline" size={20} color={colors.functional.expiringSoon.text} style={{ marginRight: 6 }} />
             <Text style={styles.sectionTitle}>
               Ingredientes que te faltan ({recipe.missingIngredients.length})
             </Text>
@@ -209,7 +210,7 @@ export default function RecipeDetailScreen() {
             accessibilityRole="button"
             accessibilityLabel="Añadir ingredientes faltantes a la lista de compras"
           >
-            <Ionicons name="cart-outline" size={18} color="#B94E35" style={{ marginRight: 6 }} />
+            <Ionicons name="cart-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
             <Text style={styles.addMissingButtonText}>Añadir faltantes a Lista de Compras</Text>
           </Pressable>
         </View>
@@ -218,24 +219,24 @@ export default function RecipeDetailScreen() {
       {/* ── Sección de Pasos Interactivos (Cooking Checklist) ── */}
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
-          <Ionicons name="list-outline" size={20} color="#2B211D" style={{ marginRight: 6 }} />
+          <Ionicons name="list-outline" size={20} color={colors.textPrimary} style={{ marginRight: 6 }} />
           <Text style={styles.sectionTitle}>
             Pasos de preparación {recipe.steps.length > 0 ? `(${completedSteps.length}/${recipe.steps.length})` : ''}
           </Text>
         </View>
 
         {isLoadingSteps && (
-          <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-            <ActivityIndicator size="small" color="#B94E35" />
-            <Text style={{ marginTop: 8, fontSize: 13, color: '#6B7280' }}>
+          <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={{ marginTop: spacing.sm, fontSize: typography.sizes.metadata, color: colors.textSecondary }}>
               El Chef IA está redactando las instrucciones paso a paso...
             </Text>
           </View>
         )}
 
         {stepsError && (
-          <View style={{ paddingVertical: 12, paddingHorizontal: 14, backgroundColor: '#FEF2F2', borderRadius: 10, marginVertical: 8 }}>
-            <Text style={{ fontSize: 13, color: '#DC2626', marginBottom: 8 }}>{stepsError}</Text>
+          <View style={{ paddingVertical: spacing.md, paddingHorizontal: 14, backgroundColor: colors.error.background, borderRadius: radii.chips, marginVertical: spacing.sm }}>
+            <Text style={{ fontSize: typography.sizes.metadata, color: colors.error.text, marginBottom: spacing.sm }}>{stepsError}</Text>
             <Pressable
               onPress={async () => {
                 if (!recipe) return;
@@ -250,15 +251,25 @@ export default function RecipeDetailScreen() {
                   setIsLoadingSteps(false);
                 }
               }}
-              style={{ alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 10, backgroundColor: '#EF4444', borderRadius: 6 }}
+              style={{
+                alignSelf: 'flex-start',
+                minHeight: spacing.touchTargetMin,
+                paddingHorizontal: spacing.md,
+                backgroundColor: colors.error.text,
+                borderRadius: radii.buttons,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Reintentar cargar pasos de la receta"
             >
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#FFFFFF' }}>Reintentar</Text>
+              <Text style={{ fontSize: typography.sizes.label, fontWeight: '600', color: colors.textInverse }}>Reintentar</Text>
             </Pressable>
           </View>
         )}
 
         {!isLoadingSteps && !stepsError && recipe.steps.length === 0 && (
-          <Text style={{ fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', paddingVertical: 10 }}>
+          <Text style={{ fontSize: typography.sizes.metadata, color: colors.textMuted, fontStyle: 'italic', paddingVertical: 10 }}>
             No hay pasos registrados para esta receta.
           </Text>
         )}
@@ -275,7 +286,7 @@ export default function RecipeDetailScreen() {
             >
               <View style={[styles.stepNumber, isDone && styles.stepNumberDone]}>
                 {isDone ? (
-                  <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                  <Ionicons name="checkmark" size={14} color={colors.surface} />
                 ) : (
                   <Text style={styles.stepNumberText}>{idx + 1}</Text>
                 )}
@@ -290,7 +301,7 @@ export default function RecipeDetailScreen() {
       <View style={styles.actionSection}>
         {!validation.canPrepare && (
           <View style={styles.noticeCard}>
-            <Ionicons name="information-circle-outline" size={20} color="#D97706" style={{ marginRight: 8 }} />
+            <Ionicons name="information-circle-outline" size={20} color={colors.functional.expiringSoon.text} style={{ marginRight: spacing.sm }} />
             <View style={{ flex: 1 }}>
               <Text style={styles.noticeTitle}>Ingredientes incompletos</Text>
               <Text style={styles.noticeText}>
@@ -318,78 +329,78 @@ export default function RecipeDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#F9FAFB' },
+  screen: { backgroundColor: colors.background },
   centerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
   },
   loadingText: {
-    fontSize: 15,
-    color: '#6B7280',
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
   },
   heroCard: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.lg,
     marginTop: 14,
-    padding: 20,
+    padding: spacing.xl,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   matchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#B94E35',
-    paddingHorizontal: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
     paddingVertical: 5,
-    borderRadius: 999,
+    borderRadius: radii.circular,
     alignSelf: 'flex-start',
     marginBottom: 10,
   },
   matchText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    color: colors.textInverse,
+    fontSize: typography.sizes.label,
     fontWeight: '700',
   },
   title: {
-    fontSize: 22,
+    fontSize: typography.sizes.headline,
     fontWeight: '800',
-    color: '#2B211D',
-    marginBottom: 8,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   description: {
-    fontSize: 14,
-    color: '#66534A',
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
     lineHeight: 22,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   metaRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
     flexWrap: 'wrap',
   },
   metaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8EDE2',
-    paddingHorizontal: 12,
+    backgroundColor: colors.surfaceVariant,
+    paddingHorizontal: spacing.md,
     paddingVertical: 5,
-    borderRadius: 999,
+    borderRadius: radii.circular,
   },
   metaText: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '600',
-    color: '#863626',
+    color: colors.primaryDark,
   },
   section: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.lg,
     marginTop: 14,
     padding: 18,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -397,137 +408,137 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: typography.sizes.body,
     fontWeight: '700',
-    color: '#2B211D',
+    color: colors.textPrimary,
   },
   ingredientRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#FFF9F2',
+    borderBottomColor: colors.surfaceVariant,
   },
   ingName: {
-    fontSize: 15,
+    fontSize: typography.sizes.body,
     fontWeight: '500',
-    color: '#2B211D',
+    color: colors.textPrimary,
     flex: 1,
   },
   ingQty: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '600',
-    color: '#66534A',
+    color: colors.textSecondary,
   },
   missingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#FFF9F2',
+    borderBottomColor: colors.surfaceVariant,
   },
   missingName: {
-    fontSize: 15,
+    fontSize: typography.sizes.body,
     fontWeight: '500',
-    color: '#66534A',
+    color: colors.textSecondary,
   },
   optionalTag: {
-    fontSize: 12,
-    color: '#96857C',
+    fontSize: typography.sizes.label,
+    color: colors.textMuted,
   },
   subText: {
-    fontSize: 12,
-    color: '#863626',
+    fontSize: typography.sizes.label,
+    color: colors.primaryDark,
     marginTop: 2,
   },
   missingQty: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '500',
-    color: '#96857C',
+    color: colors.textMuted,
   },
   stepCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: 14,
-    backgroundColor: '#FFF9F2',
+    padding: spacing.md,
+    borderRadius: radii.buttons,
+    backgroundColor: colors.background,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
   },
   stepCardDone: {
-    backgroundColor: '#EAF4ED',
-    borderColor: '#C2DFCB',
+    backgroundColor: colors.functional.fresh.background,
+    borderColor: colors.functional.fresh.border,
   },
   stepNumber: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#EBDDD2',
+    backgroundColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
     marginTop: 2,
   },
   stepNumberDone: {
-    backgroundColor: '#28613C',
+    backgroundColor: colors.functional.fresh.text,
   },
   stepNumberText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '700',
-    color: '#66534A',
+    color: colors.textSecondary,
   },
   stepText: {
-    fontSize: 14,
-    color: '#2B211D',
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textPrimary,
     lineHeight: 20,
     flex: 1,
   },
   stepTextDone: {
-    color: '#28613C',
+    color: colors.functional.fresh.text,
     textDecorationLine: 'line-through',
   },
   actionSection: {
-    paddingHorizontal: 16,
-    marginTop: 20,
-    paddingBottom: 40,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    paddingBottom: spacing.section,
   },
   noticeCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FFF2D7',
+    backgroundColor: colors.functional.expiringSoon.background,
     borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 16,
+    borderColor: colors.functional.expiringSoon.border,
+    borderRadius: radii.cards,
     padding: 14,
     marginBottom: 14,
   },
   noticeTitle: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '700',
-    color: '#8A5A00',
+    color: colors.functional.expiringSoon.text,
     marginBottom: 2,
   },
   noticeText: {
-    fontSize: 12,
-    color: '#8A5A00',
+    fontSize: typography.sizes.label,
+    color: colors.functional.expiringSoon.text,
     lineHeight: 18,
   },
   addMissingButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FBE9E2',
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: '#F5D6C8',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginTop: 12,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
   },
   addMissingButtonText: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '700',
-    color: '#B94E35',
+    color: colors.primary,
   },
 });
