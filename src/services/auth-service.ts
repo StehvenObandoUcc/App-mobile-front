@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL } from './api-client';
+import { API_BASE_URL, registerAuthTokenProvider } from './api-client';
 import { AuthSession } from '../types';
 import { LocalStorage } from '../storage/local-storage';
 
@@ -167,6 +167,12 @@ export class AuthService {
         notifyListeners();
         return demoSession;
       }
+      const isNetwork =
+        (err instanceof TypeError && String(err.message).toLowerCase().includes('network')) ||
+        String(err?.message || '').toLowerCase().includes('network request failed');
+      if (isNetwork) {
+        throw new Error('No se pudo conectar con el servidor. Revisa tu conexión a internet o verifica que el backend esté iniciado.');
+      }
       throw err;
     }
   }
@@ -175,37 +181,47 @@ export class AuthService {
    * Registra un nuevo usuario enviando la contraseña sobre TLS.
    */
   static async register(email: string, rawPassword: string, name: string): Promise<AuthSession> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        password: rawPassword,
-        name: name.trim() || 'Chef de Cocina',
-      }),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password: rawPassword,
+          name: name.trim() || 'Chef de Cocina',
+        }),
+      });
 
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.detail || 'Error al registrar usuario');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Error al registrar usuario');
+      }
+
+      const data = await response.json();
+      const session: AuthSession = {
+        accessToken: data.access_token,
+        expiresAt: data.expires_at,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+        },
+      };
+
+      await saveSecureSession(session);
+      currentSession = session;
+      await LocalStorage.switchUser(session.user.id);
+      notifyListeners();
+      return session;
+    } catch (err: any) {
+      const isNetwork =
+        (err instanceof TypeError && String(err.message).toLowerCase().includes('network')) ||
+        String(err?.message || '').toLowerCase().includes('network request failed');
+      if (isNetwork) {
+        throw new Error('No se pudo conectar con el servidor. Revisa tu conexión a internet o verifica que el backend esté iniciado.');
+      }
+      throw err;
     }
-
-    const data = await response.json();
-    const session: AuthSession = {
-      accessToken: data.access_token,
-      expiresAt: data.expires_at,
-      user: {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.name,
-      },
-    };
-
-    await saveSecureSession(session);
-    currentSession = session;
-    await LocalStorage.switchUser(session.user.id);
-    notifyListeners();
-    return session;
   }
 
   /**
@@ -221,3 +237,6 @@ export class AuthService {
     notifyListeners();
   }
 }
+
+registerAuthTokenProvider(() => currentSession?.accessToken || null);
+

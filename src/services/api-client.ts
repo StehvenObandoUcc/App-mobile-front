@@ -1,14 +1,30 @@
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 const API_PORT = '8000';
 
 function resolveApiBaseUrl(): string {
-  // Extrae la IP de desarrollo automáticamente desde Expo (ej. 192.168.x.x) para Android
-  const host =
+  // 1. Variable de entorno explícita (máxima prioridad)
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, '');
+  }
+
+  // 2. IP del host de desarrollo provista por Expo Go
+  const expoHost =
     Constants.expoConfig?.hostUri?.split(':')[0] ||
-    (Constants as any).manifest2?.extra?.expoGo?.debuggerHost?.split(':')[0] ||
-    '192.168.1.12';
-  return `http://${host}:${API_PORT}`;
+    (Constants as any).manifest2?.extra?.expoGo?.debuggerHost?.split(':')[0];
+
+  if (expoHost && expoHost !== 'localhost' && expoHost !== '127.0.0.1') {
+    return `http://${expoHost}:${API_PORT}`;
+  }
+
+  // 3. Emulador Android de Android Studio (comunica con localhost del host vía 10.0.2.2)
+  if (Platform.OS === 'android') {
+    return `http://10.0.2.2:${API_PORT}`;
+  }
+
+  // 4. Fallback para iOS Simulator o Web
+  return `http://localhost:${API_PORT}`;
 }
 
 export const API_BASE_URL = resolveApiBaseUrl();
@@ -35,6 +51,51 @@ export interface ApiScanResponse {
     source?: 'ai' | 'manual';
     confirmed?: boolean;
   }[];
+}
+
+import { Ingredient } from '../types';
+
+let getAuthTokenFn: (() => string | null) | null = null;
+
+/**
+ * Registra una función proveedora de token de autenticación para que las llamadas
+ * a la API incluyan automáticamente el encabezado Bearer token.
+ */
+export function registerAuthTokenProvider(fn: () => string | null) {
+  getAuthTokenFn = fn;
+}
+
+async function requestJson<T = any>(url: string, options?: RequestInit): Promise<T> {
+  let response: Response;
+  try {
+    const token = getAuthTokenFn ? getAuthTokenFn() : null;
+    const baseHeaders: Record<string, string> = {};
+    if (!(options?.body instanceof FormData)) {
+      baseHeaders['Content-Type'] = 'application/json';
+    }
+    if (token) {
+      baseHeaders['Authorization'] = `Bearer ${token}`;
+    }
+    const mergedHeaders = {
+      ...baseHeaders,
+      ...(options?.headers || {}),
+    };
+    response = await fetch(url, { ...options, headers: mergedHeaders });
+  } catch (err: any) {
+    throw new ApiError(
+      'No se pudo conectar con el servidor. Revisa tu conexión a internet o verifica que el backend esté iniciado.',
+      0,
+      true
+    );
+  }
+
+  if (!response.ok) {
+    const errorJson = await response.json().catch(() => null);
+    const detail = errorJson?.detail || 'Error en la solicitud al servidor';
+    throw new ApiError(detail, response.status, false);
+  }
+
+  return response.json();
 }
 
 /**
@@ -68,7 +129,7 @@ export async function scanImageWithApi(
 
   // 1. Envío directo JSON si tenemos base64 (cero bugs de FormData en Android)
   if (b64) {
-    const response = await fetch(`${API_BASE_URL}/api/v1/scan`, {
+    return requestJson<ApiScanResponse>(`${API_BASE_URL}/api/v1/scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -76,14 +137,6 @@ export async function scanImageWithApi(
         mime_type: mimeType,
       }),
     });
-
-    if (!response.ok) {
-      const errorJson = await response.json().catch(() => null);
-      const detail = errorJson?.detail || 'Error en el análisis';
-      throw new ApiError(detail, response.status);
-    }
-
-    return response.json();
   }
 
   // 2. Si es una URI local file://, convertir a base64 mediante FileReader estándar
@@ -100,7 +153,7 @@ export async function scanImageWithApi(
       reader.readAsDataURL(blob);
     });
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/scan`, {
+    return requestJson<ApiScanResponse>(`${API_BASE_URL}/api/v1/scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -108,14 +161,6 @@ export async function scanImageWithApi(
         mime_type: mimeType,
       }),
     });
-
-    if (!response.ok) {
-      const errorJson = await response.json().catch(() => null);
-      const detail = errorJson?.detail || 'Error en el análisis';
-      throw new ApiError(detail, response.status);
-    }
-
-    return response.json();
   } catch (convErr: any) {
     if (convErr instanceof ApiError) throw convErr;
     // 3. Fallback con FormData si la conversión previa fallase
@@ -126,18 +171,10 @@ export async function scanImageWithApi(
       type: mimeType,
     } as any);
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/scan`, {
+    return requestJson<ApiScanResponse>(`${API_BASE_URL}/api/v1/scan`, {
       method: 'POST',
       body: formData,
     });
-
-    if (!response.ok) {
-      const errorJson = await response.json().catch(() => null);
-      const detail = errorJson?.detail || 'Error en el análisis';
-      throw new ApiError(detail, response.status);
-    }
-
-    return response.json();
   }
 }
 
@@ -145,12 +182,7 @@ export async function scanImageWithApi(
  * Consulta sugerencias de recetas al backend de FastAPI si está disponible.
  */
 export async function fetchRecipesFromApi(): Promise<any[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/recipes`);
-  if (!response.ok) {
-    const errorJson = await response.json().catch(() => null);
-    throw new ApiError(errorJson?.detail || 'Error obteniendo recetas', response.status);
-  }
-  return response.json();
+  return requestJson<any[]>(`${API_BASE_URL}/api/v1/recipes`);
 }
 
 /**
@@ -163,7 +195,7 @@ export async function generateRecipesWithApi(
   count: number = 2,
   difficulty: string = 'any'
 ): Promise<any[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/recipes/generate`, {
+  return requestJson<any[]>(`${API_BASE_URL}/api/v1/recipes/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -174,12 +206,6 @@ export async function generateRecipesWithApi(
       difficulty,
     }),
   });
-
-  if (!response.ok) {
-    const errorJson = await response.json().catch(() => null);
-    throw new ApiError(errorJson?.detail || 'Error generando recetas', response.status);
-  }
-  return response.json();
 }
 
 /**
@@ -192,7 +218,7 @@ export async function getRecipeStepsWithApi(recipe: {
   missingIngredients: any[];
   difficulty?: string;
 }): Promise<string[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/recipes/steps`, {
+  const data = await requestJson<{ steps: string[] }>(`${API_BASE_URL}/api/v1/recipes/steps`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -204,12 +230,119 @@ export async function getRecipeStepsWithApi(recipe: {
     }),
   });
 
-  if (!response.ok) {
-    const errorJson = await response.json().catch(() => null);
-    throw new ApiError(errorJson?.detail || 'Error obteniendo los pasos de la receta', response.status);
-  }
-  const data = await response.json();
   return data.steps || [];
+}
+
+/**
+ * Obtiene el inventario completo del usuario desde el backend (conectado a Supabase).
+ */
+export async function fetchInventoryFromApi(): Promise<Ingredient[]> {
+  const data = await requestJson<any[]>(`${API_BASE_URL}/api/v1/inventory`);
+  return (data || []).map((item) => ({
+    id: item.id,
+    name: item.name,
+    category: item.category || 'other',
+    quantity: item.quantity !== undefined ? item.quantity : null,
+    unit: item.unit || 'units',
+    expirationDate: item.expirationDate || item.expiration_date || null,
+    confidence: item.confidence,
+    source: item.source || 'manual',
+    confirmed: item.confirmed ?? true,
+    imageUri: item.imageUri || item.image_uri,
+    notes: item.notes,
+  }));
+}
+
+/**
+ * Persiste un nuevo alimento en la base de datos (Supabase) a través de la API.
+ */
+export async function createInventoryItemWithApi(item: Partial<Ingredient>): Promise<Ingredient> {
+  const payload = {
+    id: item.id,
+    name: item.name,
+    category: item.category || 'other',
+    quantity: item.quantity,
+    unit: item.unit || 'units',
+    expirationDate: item.expirationDate || null,
+    confidence: item.confidence,
+    source: item.source || 'manual',
+    confirmed: item.confirmed ?? true,
+    imageUri: item.imageUri,
+    notes: item.notes,
+  };
+  const created = await requestJson<any>(`${API_BASE_URL}/api/v1/inventory`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return {
+    id: created.id,
+    name: created.name,
+    category: created.category || 'other',
+    quantity: created.quantity !== undefined ? created.quantity : null,
+    unit: created.unit || 'units',
+    expirationDate: created.expirationDate || created.expiration_date || null,
+    confidence: created.confidence,
+    source: created.source || 'manual',
+    confirmed: created.confirmed ?? true,
+    imageUri: created.imageUri || created.image_uri,
+    notes: created.notes,
+  };
+}
+
+/**
+ * Actualiza un alimento en la base de datos (Supabase) a través de la API.
+ */
+export async function updateInventoryItemWithApi(
+  id: string,
+  updates: Partial<Ingredient>
+): Promise<Ingredient> {
+  const payload: Record<string, any> = {};
+  if (updates.name !== undefined) payload.name = updates.name;
+  if (updates.category !== undefined) payload.category = updates.category;
+  if (updates.quantity !== undefined) payload.quantity = updates.quantity;
+  if (updates.unit !== undefined) payload.unit = updates.unit;
+  if (updates.expirationDate !== undefined) payload.expirationDate = updates.expirationDate;
+  if (updates.confirmed !== undefined) payload.confirmed = updates.confirmed;
+  if (updates.notes !== undefined) payload.notes = updates.notes;
+
+  const updated = await requestJson<any>(`${API_BASE_URL}/api/v1/inventory/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return {
+    id: updated.id,
+    name: updated.name,
+    category: updated.category || 'other',
+    quantity: updated.quantity !== undefined ? updated.quantity : null,
+    unit: updated.unit || 'units',
+    expirationDate: updated.expirationDate || updated.expiration_date || null,
+    confidence: updated.confidence,
+    source: updated.source || 'manual',
+    confirmed: updated.confirmed ?? true,
+    imageUri: updated.imageUri || updated.image_uri,
+    notes: updated.notes,
+  };
+}
+
+/**
+ * Elimina físicamente un alimento de la base de datos a través de la API.
+ */
+export async function deleteInventoryItemWithApi(id: string): Promise<boolean> {
+  await requestJson(`${API_BASE_URL}/api/v1/inventory/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  return true;
+}
+
+/**
+ * Elimina un lote de alimentos de la base de datos a través de la API.
+ */
+export async function batchDeleteInventoryItemsWithApi(ids: string[]): Promise<boolean> {
+  await requestJson(`${API_BASE_URL}/api/v1/inventory/batch-delete`, {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
+  return true;
 }
 
 
