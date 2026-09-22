@@ -27,9 +27,11 @@ import {
   ActionSheetModal,
   StaggerView,
   getBottomContentPadding,
+  Chip,
 } from '../src/components';
 import { sortRecipes } from '../src/utils/recipe-sorter';
 import { getValidTimeOptionsForFocus } from '../src/utils/recipe-validation';
+import { colors, radii, spacing, typography } from '../src/theme';
 
 type FilterTab = 'all' | 'high_match' | 'quick' | 'saved';
 
@@ -78,6 +80,15 @@ export default function RecipesScreen() {
   }, [validTimes, selectedTime]);
 
   const handleGenerate = async () => {
+    if (items.length === 0) {
+      setIsAiModalOpen(false);
+      Alert.alert(
+        'Despensa vacía',
+        'Añade al menos un alimento a tu inventario para que el Chef IA pueda crear recetas con lo que tienes disponible.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
     setIsGenerating(true);
     try {
       const generated = await generateWithAi(
@@ -194,15 +205,15 @@ export default function RecipesScreen() {
           accessibilityLabel="Abrir generador de recetas con inteligencia artificial"
         >
           <LinearGradient
-            colors={['#B94E35', '#863626']}
+            colors={[colors.primary, colors.primaryDark]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.aiBannerGradient}
           >
             <View style={styles.aiBannerIconWrap}>
-              <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+              <Ionicons name="sparkles" size={24} color={colors.surface} />
             </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
+            <View style={{ flex: 1, marginLeft: spacing.md }}>
               <View style={styles.aiTagBadge}>
                 <Text style={styles.aiTagText}>CHEF INTELIGENTE IA</Text>
               </View>
@@ -220,7 +231,7 @@ export default function RecipesScreen() {
 
       {/* ── Buscador y Control de Selección ── */}
       <View style={styles.searchSection}>
-        <View style={{ flex: 1, marginRight: 8 }}>
+        <View style={{ flex: 1, marginRight: spacing.sm }}>
           <SearchInput
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -238,62 +249,41 @@ export default function RecipesScreen() {
           <Ionicons
             name={isSelectMode ? 'close' : 'checkmark-done-outline'}
             size={18}
-            color={isSelectMode ? '#FFFFFF' : '#4B5563'}
+            color={isSelectMode ? colors.surface : colors.textSecondary}
           />
         </Pressable>
       </View>
 
-      {/* ── Tabs de Filtro Rápido (Cero emojis, vector icons limpios) ── */}
+      {/* ── Tabs de Filtro Rápido con Chip ── */}
       <View style={styles.tabsWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsList}>
-          <Pressable
+          <Chip
+            label="Todas"
+            selected={activeTab === 'all'}
             onPress={() => setActiveTab('all')}
-            style={[styles.tabPill, activeTab === 'all' && styles.tabPillActive]}
-          >
-            <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>Todas</Text>
-          </Pressable>
-          <Pressable
+            variant="filter"
+          />
+          <Chip
+            label="Mayor coincidencia"
+            icon="sparkles"
+            selected={activeTab === 'high_match'}
             onPress={() => setActiveTab('high_match')}
-            style={[styles.tabPill, activeTab === 'high_match' && styles.tabPillActive]}
-          >
-            <Ionicons
-              name="sparkles"
-              size={13}
-              color={activeTab === 'high_match' ? '#FFFFFF' : '#B94E35'}
-              style={{ marginRight: 5 }}
-            />
-            <Text style={[styles.tabText, activeTab === 'high_match' && styles.tabTextActive]}>
-              Mayor coincidencia
-            </Text>
-          </Pressable>
-          <Pressable
+            variant="filter"
+          />
+          <Chip
+            label="Rápidas (≤20 min)"
+            icon="time-outline"
+            selected={activeTab === 'quick'}
             onPress={() => setActiveTab('quick')}
-            style={[styles.tabPill, activeTab === 'quick' && styles.tabPillActive]}
-          >
-            <Ionicons
-              name="time-outline"
-              size={14}
-              color={activeTab === 'quick' ? '#FFFFFF' : '#6B7280'}
-              style={{ marginRight: 5 }}
-            />
-            <Text style={[styles.tabText, activeTab === 'quick' && styles.tabTextActive]}>
-              Rápidas (≤20 min)
-            </Text>
-          </Pressable>
-          <Pressable
+            variant="filter"
+          />
+          <Chip
+            label={`Favoritas (${recipes.filter((r) => r.isSaved).length})`}
+            icon="heart"
+            selected={activeTab === 'saved'}
             onPress={() => setActiveTab('saved')}
-            style={[styles.tabPill, activeTab === 'saved' && styles.tabPillActive]}
-          >
-            <Ionicons
-              name="heart"
-              size={13}
-              color={activeTab === 'saved' ? '#FFFFFF' : '#EF4444'}
-              style={{ marginRight: 5 }}
-            />
-            <Text style={[styles.tabText, activeTab === 'saved' && styles.tabTextActive]}>
-              Favoritas ({recipes.filter((r) => r.isSaved).length})
-            </Text>
-          </Pressable>
+            variant="filter"
+          />
         </ScrollView>
       </View>
 
@@ -371,7 +361,7 @@ export default function RecipesScreen() {
                     : 'square-outline'
                 }
                 size={16}
-                color="#B94E35"
+                color={colors.primary}
                 style={{ marginRight: 5 }}
               />
               <Text style={styles.bulkActionBtnText}>
@@ -390,7 +380,7 @@ export default function RecipesScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Eliminar recetas seleccionadas"
               >
-                <Ionicons name="trash-outline" size={15} color="#DC2626" style={{ marginRight: 4 }} />
+                <Ionicons name="trash-outline" size={15} color={colors.error.text} style={{ marginRight: spacing.xs }} />
                 <Text style={styles.bulkDeleteBtnText}>Eliminar ({selectedIds.size})</Text>
               </Pressable>
 
@@ -480,16 +470,21 @@ export default function RecipesScreen() {
 
             <View style={styles.modalHeader}>
               <View style={styles.modalIconWrap}>
-                <Ionicons name="sparkles" size={22} color="#B94E35" />
+                <Ionicons name="sparkles" size={22} color={colors.primary} />
               </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
+              <View style={{ flex: 1, marginLeft: spacing.md }}>
                 <Text style={styles.modalTitle}>Chef Inteligente IA</Text>
                 <Text style={styles.modalSubtitle}>
                   {items.length} alimentos detectados en tu despensa
                 </Text>
               </View>
-              <Pressable onPress={() => setIsAiModalOpen(false)} hitSlop={10}>
-                <Ionicons name="close-circle" size={26} color="#9CA3AF" />
+              <Pressable
+                onPress={() => setIsAiModalOpen(false)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar generador de recetas con IA"
+              >
+                <Ionicons name="close-circle" size={26} color={colors.textMuted} />
               </Pressable>
             </View>
 
@@ -534,7 +529,7 @@ export default function RecipesScreen() {
                 <Ionicons
                   name="leaf-outline"
                   size={20}
-                  color={selectedFocus === 'waste_reduction' ? '#B94E35' : '#66534A'}
+                  color={selectedFocus === 'waste_reduction' ? colors.primary : colors.textSecondary}
                 />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text
@@ -561,7 +556,7 @@ export default function RecipesScreen() {
                 <Ionicons
                   name="flash-outline"
                   size={20}
-                  color={selectedFocus === 'quick' ? '#B94E35' : '#66534A'}
+                  color={selectedFocus === 'quick' ? colors.primary : colors.textSecondary}
                 />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text
@@ -658,15 +653,15 @@ export default function RecipesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#FFF9F2' },
+  screen: { backgroundColor: colors.background },
   aiBannerWrapper: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
   aiBanner: {
     borderRadius: 28,
     overflow: 'hidden',
-    shadowColor: '#B94E35',
+    shadowColor: colors.primary,
     shadowOpacity: 0.25,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -679,13 +674,13 @@ const styles = StyleSheet.create({
   aiBannerGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
     paddingVertical: 18,
   },
   aiBannerIconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radii.containers,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -694,86 +689,64 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 10,
     paddingVertical: 3,
-    borderRadius: 999,
+    borderRadius: radii.circular,
     alignSelf: 'flex-start',
     marginBottom: 2,
   },
   aiTagText: {
-    color: '#FFFFFF',
-    fontSize: 9,
+    color: colors.textInverse,
+    fontSize: typography.sizes.micro,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   aiBannerTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: colors.textInverse,
+    fontSize: typography.sizes.body,
     fontWeight: '800',
   },
   aiBannerSubtitle: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     marginTop: 1,
   },
   searchSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: spacing.sm,
   },
   selectToggleBtn: {
     width: 52,
     height: 52,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radii.circular,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectToggleBtnActive: {
-    backgroundColor: '#B94E35',
-    borderColor: '#B94E35',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  tabsWrapper: { marginBottom: 8 },
+  tabsWrapper: { marginBottom: spacing.sm },
   tabsList: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  tabPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 40,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#EBDDD2',
-  },
-  tabPillActive: {
-    backgroundColor: '#B94E35',
-    borderColor: '#B94E35',
-  },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#66534A',
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   sortBarWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 6,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   sortBarLabel: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '700',
-    color: '#66534A',
-    marginRight: 8,
+    color: colors.textSecondary,
+    marginRight: spacing.sm,
   },
   sortList: {
     gap: 6,
@@ -781,68 +754,68 @@ const styles = StyleSheet.create({
   sortPill: {
     height: 36,
     paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radii.circular,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sortPillActive: {
-    backgroundColor: '#B94E35',
-    borderColor: '#B94E35',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   sortText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '600',
-    color: '#66534A',
+    color: colors.textSecondary,
   },
   sortTextActive: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '700',
   },
   labelWithHint: {
     flexDirection: 'column',
     alignItems: 'flex-start',
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
   },
   validationHintText: {
-    fontSize: 11,
+    fontSize: typography.sizes.caption,
     fontWeight: '600',
-    color: '#8A5A00',
+    color: colors.functional.expiringSoon.text,
     marginTop: 2,
   },
   timePillDisabled: {
-    backgroundColor: '#F8EDE2',
-    borderColor: '#EBDDD2',
+    backgroundColor: colors.surfaceVariant,
+    borderColor: colors.border,
     opacity: 0.4,
   },
   timePillTextDisabled: {
-    color: '#96857C',
+    color: colors.textMuted,
   },
   listContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: 110,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.scrim,
     justifyContent: 'flex-end',
   },
   modalDismissArea: {
     flex: 1,
   },
   modalSheet: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
     paddingTop: 14,
     paddingBottom: 36,
     maxHeight: '90%',
-    shadowColor: '#2B211D',
+    shadowColor: colors.textPrimary,
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
@@ -851,9 +824,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#EBDDD2',
+    backgroundColor: colors.border,
     alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -864,54 +837,54 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#FBE9E2',
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: typography.sizes.cardTitle,
     fontWeight: '800',
-    color: '#2B211D',
+    color: colors.textPrimary,
   },
   modalSubtitle: {
-    fontSize: 13,
-    color: '#66534A',
+    fontSize: typography.sizes.metadata,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   modalSectionLabel: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '700',
-    color: '#2B211D',
-    marginBottom: 8,
-    marginTop: 8,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
   },
   pillSelectorRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   timePill: {
     flex: 1,
     minHeight: 44,
     paddingVertical: 9,
-    borderRadius: 999,
-    backgroundColor: '#F8EDE2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
   },
   timePillActive: {
-    backgroundColor: '#FBE9E2',
-    borderColor: '#B94E35',
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
   },
   timePillText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '600',
-    color: '#66534A',
+    color: colors.textSecondary,
   },
   timePillTextActive: {
-    color: '#B94E35',
+    color: colors.primary,
     fontWeight: '700',
   },
   focusOptions: {
@@ -920,36 +893,36 @@ const styles = StyleSheet.create({
   focusCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    padding: spacing.lg,
+    borderRadius: radii.containers,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
   },
   focusCardActive: {
-    backgroundColor: '#FBE9E2',
-    borderColor: '#B94E35',
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
   },
   focusTitle: {
-    fontSize: 14,
+    fontSize: typography.sizes.bodySmall,
     fontWeight: '700',
-    color: '#2B211D',
+    color: colors.textPrimary,
   },
   focusTitleActive: {
-    color: '#863626',
+    color: colors.primaryDark,
   },
   focusDesc: {
-    fontSize: 12,
-    color: '#66534A',
+    fontSize: typography.sizes.label,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   bulkToolbar: {
     flexDirection: 'column',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 6,
     backgroundColor: 'transparent',
     marginBottom: 6,
-    gap: 8,
+    gap: spacing.sm,
   },
   bulkTopRow: {
     flexDirection: 'row',
@@ -960,7 +933,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 8,
+    gap: spacing.sm,
     paddingTop: 6,
   },
   bulkInfo: {
@@ -969,54 +942,54 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   bulkCountText: {
-    fontSize: 13,
+    fontSize: typography.sizes.metadata,
     fontWeight: '700',
-    color: '#66534A',
+    color: colors.textSecondary,
   },
   bulkSelectedText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '600',
-    color: '#B94E35',
+    color: colors.primary,
   },
   bulkActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: '#FBE9E2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1,
-    borderColor: '#F5D6C8',
+    borderColor: colors.border,
   },
   bulkActionBtnText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '700',
-    color: '#863626',
+    color: colors.primaryDark,
   },
   bulkDeleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: '#FBE5E3',
+    borderRadius: radii.circular,
+    backgroundColor: colors.error.background,
     borderWidth: 1,
-    borderColor: '#F4BCB8',
+    borderColor: colors.border,
   },
   bulkDeleteBtnText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '700',
-    color: '#A93632',
+    color: colors.error.text,
   },
   bulkCancelBtn: {
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: '#F8EDE2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
   },
   bulkCancelBtnText: {
-    fontSize: 12,
+    fontSize: typography.sizes.label,
     fontWeight: '700',
-    color: '#66534A',
+    color: colors.textSecondary,
   },
 });
