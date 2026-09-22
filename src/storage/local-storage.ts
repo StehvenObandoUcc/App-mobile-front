@@ -405,7 +405,7 @@ export const LocalStorage = {
       } else {
         // Producto nuevo en inventario
         const newIngredient: Ingredient = {
-          id: `ing-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+          id: `ing-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name: bought.name,
           category: bought.category,
           quantity: cleanQty, // Conserva null si es desconocida

@@ -41,7 +41,7 @@ export function useShoppingList() {
   ): Promise<ShoppingItem> => {
     const { unit: cleanUnit, quantity: cleanQty } = normalizeItemUnitAndQty(unit, quantity);
     const newItem: ShoppingItem = {
-      id: `shop-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      id: `shop-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: name.trim(),
       quantity: cleanQty,
       unit: cleanUnit,
@@ -87,7 +87,7 @@ export function useShoppingList() {
       } else {
         // Coincidencia ambigua o inexistente: crear ítem separado
         const newItem: ShoppingItem = {
-          id: `shop-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          id: `shop-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           name: missing.name,
           quantity: cleanQty, // Conserva null si es desconocida
           unit: cleanUnit,
