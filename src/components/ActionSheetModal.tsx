@@ -7,6 +7,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, typography, spacing, radii } from '../theme';
 
 export interface ActionSheetOption {
   label: string;
@@ -30,10 +31,6 @@ export interface ActionSheetModalProps {
   cancelText?: string;
 }
 
-/**
- * Componente unificado para menús contextuales y modales de confirmación (BUG-07, BUG-08).
- * Elimina la duplicación de modales y asegura coherencia visual con el Design System de Food AI.
- */
 export function ActionSheetModal({
   visible,
   onClose,
@@ -83,7 +80,7 @@ export function ActionSheetModal({
                   <Ionicons
                     name={action.icon}
                     size={20}
-                    color={action.isDestructive ? '#A93632' : '#B94E35'}
+                    color={action.isDestructive ? colors.error.text : colors.primary}
                     style={styles.actionIcon}
                   />
                   <Text
@@ -134,17 +131,17 @@ export function ActionSheetModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.scrim,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.floatingNav,
+    borderTopRightRadius: radii.floatingNav,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
     paddingBottom: 36,
-    shadowColor: '#000',
+    shadowColor: colors.textPrimary,
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 8,
@@ -153,80 +150,80 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.borderStrong,
     alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   title: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.sizes.cardTitle,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: 6,
   },
   description: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 8,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.sm,
     lineHeight: 20,
   },
   actionsList: {
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#EBDDD2',
-    gap: 12,
+    borderBottomColor: colors.border,
+    gap: spacing.md,
   },
   actionIcon: {
     marginRight: 2,
   },
   actionLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2B211D',
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
   },
   destructiveLabel: {
-    color: '#A93632',
+    color: colors.error.text,
   },
   confirmationActions: {
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
   confirmBtn: {
-    backgroundColor: '#B94E35',
-    borderRadius: 999,
+    backgroundColor: colors.primary,
+    borderRadius: radii.circular,
     minHeight: 52,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   confirmBtnDestructive: {
-    backgroundColor: '#A93632',
+    backgroundColor: colors.error.text,
   },
   confirmBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
+    color: colors.textInverse,
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.bold,
   },
   cancelBtn: {
-    backgroundColor: '#F8EDE2',
-    borderRadius: 999,
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: radii.circular,
     minHeight: 52,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   cancelBtnText: {
-    color: '#66534A',
-    fontSize: 15,
-    fontWeight: '700',
+    color: colors.textSecondary,
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.bold,
   },
 });

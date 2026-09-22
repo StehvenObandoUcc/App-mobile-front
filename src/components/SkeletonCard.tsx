@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
+import { colors, spacing, radii } from '../theme';
 
 export type SkeletonCardProps = {
   variant?: 'ingredient' | 'recipe';
@@ -33,7 +34,7 @@ export function SkeletonCard({ variant = 'ingredient' }: SkeletonCardProps) {
         <Animated.View style={[styles.recipeImagePlaceholder, { opacity }]} />
         <View style={styles.recipeBody}>
           <Animated.View style={[styles.line, { width: '70%', height: 18, opacity }]} />
-          <Animated.View style={[styles.line, { width: '90%', height: 14, marginTop: 8, opacity }]} />
+          <Animated.View style={[styles.line, { width: '90%', height: 14, marginTop: spacing.sm, opacity }]} />
           <View style={styles.recipeFooter}>
             <Animated.View style={[styles.pillPlaceholder, { opacity }]} />
             <Animated.View style={[styles.pillPlaceholder, { opacity }]} />
@@ -59,57 +60,57 @@ const styles = StyleSheet.create({
   ingredientCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     padding: 14,
-    borderRadius: 18,
-    marginBottom: 12,
+    borderRadius: radii.cards,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
   },
   avatarPlaceholder: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: '#E5E7EB',
+    borderRadius: radii.containers,
+    backgroundColor: colors.skeleton.background,
   },
   ingredientBody: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: spacing.md,
   },
   line: {
     borderRadius: 6,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.skeleton.background,
   },
   badgePlaceholder: {
     width: 72,
     height: 24,
-    borderRadius: 999,
-    backgroundColor: '#E5E7EB',
+    borderRadius: radii.circular,
+    backgroundColor: colors.skeleton.background,
   },
   recipeCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginBottom: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radii.cards,
+    marginBottom: spacing.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
   },
   recipeImagePlaceholder: {
     height: 140,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.skeleton.background,
   },
   recipeBody: {
-    padding: 16,
+    padding: spacing.lg,
   },
   recipeFooter: {
     flexDirection: 'row',
     marginTop: 14,
-    gap: 8,
+    gap: spacing.sm,
   },
   pillPlaceholder: {
     width: 68,
     height: 22,
-    borderRadius: 999,
-    backgroundColor: '#E5E7EB',
+    borderRadius: radii.circular,
+    backgroundColor: colors.skeleton.background,
   },
 });

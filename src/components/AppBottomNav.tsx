@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShoppingList } from '../hooks/useShoppingList';
+import { colors, typography, spacing, radii, elevations } from '../theme';
 
 export const NAV_HEIGHT = 64;
 export const NAV_BOTTOM_OFFSET = 12;
@@ -39,10 +40,10 @@ export function AppBottomNav() {
         >
           {isHome ? (
             <View style={styles.navActivePill}>
-              <Ionicons name="home" size={20} color="#B94E35" />
+              <Ionicons name="home" size={20} color={colors.primary} />
             </View>
           ) : (
-            <Ionicons name="home-outline" size={22} color="#66534A" />
+            <Ionicons name="home-outline" size={22} color={colors.textSecondary} />
           )}
           <Text style={isHome ? styles.navLabelActive : styles.navLabel}>Inicio</Text>
         </Pressable>
@@ -58,10 +59,10 @@ export function AppBottomNav() {
         >
           {isInventory ? (
             <View style={styles.navActivePill}>
-              <Ionicons name="basket" size={20} color="#B94E35" />
+              <Ionicons name="basket" size={20} color={colors.primary} />
             </View>
           ) : (
-            <Ionicons name="basket-outline" size={22} color="#66534A" />
+            <Ionicons name="basket-outline" size={22} color={colors.textSecondary} />
           )}
           <Text style={isInventory ? styles.navLabelActive : styles.navLabel}>Despensa</Text>
         </Pressable>
@@ -74,7 +75,7 @@ export function AppBottomNav() {
           accessibilityLabel="Escanear alimentos con la cámara"
         >
           <View style={styles.navFabCircle}>
-            <Ionicons name="camera" size={22} color="#FFFFFF" />
+            <Ionicons name="camera" size={22} color={colors.textInverse} />
           </View>
         </Pressable>
 
@@ -89,10 +90,10 @@ export function AppBottomNav() {
         >
           {isRecipes ? (
             <View style={styles.navActivePill}>
-              <Ionicons name="restaurant" size={20} color="#B94E35" />
+              <Ionicons name="restaurant" size={20} color={colors.primary} />
             </View>
           ) : (
-            <Ionicons name="restaurant-outline" size={22} color="#66534A" />
+            <Ionicons name="restaurant-outline" size={22} color={colors.textSecondary} />
           )}
           <Text style={isRecipes ? styles.navLabelActive : styles.navLabel}>Recetas</Text>
         </Pressable>
@@ -109,10 +110,10 @@ export function AppBottomNav() {
           <View style={{ position: 'relative' }}>
             {isShopping ? (
               <View style={styles.navActivePill}>
-                <Ionicons name="cart" size={20} color="#B94E35" />
+                <Ionicons name="cart" size={20} color={colors.primary} />
               </View>
             ) : (
-              <Ionicons name="cart-outline" size={22} color="#66534A" />
+              <Ionicons name="cart-outline" size={22} color={colors.textSecondary} />
             )}
             {pendingItems.length > 0 && (
               <View style={styles.navBadge}>
@@ -130,65 +131,61 @@ export function AppBottomNav() {
 const styles = StyleSheet.create({
   bottomNavWrapper: {
     position: 'absolute',
-    left: 16,
-    right: 16,
+    left: spacing.lg,
+    right: spacing.lg,
     zIndex: 999,
   },
   bottomNavContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 32,
+    backgroundColor: colors.surface,
+    borderRadius: radii.floatingNav,
     borderWidth: 1,
-    borderColor: '#F0E4D8',
+    borderColor: colors.border,
     paddingVertical: 6,
-    paddingHorizontal: 10,
-    shadowColor: '#2B211D',
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    paddingHorizontal: spacing.md,
+    ...elevations.lg,
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 48,
-    minHeight: 48,
+    minWidth: spacing.touchTargetMin,
+    minHeight: spacing.touchTargetMin,
   },
   navActivePill: {
-    backgroundColor: '#FBE9E2',
-    paddingHorizontal: 16,
+    backgroundColor: colors.primaryContainer,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 5,
-    borderRadius: 999,
+    borderRadius: radii.circular,
     marginBottom: 2,
   },
   navLabel: {
-    fontSize: 11,
-    color: '#66534A',
-    fontWeight: '500',
+    fontSize: typography.sizes.caption,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.medium,
     marginTop: 2,
   },
   navLabelActive: {
-    fontSize: 11,
-    color: '#B94E35',
-    fontWeight: '700',
+    fontSize: typography.sizes.caption,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
     marginTop: 2,
   },
   navFabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 48,
-    minHeight: 48,
+    minWidth: spacing.touchTargetMin,
+    minHeight: spacing.touchTargetMin,
   },
   navFabCircle: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#B94E35',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#B94E35',
+    shadowColor: colors.primary,
     shadowOpacity: 0.35,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -198,18 +195,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -4,
     right: -6,
-    backgroundColor: '#B94E35',
+    backgroundColor: colors.primary,
     minWidth: 16,
     height: 16,
-    borderRadius: 8,
+    borderRadius: radii.circular,
     paddingHorizontal: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
   navBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: '700',
+    color: colors.textInverse,
+    fontSize: typography.sizes.micro,
+    lineHeight: typography.lineHeights.micro,
+    fontWeight: typography.weights.bold,
   },
   cardPressed: {
     opacity: 0.85,

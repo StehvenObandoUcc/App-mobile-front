@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from './PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
+import { colors, typography, spacing, radii } from '../theme';
 
 export interface M3DatePickerModalProps {
   visible: boolean;
@@ -31,7 +32,6 @@ export function M3DatePickerModal({
   onChange,
   onClose,
 }: M3DatePickerModalProps) {
-  // Inicializar año y mes a partir del valor actual o la fecha de hoy
   const initialDate = useMemo(() => {
     if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const [y, m, d] = value.split('-').map(Number);
@@ -44,7 +44,6 @@ export function M3DatePickerModal({
   const [currentMonth, setCurrentMonth] = useState(initialDate.getMonth());
   const [selectedDateStr, setSelectedDateStr] = useState(value || '');
 
-  // Sincronizar si cambia el value prop
   React.useEffect(() => {
     if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const [y, m, d] = value.split('-').map(Number);
@@ -72,11 +71,9 @@ export function M3DatePickerModal({
     }
   };
 
-  // Generar días del mes para la cuadrícula
   const calendarDays = useMemo(() => {
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
-    // Ajustar domingo (0) al final de la semana (6)
     const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
 
     const days: ({ day: number; dateStr: string; isCurrentMonth: boolean } | null)[] = [];
@@ -98,33 +95,30 @@ export function M3DatePickerModal({
     return days;
   }, [currentYear, currentMonth]);
 
-  const handleQuickAddDays = (daysToAdd: number) => {
+  const todayStr = useMemo(() => {
+    const now = new Date();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${now.getFullYear()}-${m}-${d}`;
+  }, []);
+
+  const handleQuickSelect = (daysToAdd: number) => {
     const target = new Date();
     target.setDate(target.getDate() + daysToAdd);
-    const y = target.getFullYear();
     const m = String(target.getMonth() + 1).padStart(2, '0');
     const d = String(target.getDate()).padStart(2, '0');
-    const newDateStr = `${y}-${m}-${d}`;
-    setSelectedDateStr(newDateStr);
-    setCurrentYear(y);
+    const str = `${target.getFullYear()}-${m}-${d}`;
+    setSelectedDateStr(str);
+    setCurrentYear(target.getFullYear());
     setCurrentMonth(target.getMonth());
   };
 
   const handleConfirm = () => {
-    onChange(selectedDateStr);
+    if (selectedDateStr) {
+      onChange(selectedDateStr);
+    }
     onClose();
   };
-
-  const handleClear = () => {
-    setSelectedDateStr('');
-    onChange('');
-    onClose();
-  };
-
-  const todayStr = useMemo(() => {
-    const t = new Date();
-    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-  }, []);
 
   return (
     <Modal
@@ -134,84 +128,100 @@ export function M3DatePickerModal({
       onRequestClose={onClose}
     >
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel="Cerrar selector de fecha"
+        />
         <View style={styles.card}>
-          {/* Cabecera */}
           <View style={styles.header}>
             <View style={styles.iconCircle}>
-              <Ionicons name="calendar" size={22} color="#B94E35" />
+              <Ionicons name="calendar" size={22} color={colors.primary} />
             </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.headerTitle}>Fecha de vencimiento</Text>
+            <View style={{ marginLeft: spacing.md, flex: 1 }}>
+              <Text style={styles.headerTitle}>Fecha de Vencimiento</Text>
               <Text style={styles.headerSubtitle}>
-                {selectedDateStr ? `Seleccionada: ${selectedDateStr}` : 'Sin fecha definida'}
+                {selectedDateStr || 'Selecciona un día'}
               </Text>
             </View>
-            <Pressable onPress={onClose} hitSlop={8}>
-              <Ionicons name="close" size={22} color="#66534A" />
-            </Pressable>
           </View>
 
-          {/* Píldoras de Acceso Rápido */}
-          <Text style={styles.sectionLabel}>Atajos rápidos:</Text>
+          <Text style={styles.sectionLabel}>Atajos Rápidos</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickScroll}>
             {[
               { label: 'Hoy', days: 0 },
               { label: '+3 días', days: 3 },
-              { label: '+1 semana', days: 7 },
-              { label: '+2 semanas', days: 14 },
+              { label: '+1 sem', days: 7 },
+              { label: '+2 sem', days: 14 },
               { label: '+1 mes', days: 30 },
-            ].map((shortcut) => (
+              { label: '+3 meses', days: 90 },
+            ].map((shortcut, idx) => (
               <Pressable
-                key={shortcut.label}
-                onPress={() => handleQuickAddDays(shortcut.days)}
+                key={idx}
                 style={styles.quickPill}
+                onPress={() => handleQuickSelect(shortcut.days)}
+                accessibilityRole="button"
+                accessibilityLabel={shortcut.label}
               >
                 <Text style={styles.quickPillText}>{shortcut.label}</Text>
               </Pressable>
             ))}
           </ScrollView>
 
-          {/* Navegación de Mes */}
           <View style={styles.monthNav}>
-            <Pressable onPress={handlePrevMonth} style={styles.navArrow} hitSlop={10}>
-              <Ionicons name="chevron-back" size={20} color="#B94E35" />
+            <Pressable
+              onPress={handlePrevMonth}
+              hitSlop={10}
+              style={styles.navArrow}
+              accessibilityRole="button"
+              accessibilityLabel="Mes anterior"
+            >
+              <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
             </Pressable>
+
             <Text style={styles.monthTitle}>
               {MONTH_NAMES[currentMonth]} {currentYear}
             </Text>
-            <Pressable onPress={handleNextMonth} style={styles.navArrow} hitSlop={10}>
-              <Ionicons name="chevron-forward" size={20} color="#B94E35" />
+
+            <Pressable
+              onPress={handleNextMonth}
+              hitSlop={10}
+              style={styles.navArrow}
+              accessibilityRole="button"
+              accessibilityLabel="Mes siguiente"
+            >
+              <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
             </Pressable>
           </View>
 
-          {/* Etiquetas de Días (Lu, Ma...) */}
           <View style={styles.dayLabelsRow}>
-            {DAY_LABELS.map((label) => (
-              <Text key={label} style={styles.dayLabelText}>
-                {label}
+            {DAY_LABELS.map((d, i) => (
+              <Text key={i} style={styles.dayLabelText}>
+                {d}
               </Text>
             ))}
           </View>
 
-          {/* Cuadrícula del Calendario */}
           <View style={styles.grid}>
-            {calendarDays.map((item, index) => {
-              if (!item) {
-                return <View key={`empty-${index}`} style={styles.dayCell} />;
+            {calendarDays.map((cell, index) => {
+              if (!cell) {
+                return <View key={index} style={styles.dayCell} />;
               }
-              const isSelected = item.dateStr === selectedDateStr;
-              const isToday = item.dateStr === todayStr;
+
+              const isSelected = cell.dateStr === selectedDateStr;
+              const isToday = cell.dateStr === todayStr;
 
               return (
                 <Pressable
-                  key={item.dateStr}
-                  onPress={() => setSelectedDateStr(item.dateStr)}
+                  key={index}
                   style={[
                     styles.dayCell,
                     isSelected && styles.dayCellSelected,
                     isToday && !isSelected && styles.dayCellToday,
                   ]}
+                  onPress={() => setSelectedDateStr(cell.dateStr)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${cell.day} de ${MONTH_NAMES[currentMonth]}`}
                 >
                   <Text
                     style={[
@@ -220,27 +230,24 @@ export function M3DatePickerModal({
                       isToday && !isSelected && styles.dayTextToday,
                     ]}
                   >
-                    {item.day}
+                    {cell.day}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
 
-          {/* Acciones */}
           <View style={styles.footerRow}>
-            {selectedDateStr ? (
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <SecondaryButton
-                  title="Quitar fecha"
-                  variant="outline"
-                  onPress={handleClear}
-                />
-              </View>
-            ) : null}
-            <View style={{ flex: 1.5 }}>
+            <View style={{ flex: 1, marginRight: spacing.sm }}>
+              <SecondaryButton
+                title="Cancelar"
+                variant="outline"
+                onPress={onClose}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
               <PrimaryButton
-                title={selectedDateStr ? 'Confirmar' : 'Cerrar'}
+                title="Guardar"
                 onPress={handleConfirm}
               />
             </View>
@@ -254,19 +261,19 @@ export function M3DatePickerModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: colors.scrim,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
   },
   card: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
+    backgroundColor: colors.surface,
+    borderRadius: radii.containers,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
-    padding: 20,
-    shadowColor: '#2B211D',
+    borderColor: colors.border,
+    padding: spacing.xl,
+    shadowColor: colors.textPrimary,
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 8,
@@ -279,62 +286,62 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 42,
     height: 42,
-    borderRadius: 21,
-    backgroundColor: '#FBE9E2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#2B211D',
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.heavy,
+    color: colors.textPrimary,
   },
   headerSubtitle: {
-    fontSize: 12,
-    color: '#66534A',
+    fontSize: typography.sizes.label,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#66534A',
+    fontSize: typography.sizes.label,
+    fontWeight: typography.weights.bold,
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   quickScroll: {
     marginBottom: 14,
   },
   quickPill: {
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#F8EDE2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
-    marginRight: 8,
+    borderColor: colors.border,
+    marginRight: spacing.sm,
   },
   quickPillText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#863626',
+    fontSize: typography.sizes.label,
+    fontWeight: typography.weights.bold,
+    color: colors.primaryDark,
   },
   monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: '#F4ECE4',
-    marginBottom: 8,
+    borderTopColor: colors.surfaceVariant,
+    marginBottom: spacing.sm,
   },
   navArrow: {
     padding: 6,
-    borderRadius: 16,
-    backgroundColor: '#F8EDE2',
+    borderRadius: radii.cards,
+    backgroundColor: colors.surfaceVariant,
   },
   monthTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#2B211D',
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.heavy,
+    color: colors.textPrimary,
   },
   dayLabelsRow: {
     flexDirection: 'row',
@@ -344,43 +351,43 @@ const styles = StyleSheet.create({
   dayLabelText: {
     width: 38,
     textAlign: 'center',
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#96857C',
+    fontSize: typography.sizes.caption,
+    fontWeight: typography.weights.bold,
+    color: colors.textMuted,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-around',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   dayCell: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: radii.circular,
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 2,
   },
   dayCellSelected: {
-    backgroundColor: '#B94E35',
+    backgroundColor: colors.primary,
   },
   dayCellToday: {
     borderWidth: 1.5,
-    borderColor: '#B94E35',
+    borderColor: colors.primary,
   },
   dayText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2B211D',
+    fontSize: typography.sizes.metadata,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
   },
   dayTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '800',
+    color: colors.textInverse,
+    fontWeight: typography.weights.heavy,
   },
   dayTextToday: {
-    color: '#B94E35',
-    fontWeight: '800',
+    color: colors.primary,
+    fontWeight: typography.weights.heavy,
   },
   footerRow: {
     flexDirection: 'row',

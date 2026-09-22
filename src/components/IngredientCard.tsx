@@ -1,8 +1,12 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Ingredient, IngredientCategory, ExpirationStatus } from '../types';
-import { StatusBadge } from './StatusBadge';
+import { Ingredient, IngredientCategory } from '../types';
+import { Chip } from './Chip';
+import { colors, typography, spacing, radii, elevations } from '../theme';
+import { getExpirationStatus } from '../utils/expiration';
+
+export { getExpirationStatus };
 
 export type IngredientCardProps = {
   ingredient: Ingredient;
@@ -16,40 +20,17 @@ export type IngredientCardProps = {
   onToggleSelect?: () => void;
 };
 
-const CATEGORY_MAP: Record<
-  IngredientCategory,
-  { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string }
-> = {
-  vegetable: { icon: 'leaf-outline', color: '#28613C', bg: '#EAF4ED' },
-  fruit: { icon: 'nutrition-outline', color: '#C85A32', bg: '#FDF0EA' },
-  protein: { icon: 'restaurant-outline', color: '#A93632', bg: '#FBE5E3' },
-  dairy: { icon: 'water-outline', color: '#2A5A78', bg: '#EBF2F7' },
-  grain: { icon: 'grid-outline', color: '#94580C', bg: '#FEF6E9' },
-  legume: { icon: 'ellipse-outline', color: '#6B4D8A', bg: '#F5EFFB' },
-  sauce: { icon: 'color-fill-outline', color: '#B94E35', bg: '#FBE9E2' },
-  snack: { icon: 'fast-food-outline', color: '#E58A45', bg: '#FFF1E3' },
-  other: { icon: 'cube-outline', color: '#66534A', bg: '#F8EDE2' },
+const CATEGORY_ICONS: Record<IngredientCategory, keyof typeof Ionicons.glyphMap> = {
+  vegetable: 'leaf-outline',
+  fruit: 'nutrition-outline',
+  protein: 'restaurant-outline',
+  dairy: 'water-outline',
+  grain: 'grid-outline',
+  legume: 'ellipse-outline',
+  sauce: 'color-fill-outline',
+  snack: 'fast-food-outline',
+  other: 'cube-outline',
 };
-
-export function getExpirationStatus(dateStr: string | null): {
-  status: ExpirationStatus;
-  label: string;
-} {
-  if (!dateStr) {
-    return { status: 'unknown', label: 'Sin fecha' };
-  }
-  const diffDays = Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) {
-    return { status: 'expired', label: 'Vencido' };
-  }
-  if (diffDays === 0) {
-    return { status: 'expiringSoon', label: 'Vence hoy' };
-  }
-  if (diffDays <= 3) {
-    return { status: 'expiringSoon', label: `Vence en ${diffDays}d` };
-  }
-  return { status: 'fresh', label: `${diffDays}d restantes` };
-}
 
 export function IngredientCard({
   ingredient,
@@ -62,7 +43,8 @@ export function IngredientCard({
   isSelected = false,
   onToggleSelect,
 }: IngredientCardProps) {
-  const cat = CATEGORY_MAP[ingredient.category] || CATEGORY_MAP.other;
+  const catColor = colors.categories[ingredient.category] || colors.categories.other;
+  const catIcon = CATEGORY_ICONS[ingredient.category] || CATEGORY_ICONS.other;
   const expiry = getExpirationStatus(ingredient.expirationDate);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -139,14 +121,14 @@ export function IngredientCard({
             <Ionicons
               name={isSelected ? 'checkmark' : 'ellipse-outline'}
               size={16}
-              color={isSelected ? '#FFFFFF' : '#9CA3AF'}
+              color={isSelected ? colors.textInverse : colors.textMuted}
             />
           </Pressable>
         )}
 
         {/* Icono de categoría */}
-        <View style={[styles.iconWrap, { backgroundColor: cat.bg }]}>
-          <Ionicons name={cat.icon} size={24} color={cat.color} />
+        <View style={[styles.iconWrap, { backgroundColor: catColor.background }]}>
+          <Ionicons name={catIcon} size={24} color={catColor.text} />
         </View>
 
         {/* Contenido central */}
@@ -162,7 +144,7 @@ export function IngredientCard({
                 </Text>
               </View>
             )}
-            <StatusBadge status={expiry.status} label={expiry.label} />
+            <Chip variant="status" status={expiry.status} label={expiry.label} />
           </View>
         </View>
       </Pressable>
@@ -172,98 +154,74 @@ export function IngredientCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
+    backgroundColor: colors.surface,
+    borderRadius: radii.containers,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: spacing.sm + 2,
     borderWidth: 1,
-    borderColor: '#F0E4D8',
-    shadowColor: '#2B211D',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    borderColor: colors.border,
+    ...elevations.sm,
   },
   cardSelected: {
-    borderColor: '#B94E35',
-    backgroundColor: '#FDF5F2',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
   },
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: 12,
-    backgroundColor: '#F8EDE2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#EBDDD2',
-    marginRight: 10,
+    borderColor: colors.border,
+    marginRight: spacing.sm + 2,
   },
   checkboxActive: {
-    backgroundColor: '#B94E35',
-    borderColor: '#B94E35',
-  },
-  pressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }],
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   iconWrap: {
     width: 48,
     height: 48,
-    borderRadius: 18,
+    borderRadius: radii.cards,
     alignItems: 'center',
     justifyContent: 'center',
   },
   body: {
     flex: 1,
-    marginLeft: 12,
-    marginRight: 8,
+    marginLeft: spacing.md,
+    marginRight: spacing.sm,
   },
   name: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#2B211D',
+    fontSize: typography.sizes.body,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
     marginBottom: 5,
     lineHeight: 20,
   },
   detailsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     flexWrap: 'wrap',
   },
   quantityPill: {
-    backgroundColor: '#F8EDE2',
+    backgroundColor: colors.surfaceVariant,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.circular,
     justifyContent: 'center',
     alignItems: 'center',
   },
   quantityText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#66534A',
+    fontSize: typography.sizes.label,
+    fontWeight: typography.weights.semibold,
+    color: colors.textSecondary,
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 16,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  actionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F8EDE2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionPressed: {
-    backgroundColor: '#EBDDD2',
   },
 });

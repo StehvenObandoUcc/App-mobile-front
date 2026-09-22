@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TextInput, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, typography, spacing, radii } from '../theme';
 
 export type SearchInputProps = {
   value: string;
@@ -17,12 +18,12 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <View style={styles.container}>
-      <Ionicons name="search-outline" size={20} color="#66534A" style={styles.searchIcon} />
+      <Ionicons name="search-outline" size={20} color={colors.textSecondary} style={styles.searchIcon} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#96857C"
+        placeholderTextColor={colors.textMuted}
         style={styles.input}
         returnKeyType="search"
         accessibilityRole="search"
@@ -40,7 +41,7 @@ export function SearchInput({
           hitSlop={8}
           style={styles.clearButton}
         >
-          <Ionicons name="close-circle" size={18} color="#66534A" />
+          <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
         </Pressable>
       )}
     </View>
@@ -50,24 +51,24 @@ export function SearchInput({
 const styles = StyleSheet.create({
   container: {
     height: 52,
-    backgroundColor: '#F8EDE2',
-    borderRadius: 999,
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: radii.circular,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
+    paddingHorizontal: spacing.lg,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: spacing.sm,
   },
   input: {
     flex: 1,
     height: '100%',
-    fontSize: 15,
-    color: '#2B211D',
+    fontSize: typography.sizes.body,
+    color: colors.textPrimary,
   },
   clearButton: {
-    padding: 4,
+    padding: spacing.xs,
   },
 });

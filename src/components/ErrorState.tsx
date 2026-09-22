@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from './PrimaryButton';
+import { colors, typography, spacing, radii } from '../theme';
 
 export type ErrorStateProps = {
   title?: string;
@@ -17,7 +18,7 @@ export function ErrorState({
   return (
     <View style={styles.container}>
       <View style={styles.iconCircle}>
-        <Ionicons name="cloud-offline-outline" size={44} color="#EF4444" />
+        <Ionicons name="cloud-offline-outline" size={44} color={colors.error.text} />
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
@@ -32,31 +33,31 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxxl,
     paddingVertical: 48,
   },
   iconCircle: {
     width: 88,
     height: 88,
-    borderRadius: 44,
-    backgroundColor: '#FEF2F2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.error.background,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: typography.sizes.sectionTitle,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   message: {
-    fontSize: 15,
-    color: '#6B7280',
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
   },
   buttonWrap: {
     width: '100%',

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from './PrimaryButton';
+import { colors, typography, spacing, radii, elevations } from '../theme';
 
 export type EmptyStateProps = {
   title: string;
@@ -21,7 +22,7 @@ export function EmptyState({
   return (
     <View style={styles.container}>
       <View style={styles.iconCircle}>
-        <Ionicons name={iconName} size={44} color="#B94E35" />
+        <Ionicons name={iconName} size={44} color={colors.primary} />
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
@@ -38,38 +39,34 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxxl,
     paddingVertical: 48,
   },
   iconCircle: {
     width: 88,
     height: 88,
-    borderRadius: 44,
-    backgroundColor: '#FBE9E2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.primaryContainer,
     borderWidth: 1.5,
-    borderColor: '#F5D6C8',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
-    shadowColor: '#2B211D',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    marginBottom: spacing.xl,
+    ...elevations.sm,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2B211D',
+    fontSize: typography.sizes.sectionTitle,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   description: {
-    fontSize: 15,
-    color: '#66534A',
+    fontSize: typography.sizes.body,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
   },
   actionWrap: {
     width: '100%',

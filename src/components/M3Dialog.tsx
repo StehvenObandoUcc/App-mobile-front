@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from './PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
+import { colors, typography, spacing, radii } from '../theme';
 
 export interface M3DialogProps {
   visible: boolean;
@@ -68,10 +69,10 @@ export function M3Dialog({
   };
 
   const typeStyles = {
-    success: { bg: '#EAF4ED', color: '#28613C' },
-    info: { bg: '#FBE9E2', color: '#B94E35' },
-    warning: { bg: '#FFF2D7', color: '#8A5A00' },
-    error: { bg: '#FBE5E3', color: '#A93632' },
+    success: { bg: colors.functional.fresh.background, color: colors.functional.fresh.text },
+    info: { bg: colors.primaryContainer, color: colors.primary },
+    warning: { bg: colors.functional.expiringSoon.background, color: colors.functional.expiringSoon.text },
+    error: { bg: colors.error.background, color: colors.error.text },
   };
 
   const selectedType = typeStyles[type] || typeStyles.info;
@@ -108,7 +109,7 @@ export function M3Dialog({
 
           <View style={styles.actionsRow}>
             {cancelText && onCancel && (
-              <View style={{ flex: 1, marginRight: 8 }}>
+              <View style={{ flex: 1, marginRight: spacing.sm }}>
                 <SecondaryButton
                   title={cancelText}
                   variant="outline"
@@ -132,22 +133,22 @@ export function M3Dialog({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: colors.scrim,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 28,
   },
   dialogCard: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
+    backgroundColor: colors.surface,
+    borderRadius: radii.containers,
     borderWidth: 1,
-    borderColor: '#EBDDD2',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 20,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
     alignItems: 'center',
-    shadowColor: '#2B211D',
+    shadowColor: colors.textPrimary,
     shadowOpacity: 0.12,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
@@ -157,25 +158,25 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radii.circular,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#2B211D',
+    fontSize: typography.sizes.cardTitle,
+    fontWeight: typography.weights.heavy,
+    color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     letterSpacing: -0.2,
   },
   message: {
-    fontSize: 14,
-    color: '#66534A',
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   actionsRow: {
     flexDirection: 'row',

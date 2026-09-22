@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recipe } from '../types';
+import { colors, radii, spacing, typography, elevations } from '../theme';
 
 export type RecipeCardProps = {
   recipe: Recipe;
@@ -13,10 +14,10 @@ export type RecipeCardProps = {
   onToggleSelect?: () => void;
 };
 
-const DIFFICULTY_MAP = {
-  easy: { label: 'Fácil', color: '#28613C', bg: '#EAF4ED' },
-  medium: { label: 'Media', color: '#8A5A00', bg: '#FFF2D7' },
-  hard: { label: 'Difícil', color: '#A93632', bg: '#FBE5E3' },
+const DIFFICULTY_LABELS: Record<Recipe['difficulty'], string> = {
+  easy: 'Fácil',
+  medium: 'Media',
+  hard: 'Difícil',
 };
 
 export function RecipeCard({
@@ -28,7 +29,8 @@ export function RecipeCard({
   isSelected = false,
   onToggleSelect,
 }: RecipeCardProps) {
-  const diff = DIFFICULTY_MAP[recipe.difficulty] || DIFFICULTY_MAP.easy;
+  const diff = colors.difficulty[recipe.difficulty] || colors.difficulty.easy;
+  const diffLabel = DIFFICULTY_LABELS[recipe.difficulty] || DIFFICULTY_LABELS.easy;
   const totalIngredients = recipe.availableIngredients.length + recipe.missingIngredients.length;
   const availableCount = recipe.availableIngredients.length;
 
@@ -108,7 +110,7 @@ export function RecipeCard({
     <Animated.View
       style={{
         opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+        transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
       }}
     >
       <Pressable
@@ -122,85 +124,85 @@ export function RecipeCard({
           isSelected && styles.cardSelected,
         ]}
         accessibilityRole="button"
-        accessibilityHint={isSelectMode ? 'Toca para seleccionar esta receta' : 'Mantén presionado para seleccionar'}
-        accessibilityLabel={`Receta ${recipe.title}, coincidencia del ${recipe.matchScore} por ciento`}
+        accessibilityLabel={`Receta ${recipe.title}, coincidencia ${recipe.matchScore}%, dificultad ${diffLabel}`}
       >
-        {/* Cabecera superior con Badges y Guardar / Selección */}
+        {/* Cabecera: Checkbox / Badge de coincidencia y Botón Guardar */}
         <View style={styles.topRow}>
           {isSelectMode ? (
             <Pressable
               onPress={onToggleSelect}
-              style={[styles.checkbox, isSelected && styles.checkboxActive]}
               hitSlop={10}
+              style={[styles.checkbox, isSelected && styles.checkboxActive]}
             >
               <Ionicons
                 name={isSelected ? 'checkmark' : 'ellipse-outline'}
-                size={18}
-                color={isSelected ? '#FFFFFF' : '#9CA3AF'}
+                size={16}
+                color={isSelected ? colors.textInverse : colors.textMuted}
               />
             </Pressable>
           ) : (
             <View style={styles.matchBadge}>
-              <Ionicons name="sparkles" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
-              <Text style={styles.matchText}>{recipe.matchScore}% con tu despensa</Text>
+              <Ionicons name="sparkles" size={13} color={colors.textInverse} style={{ marginRight: spacing.xs }} />
+              <Text style={styles.matchText}>{recipe.matchScore}% Match</Text>
             </View>
           )}
 
-          {!isSelectMode && onSave && (
+          {onSave && (
             <Pressable
               onPress={handleSavePress}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel={recipe.isSaved ? 'Quitar de guardados' : 'Guardar receta'}
+              hitSlop={8}
               style={styles.saveButton}
+              accessibilityRole="button"
+              accessibilityLabel={recipe.isSaved ? 'Quitar de guardadas' : 'Guardar receta'}
             >
               <Animated.View style={{ transform: [{ scale: heartScale }] }}>
                 <Ionicons
                   name={recipe.isSaved ? 'heart' : 'heart-outline'}
-                  size={22}
-                  color={recipe.isSaved ? '#EF4444' : '#9CA3AF'}
+                  size={20}
+                  color={recipe.isSaved ? colors.primary : colors.textSecondary}
                 />
               </Animated.View>
             </Pressable>
           )}
         </View>
 
-        {/* Información principal */}
-        <Text style={styles.title} numberOfLines={2}>
+        {/* Título y descripción */}
+        <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
           {recipe.title}
         </Text>
-        <Text style={styles.description} numberOfLines={2}>
+        <Text style={styles.description} numberOfLines={2} ellipsizeMode="tail">
           {recipe.description}
         </Text>
 
-        {/* Metadatos en formato Pill (estilo Delivery) */}
+        {/* Metadatos: Tiempo, Dificultad, Porciones */}
         <View style={styles.metaRow}>
-          {recipe.prepTimeMinutes && (
+          {recipe.prepTimeMinutes !== null && (
             <View style={styles.metaPill}>
-              <Ionicons name="time-outline" size={13} color="#6B7280" style={{ marginRight: 4 }} />
+              <Ionicons name="time-outline" size={14} color={colors.textSecondary} style={{ marginRight: spacing.xs }} />
               <Text style={styles.metaText}>{recipe.prepTimeMinutes} min</Text>
             </View>
           )}
-          {recipe.servings && (
+
+          <View style={[styles.metaPill, { backgroundColor: diff.background }]}>
+            <Ionicons name="speedometer-outline" size={14} color={diff.text} style={{ marginRight: spacing.xs }} />
+            <Text style={[styles.metaText, { color: diff.text }]}>{diffLabel}</Text>
+          </View>
+
+          {recipe.servings !== null && (
             <View style={styles.metaPill}>
-              <Ionicons name="people-outline" size={13} color="#6B7280" style={{ marginRight: 4 }} />
+              <Ionicons name="people-outline" size={14} color={colors.textSecondary} style={{ marginRight: spacing.xs }} />
               <Text style={styles.metaText}>{recipe.servings} porc.</Text>
             </View>
           )}
-          <View style={[styles.metaPill, { backgroundColor: diff.bg }]}>
-            <Text style={[styles.metaText, { color: diff.color, fontWeight: '700' }]}>
-              {diff.label}
-            </Text>
-          </View>
         </View>
 
-        {/* Barra de progreso de ingredientes del inventario */}
+        {/* Barra de progreso de ingredientes en inventario */}
         <View style={styles.footer}>
           <View style={styles.inventoryInfo}>
             <Ionicons
               name={recipe.missingIngredients.length === 0 ? 'checkmark-circle' : 'restaurant-outline'}
               size={15}
-              color={recipe.missingIngredients.length === 0 ? '#28613C' : '#E58A45'}
+              color={recipe.missingIngredients.length === 0 ? colors.functional.fresh.text : colors.secondary}
               style={{ marginRight: 6 }}
             />
             <Text style={styles.inventoryText}>
@@ -210,7 +212,7 @@ export function RecipeCard({
           <Ionicons
             name={isSelectMode ? (isSelected ? 'checkmark-circle' : 'ellipse-outline') : 'chevron-forward'}
             size={18}
-            color={isSelected ? '#B94E35' : '#66534A'}
+            color={isSelected ? colors.primary : colors.textSecondary}
           />
         </View>
       </Pressable>
@@ -220,35 +222,31 @@ export function RecipeCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radii.containers,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#F0E4D8',
-    shadowColor: '#2B211D',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    borderColor: colors.border,
+    ...elevations.sm,
   },
   cardSelected: {
-    borderColor: '#B94E35',
-    backgroundColor: '#FDF5F2',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
   },
   checkbox: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: '#F8EDE2',
+    borderRadius: radii.buttons,
+    backgroundColor: colors.surfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#EBDDD2',
+    borderColor: colors.border,
   },
   checkboxActive: {
-    backgroundColor: '#B94E35',
-    borderColor: '#B94E35',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   topRow: {
     flexDirection: 'row',
@@ -259,55 +257,55 @@ const styles = StyleSheet.create({
   matchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#B94E35',
-    paddingHorizontal: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
     paddingVertical: 5,
-    borderRadius: 999,
+    borderRadius: radii.circular,
   },
   matchText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
+    color: colors.textInverse,
+    fontSize: typography.sizes.label,
+    fontWeight: typography.weights.bold,
   },
   saveButton: {
     width: 38,
     height: 38,
-    borderRadius: 19,
-    backgroundColor: '#F8EDE2',
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#2B211D',
-    marginBottom: 4,
+    fontSize: typography.sizes.cardTitle,
+    fontWeight: typography.weights.heavy,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
     lineHeight: 22,
   },
   description: {
-    fontSize: 13,
-    color: '#66534A',
+    fontSize: typography.sizes.metadata,
+    color: colors.textSecondary,
     lineHeight: 18,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   metaRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
     flexWrap: 'wrap',
   },
   metaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8EDE2',
+    backgroundColor: colors.surfaceVariant,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.circular,
   },
   metaText: {
-    fontSize: 12,
-    color: '#66534A',
-    fontWeight: '600',
+    fontSize: typography.sizes.label,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.semibold,
   },
   footer: {
     flexDirection: 'row',
@@ -315,7 +313,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F0E4D8',
+    borderTopColor: colors.border,
   },
   inventoryInfo: {
     flexDirection: 'row',
@@ -323,8 +321,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inventoryText: {
-    fontSize: 12,
-    color: '#66534A',
-    fontWeight: '600',
+    fontSize: typography.sizes.label,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.semibold,
   },
 });
