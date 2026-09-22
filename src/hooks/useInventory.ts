@@ -81,16 +81,6 @@ export function useInventory() {
     }
   };
 
-  const loadDemoData = async () => {
-    try {
-      await LocalStorage.loadDemoData();
-      await loadItems();
-    } catch (err: any) {
-      setError(err?.message || 'Error al cargar datos demo');
-      throw err;
-    }
-  };
-
   return {
     items,
     status,
@@ -101,6 +91,5 @@ export function useInventory() {
     deleteItem,
     deleteMultipleItems,
     consumeItem,
-    loadDemoData,
   };
 }

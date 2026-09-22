@@ -1,7 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ingredient, Recipe, ShoppingItem, IngredientCategory } from '../types';
-import { mockIngredients } from '../mocks/ingredients.mock';
-import { mockRecipes } from '../mocks/recipes.mock';
 import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
 
 export const DEFAULT_SHELF_LIFE_DAYS: Record<IngredientCategory, number> = {
@@ -144,18 +142,6 @@ export const LocalStorage = {
     memoryShoppingList = [];
     deletedRecipeIds = new Set();
     emitChange();
-  },
-
-  /**
-   * Carga explícita de datos de muestra para el usuario demo.
-   */
-  async loadDemoData(): Promise<void> {
-    ensureActiveUser();
-    deletedRecipeIds.clear();
-    memoryInventory = [...mockIngredients];
-    memoryRecipes = [...mockRecipes];
-    emitChange();
-    await persistToDisk();
   },
 
   /**
