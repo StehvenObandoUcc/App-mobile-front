@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Modal,
   Pressable,
+  Animated,
+  Easing,
+  StyleSheet as RNStyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radii } from '../theme';
@@ -43,16 +46,64 @@ export function ActionSheetModal({
   onConfirm,
   cancelText = 'Cancelar',
 }: ActionSheetModalProps) {
+  const slideAnim = useRef(new Animated.Value(400)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+
+  // Controla el estado de montaje para evitar animaciones en el primer render oculto
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setIsMounted(true);
+      // Pequeño defer para que el modal esté en el DOM antes de animar
+      requestAnimationFrame(() => {
+        Animated.parallel([
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            tension: 80,
+            friction: 12,
+            useNativeDriver: true,
+          }),
+          Animated.timing(backdropOpacity, {
+            toValue: 1,
+            duration: 220,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 400,
+          duration: 200,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(backdropOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setIsMounted(false));
+    }
+  }, [visible]);
+
   return (
     <Modal
-      visible={visible}
+      visible={isMounted}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          {/* Tirador visual de arrastre */}
+      <Animated.View style={[styles.overlay, { opacity: backdropOpacity }]}>
+        {/* Tap fuera para cerrar */}
+        <Pressable style={RNStyleSheet.absoluteFill} onPress={onClose} />
+
+        <Animated.View
+          style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
+        >
+          {/* Tirador visual */}
           <View style={styles.handle} />
 
           {/* Cabecera */}
@@ -69,7 +120,7 @@ export function ActionSheetModal({
               {actions.map((action, idx) => (
                 <Pressable
                   key={idx}
-                  style={styles.actionRow}
+                  style={({ pressed }) => [styles.actionRow, pressed && styles.actionRowPressed]}
                   onPress={() => {
                     onClose();
                     action.onPress();
@@ -97,9 +148,10 @@ export function ActionSheetModal({
           ) : (
             <View style={styles.confirmationActions}>
               <Pressable
-                style={[
+                style={({ pressed }) => [
                   styles.confirmBtn,
                   confirmDestructive && styles.confirmBtnDestructive,
+                  pressed && styles.confirmBtnPressed,
                 ]}
                 onPress={() => {
                   onClose();
@@ -115,15 +167,15 @@ export function ActionSheetModal({
 
           {/* Botón Cancelar siempre presente */}
           <Pressable
-            style={styles.cancelBtn}
+            style={({ pressed }) => [styles.cancelBtn, pressed && styles.cancelBtnPressed]}
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel={cancelText}
           >
             <Text style={styles.cancelBtnText}>{cancelText}</Text>
           </Pressable>
-        </Pressable>
-      </Pressable>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -181,6 +233,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.md,
   },
+  actionRowPressed: {
+    opacity: 0.7,
+  },
   actionIcon: {
     marginRight: 2,
   },
@@ -207,6 +262,10 @@ const styles = StyleSheet.create({
   confirmBtnDestructive: {
     backgroundColor: colors.error.text,
   },
+  confirmBtnPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
   confirmBtnText: {
     color: colors.textInverse,
     fontSize: typography.sizes.body,
@@ -220,6 +279,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.sm,
+  },
+  cancelBtnPressed: {
+    opacity: 0.75,
   },
   cancelBtnText: {
     color: colors.textSecondary,

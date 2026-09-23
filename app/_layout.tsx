@@ -15,9 +15,10 @@ export default function Layout() {
     if (!isHydrated) return;
 
     const inLoginScreen = segments[0] === 'login';
+    const inHomeScreen = !segments[0] || segments[0] === 'index';
 
-    if (!isAuthenticated && !inLoginScreen) {
-      // Bloquear acceso no autenticado y redirigir inmediatamente a login
+    // Permitir acceso libre a Inicio (/); redirigir a login solo en rutas que requieren sesión
+    if (!isAuthenticated && !inLoginScreen && !inHomeScreen) {
       router.replace('/login');
     }
   }, [isAuthenticated, isHydrated, segments, router]);
@@ -36,7 +37,7 @@ export default function Layout() {
   }
 
   const hideBottomNavOn = ['/login', '/scan', '/scan-result', '/recipe-detail'];
-  const showBottomNav = isAuthenticated && !hideBottomNavOn.includes(pathname);
+  const showBottomNav = !hideBottomNavOn.includes(pathname);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -49,31 +50,31 @@ export default function Layout() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="shopping-list"
-          options={{ title: 'Lista de Compras' }}
-        />
-        <Stack.Screen
-          name="scan"
-          options={{ title: 'Escanear Alimentos' }}
-        />
-        <Stack.Screen
-          name="scan-result"
-          options={{ title: 'Revisar Detección' }}
-        />
+        <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="index" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen
           name="inventory"
-          options={{ title: 'Mi Inventario' }}
+          options={{ headerShown: false, animation: 'fade' }}
         />
         <Stack.Screen
           name="recipes"
-          options={{ title: 'Recetas Sugeridas' }}
+          options={{ headerShown: false, animation: 'fade' }}
+        />
+        <Stack.Screen
+          name="shopping-list"
+          options={{ headerShown: false, animation: 'fade' }}
+        />
+        <Stack.Screen
+          name="scan"
+          options={{ title: 'Escanear Alimentos', animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="scan-result"
+          options={{ title: 'Revisar Detección', animation: 'slide_from_right' }}
         />
         <Stack.Screen
           name="recipe-detail"
-          options={{ title: 'Preparar Receta' }}
+          options={{ title: 'Preparar Receta', animation: 'slide_from_right' }}
         />
       </Stack>
       {showBottomNav && <AppBottomNav />}

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { colors, spacing, radii } from '../theme';
 
 export type SkeletonCardProps = {
@@ -7,19 +7,21 @@ export type SkeletonCardProps = {
 };
 
 export function SkeletonCard({ variant = 'ingredient' }: SkeletonCardProps) {
-  const opacity = useRef(new Animated.Value(0.4)).current;
+  const opacity = useRef(new Animated.Value(0.35)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
           toValue: 0.85,
-          duration: 700,
+          duration: 800,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
-          toValue: 0.4,
-          duration: 700,
+          toValue: 0.35,
+          duration: 800,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ])

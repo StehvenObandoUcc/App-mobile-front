@@ -339,6 +339,26 @@ export default function InventoryScreen() {
 
   return (
     <AppScreen style={styles.screen}>
+      {/* ── Cabecera Editorial Despensa ── */}
+      <View style={styles.headerSection}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.screenTitle}>Mi Despensa</Text>
+          <Text style={styles.screenSubtitle}>
+            {items.length === 0
+              ? 'Organiza tus alimentos e ingredientes'
+              : `${items.length} alimento${items.length === 1 ? '' : 's'} guardado${items.length === 1 ? '' : 's'}`}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => router.push('/scan')}
+          style={({ pressed }) => [styles.scanHeaderBtn, pressed && styles.scanHeaderBtnPressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Escanear con cámara"
+        >
+          <Ionicons name="camera-outline" size={20} color={colors.primary} />
+        </Pressable>
+      </View>
+
       {/* ── Buscador ── */}
       <View style={styles.searchSection}>
         <SearchInput
@@ -668,9 +688,42 @@ const styles = StyleSheet.create({
   screen: {
     backgroundColor: colors.background,
   },
-  searchSection: {
+  headerSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  screenTitle: {
+    fontSize: typography.sizes.screenTitle,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  screenSubtitle: {
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  scanHeaderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.circular,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanHeaderBtnPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.94 }],
+  },
+  searchSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
     paddingBottom: spacing.sm,
   },
   bulkToolbar: {

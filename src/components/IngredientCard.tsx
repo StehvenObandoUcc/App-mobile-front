@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient, IngredientCategory } from '../types';
 import { Chip } from './Chip';
@@ -54,14 +54,17 @@ export function IngredientCard({
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 250,
+      duration: 280,
+      easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
   }, []);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.985,
+      toValue: 0.97,
+      tension: 300,
+      friction: 20,
       useNativeDriver: true,
     }).start();
   };
@@ -69,8 +72,8 @@ export function IngredientCard({
   const handlePressOut = () => {
     Animated.spring(scaleAnim, {
       toValue: 1,
-      friction: 4,
-      tension: 50,
+      tension: 200,
+      friction: 14,
       useNativeDriver: true,
     }).start();
     setTimeout(() => {

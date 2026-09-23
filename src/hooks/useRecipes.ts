@@ -3,16 +3,18 @@ import { AsyncStatus, Recipe } from '../types';
 import { RecipeService, mockRecipeService } from '../services/recipe-service';
 import { LocalStorage } from '../storage/local-storage';
 
+let memoryRecipes: Recipe[] | null = null;
+
 export function useRecipes(service: RecipeService = mockRecipeService) {
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [status, setStatus] = useState<AsyncStatus>('loading');
+  const [recipes, setRecipes] = useState<Recipe[]>(memoryRecipes || []);
+  const [status, setStatus] = useState<AsyncStatus>(memoryRecipes && memoryRecipes.length > 0 ? 'success' : 'loading');
   const [error, setError] = useState<string | null>(null);
 
   const loadRecipes = useCallback(async () => {
-    setStatus('loading');
     setError(null);
     try {
       const data = await service.getRecipes();
+      memoryRecipes = data;
       setRecipes(data);
       setStatus('success');
     } catch (err: any) {
@@ -25,7 +27,10 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
     loadRecipes();
 
     const unsubscribe = LocalStorage.subscribe(() => {
-      service.getRecipes().then(setRecipes).catch(() => {});
+      service.getRecipes().then((data) => {
+        memoryRecipes = data;
+        setRecipes(data);
+      }).catch(() => {});
     });
 
     return unsubscribe;

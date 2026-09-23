@@ -9,25 +9,31 @@ import {
   batchDeleteInventoryItemsWithApi,
 } from '../services/api-client';
 
+let memoryInventory: Ingredient[] | null = null;
+
 export function useInventory() {
-  const [items, setItems] = useState<Ingredient[]>([]);
-  const [status, setStatus] = useState<AsyncStatus>('loading');
+  const [items, setItems] = useState<Ingredient[]>(memoryInventory || []);
+  const [status, setStatus] = useState<AsyncStatus>(memoryInventory && memoryInventory.length > 0 ? 'success' : 'loading');
   const [error, setError] = useState<string | null>(null);
 
   const loadItems = useCallback(async () => {
-    setStatus('loading');
     setError(null);
     try {
       // 1. Carga inmediata desde caché local para respuesta instantánea (0ms)
       const localData = await LocalStorage.getInventory();
       if (localData && localData.length > 0) {
+        memoryInventory = localData;
         setItems(localData);
+        setStatus('success');
+      } else if (!memoryInventory) {
+        setStatus('loading');
       }
 
       // 2. Sincronización en red con la base de datos (Supabase a través de FastAPI)
       try {
         const remoteData = await fetchInventoryFromApi();
         if (Array.isArray(remoteData)) {
+          memoryInventory = remoteData;
           await LocalStorage.saveInventory(remoteData);
           setItems(remoteData);
         }
@@ -36,7 +42,7 @@ export function useInventory() {
         console.warn('[useInventory] Modo offline/fallback: usando datos locales', networkErr?.message);
         if (!localData || localData.length === 0) {
           // Solo si tampoco hay datos locales reportamos advertencia
-          setItems([]);
+          if (!memoryInventory) setItems([]);
         }
       }
 
@@ -52,7 +58,10 @@ export function useInventory() {
 
     // Suscripción a cambios reactivos locales
     const unsubscribe = LocalStorage.subscribe(() => {
-      LocalStorage.getInventory().then(setItems).catch(() => {});
+      LocalStorage.getInventory().then((data) => {
+        memoryInventory = data;
+        setItems(data);
+      }).catch(() => {});
     });
 
     return unsubscribe;

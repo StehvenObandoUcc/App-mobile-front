@@ -240,6 +240,16 @@ export default function ShoppingListScreen() {
             { paddingBottom: Math.max(110, getBottomContentPadding(insets.bottom)) },
           ]}
         >
+          {/* ── Cabecera Editorial ── */}
+          <View style={styles.headerSection}>
+            <Text style={styles.screenTitle}>Lista de Compras</Text>
+            <Text style={styles.screenSubtitle}>
+              {items.length === 0
+                ? 'Agrega productos para planificar tu compra'
+                : `${pendingItems.length} pendiente${pendingItems.length === 1 ? '' : 's'} · ${boughtItems.length} comprada${boughtItems.length === 1 ? '' : 's'}`}
+            </Text>
+          </View>
+
           {/* ── Resumen Estadístico ── */}
           <View style={styles.summaryRow}>
             <View style={[styles.summaryCard, styles.summaryPending]}>
@@ -615,6 +625,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: 110,
+  },
+  headerSection: {
+    marginBottom: spacing.lg,
+  },
+  screenTitle: {
+    fontSize: typography.sizes.screenTitle,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  screenSubtitle: {
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   summaryRow: {
     flexDirection: 'row',

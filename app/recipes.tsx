@@ -196,124 +196,6 @@ export default function RecipesScreen() {
 
   return (
     <AppScreen style={styles.screen}>
-      {/* ── Banner Principal IA ── */}
-      <View style={styles.aiBannerWrapper}>
-        <Pressable
-          onPress={() => setIsAiModalOpen(true)}
-          style={({ pressed }) => [styles.aiBanner, pressed && styles.aiBannerPressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Abrir generador de recetas con inteligencia artificial"
-        >
-          <LinearGradient
-            colors={[colors.primary, colors.primaryDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.aiBannerGradient}
-          >
-            <View style={styles.aiBannerIconWrap}>
-              <Ionicons name="sparkles" size={24} color={colors.surface} />
-            </View>
-            <View style={{ flex: 1, marginLeft: spacing.md }}>
-              <View style={styles.aiTagBadge}>
-                <Text style={styles.aiTagText}>CHEF INTELIGENTE IA</Text>
-              </View>
-              <Text style={styles.aiBannerTitle}>Generar con IA</Text>
-              <Text style={styles.aiBannerSubtitle}>
-                {items.length > 0
-                  ? `Combina tus ${items.length} alimentos guardados`
-                  : 'Sugerencias basadas en tus ingredientes'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
-          </LinearGradient>
-        </Pressable>
-      </View>
-
-      {/* ── Buscador y Control de Selección ── */}
-      <View style={styles.searchSection}>
-        <View style={{ flex: 1, marginRight: spacing.sm }}>
-          <SearchInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Buscar recetas por nombre o ingrediente..."
-          />
-        </View>
-        <Pressable
-          onPress={() => {
-            setIsSelectMode(!isSelectMode);
-            setSelectedIds(new Set());
-          }}
-          style={[styles.selectToggleBtn, isSelectMode && styles.selectToggleBtnActive]}
-          hitSlop={8}
-        >
-          <Ionicons
-            name={isSelectMode ? 'close' : 'checkmark-done-outline'}
-            size={18}
-            color={isSelectMode ? colors.surface : colors.textSecondary}
-          />
-        </Pressable>
-      </View>
-
-      {/* ── Tabs de Filtro Rápido con Chip ── */}
-      <View style={styles.tabsWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsList}>
-          <Chip
-            label="Todas"
-            selected={activeTab === 'all'}
-            onPress={() => setActiveTab('all')}
-            variant="filter"
-          />
-          <Chip
-            label="Mayor coincidencia"
-            icon="sparkles"
-            selected={activeTab === 'high_match'}
-            onPress={() => setActiveTab('high_match')}
-            variant="filter"
-          />
-          <Chip
-            label="Rápidas (≤20 min)"
-            icon="time-outline"
-            selected={activeTab === 'quick'}
-            onPress={() => setActiveTab('quick')}
-            variant="filter"
-          />
-          <Chip
-            label={`Favoritas (${recipes.filter((r) => r.isSaved).length})`}
-            icon="heart"
-            selected={activeTab === 'saved'}
-            onPress={() => setActiveTab('saved')}
-            variant="filter"
-          />
-        </ScrollView>
-      </View>
-
-      {/* ── Barra de Ordenamiento (Recientes, Coincidencia, Tiempo) ── */}
-      <View style={styles.sortBarWrapper}>
-        <Text style={styles.sortBarLabel}>Ordenar:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortList}>
-          {[
-            { key: 'createdAt_desc', label: 'Más recientes' },
-            { key: 'matchScore_desc', label: 'Mayor coincidencia' },
-            { key: 'prepTime_asc', label: 'Más rápidas' },
-            { key: 'difficulty_asc', label: 'Menor dificultad' },
-          ].map((opt) => {
-            const isSelected = sortBy === opt.key;
-            return (
-              <Pressable
-                key={opt.key}
-                onPress={() => setSortBy(opt.key as RecipeSortOption)}
-                style={[styles.sortPill, isSelected && styles.sortPillActive]}
-              >
-                <Text style={[styles.sortText, isSelected && styles.sortTextActive]}>
-                  {opt.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* ── Estados de carga / error / lista ── */}
       {status === 'loading' && (
         <View style={styles.listContainer}>
           <SkeletonCard variant="recipe" />
@@ -329,83 +211,212 @@ export default function RecipesScreen() {
         />
       )}
 
-      {/* ── Barra de Gestión y Selección Rápida (Idéntica a Inventario) ── */}
-      {status === 'success' && filteredRecipes.length > 0 && (
-        <View style={styles.bulkToolbar}>
-          <View style={styles.bulkTopRow}>
-            <View style={styles.bulkInfo}>
-              <Text style={styles.bulkCountText}>
-                {filteredRecipes.length} {filteredRecipes.length === 1 ? 'receta' : 'recetas'}
-              </Text>
-              {isSelectMode && (
-                <Text style={styles.bulkSelectedText}>
-                  ({selectedIds.size} seleccionadas)
-                </Text>
-              )}
-            </View>
-
-            <Pressable
-              onPress={handleSelectAll}
-              style={styles.bulkActionBtn}
-              accessibilityRole="button"
-              accessibilityLabel={
-                selectedIds.size === filteredRecipes.length
-                  ? 'Deseleccionar todas las recetas'
-                  : 'Seleccionar todas las recetas'
-              }
-            >
-              <Ionicons
-                name={
-                  selectedIds.size === filteredRecipes.length && filteredRecipes.length > 0
-                    ? 'checkbox'
-                    : 'square-outline'
-                }
-                size={16}
-                color={colors.primary}
-                style={{ marginRight: 5 }}
-              />
-              <Text style={styles.bulkActionBtnText}>
-                {selectedIds.size === filteredRecipes.length && filteredRecipes.length > 0
-                  ? 'Deseleccionar todas'
-                  : 'Seleccionar todas'}
-              </Text>
-            </Pressable>
-          </View>
-
-          {isSelectMode && (
-            <View style={styles.bulkBottomRow}>
-              <Pressable
-                onPress={handleDeleteSelected}
-                style={styles.bulkDeleteBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Eliminar recetas seleccionadas"
-              >
-                <Ionicons name="trash-outline" size={15} color={colors.error.text} style={{ marginRight: spacing.xs }} />
-                <Text style={styles.bulkDeleteBtnText}>Eliminar ({selectedIds.size})</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handleCancelSelection}
-                style={styles.bulkCancelBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Cancelar selección"
-              >
-                <Text style={styles.bulkCancelBtnText}>Cancelar</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-      )}
-
       {status === 'success' && (
         <FlatList
           data={filteredRecipes}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[
             styles.listContainer,
-            { paddingBottom: Math.max(110, getBottomContentPadding(insets.bottom)) },
+            { paddingBottom: Math.max(120, getBottomContentPadding(insets.bottom) + 16) },
           ]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View>
+              {/* ── Cabecera Editorial Recetas ── */}
+              <View style={styles.headerSection}>
+                <Text style={styles.screenTitle}>Recetas</Text>
+                <Text style={styles.screenSubtitle}>
+                  Inspiración culinaria según tus alimentos disponibles
+                </Text>
+              </View>
+
+              {/* ── Banner Principal IA ── */}
+              <View style={styles.aiBannerWrapper}>
+                <Pressable
+                  onPress={() => setIsAiModalOpen(true)}
+                  style={({ pressed }) => [styles.aiBanner, pressed && styles.aiBannerPressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Abrir generador de recetas con inteligencia artificial"
+                >
+                  <LinearGradient
+                    colors={[colors.primary, colors.primaryDark]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.aiBannerGradient}
+                  >
+                    <View style={styles.aiBannerIconWrap}>
+                      <Ionicons name="sparkles" size={24} color={colors.surface} />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: spacing.md }}>
+                      <View style={styles.aiTagBadge}>
+                        <Text style={styles.aiTagText}>CHEF INTELIGENTE IA</Text>
+                      </View>
+                      <Text style={styles.aiBannerTitle}>Generar con IA</Text>
+                      <Text style={styles.aiBannerSubtitle}>
+                        {items.length > 0
+                          ? `Combina tus ${items.length} alimentos guardados`
+                          : 'Sugerencias basadas en tus ingredientes'}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+                  </LinearGradient>
+                </Pressable>
+              </View>
+
+              {/* ── Buscador y Control de Selección ── */}
+              <View style={styles.searchSection}>
+                <View style={{ flex: 1, marginRight: spacing.sm }}>
+                  <SearchInput
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="Buscar recetas o ingredientes..."
+                  />
+                </View>
+                <Pressable
+                  onPress={() => {
+                    setIsSelectMode(!isSelectMode);
+                    setSelectedIds(new Set());
+                  }}
+                  style={[styles.selectToggleBtn, isSelectMode && styles.selectToggleBtnActive]}
+                  hitSlop={8}
+                >
+                  <Ionicons
+                    name={isSelectMode ? 'close' : 'checkmark-done-outline'}
+                    size={18}
+                    color={isSelectMode ? colors.surface : colors.textSecondary}
+                  />
+                </Pressable>
+              </View>
+
+              {/* ── Tabs de Filtro Rápido con Chip ── */}
+              <View style={styles.tabsWrapper}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsList}>
+                  <Chip
+                    label="Todas"
+                    selected={activeTab === 'all'}
+                    onPress={() => setActiveTab('all')}
+                    variant="filter"
+                  />
+                  <Chip
+                    label="Mayor coincidencia"
+                    icon="sparkles"
+                    selected={activeTab === 'high_match'}
+                    onPress={() => setActiveTab('high_match')}
+                    variant="filter"
+                  />
+                  <Chip
+                    label="Rápidas (≤20 min)"
+                    icon="time-outline"
+                    selected={activeTab === 'quick'}
+                    onPress={() => setActiveTab('quick')}
+                    variant="filter"
+                  />
+                  <Chip
+                    label={`Favoritas (${recipes.filter((r) => r.isSaved).length})`}
+                    icon="heart"
+                    selected={activeTab === 'saved'}
+                    onPress={() => setActiveTab('saved')}
+                    variant="filter"
+                  />
+                </ScrollView>
+              </View>
+
+              {/* ── Barra de Ordenamiento (Recientes, Coincidencia, Tiempo) ── */}
+              <View style={styles.sortBarWrapper}>
+                <Text style={styles.sortBarLabel}>Ordenar:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortList}>
+                  {[
+                    { key: 'createdAt_desc', label: 'Más recientes' },
+                    { key: 'matchScore_desc', label: 'Mayor coincidencia' },
+                    { key: 'prepTime_asc', label: 'Más rápidas' },
+                    { key: 'difficulty_asc', label: 'Menor dificultad' },
+                  ].map((opt) => {
+                    const isSelected = sortBy === opt.key;
+                    return (
+                      <Pressable
+                        key={opt.key}
+                        onPress={() => setSortBy(opt.key as RecipeSortOption)}
+                        style={[styles.sortPill, isSelected && styles.sortPillActive]}
+                      >
+                        <Text style={[styles.sortText, isSelected && styles.sortTextActive]}>
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* ── Barra de Gestión y Selección Rápida ── */}
+              {filteredRecipes.length > 0 && (
+                <View style={styles.bulkToolbar}>
+                  <View style={styles.bulkTopRow}>
+                    <View style={styles.bulkInfo}>
+                      <Text style={styles.bulkCountText}>
+                        {filteredRecipes.length} {filteredRecipes.length === 1 ? 'receta' : 'recetas'}
+                      </Text>
+                      {isSelectMode && (
+                        <Text style={styles.bulkSelectedText}>
+                          ({selectedIds.size} seleccionadas)
+                        </Text>
+                      )}
+                    </View>
+
+                    <Pressable
+                      onPress={handleSelectAll}
+                      style={styles.bulkActionBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        selectedIds.size === filteredRecipes.length
+                          ? 'Deseleccionar todas las recetas'
+                          : 'Seleccionar todas las recetas'
+                      }
+                    >
+                      <Ionicons
+                        name={
+                          selectedIds.size === filteredRecipes.length && filteredRecipes.length > 0
+                            ? 'checkbox'
+                            : 'square-outline'
+                        }
+                        size={16}
+                        color={colors.primary}
+                        style={{ marginRight: 5 }}
+                      />
+                      <Text style={styles.bulkActionBtnText}>
+                        {selectedIds.size === filteredRecipes.length && filteredRecipes.length > 0
+                          ? 'Deseleccionar todas'
+                          : 'Seleccionar todas'}
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {isSelectMode && (
+                    <View style={styles.bulkBottomRow}>
+                      <Pressable
+                        onPress={handleDeleteSelected}
+                        style={styles.bulkDeleteBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel="Eliminar recetas seleccionadas"
+                      >
+                        <Ionicons name="trash-outline" size={15} color={colors.error.text} style={{ marginRight: spacing.xs }} />
+                        <Text style={styles.bulkDeleteBtnText}>Eliminar ({selectedIds.size})</Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={handleCancelSelection}
+                        style={styles.bulkCancelBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel="Cancelar selección"
+                      >
+                        <Text style={styles.bulkCancelBtnText}>Cancelar</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          }
           renderItem={({ item, index }) => (
             <StaggerView index={Math.min(index, 8)}>
               <RecipeCard
@@ -654,9 +665,25 @@ export default function RecipesScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: colors.background },
-  aiBannerWrapper: {
+  headerSection: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  screenTitle: {
+    fontSize: typography.sizes.screenTitle,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  screenSubtitle: {
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  aiBannerWrapper: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
   },
   aiBanner: {
     borderRadius: 28,

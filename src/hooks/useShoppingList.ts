@@ -3,16 +3,19 @@ import { ShoppingItem, RecipeIngredient, IngredientUnit, IngredientCategory } fr
 import { LocalStorage } from '../storage/local-storage';
 import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
 
+let memoryShoppingList: ShoppingItem[] | null = null;
+
 export function useShoppingList() {
-  const [items, setItems] = useState<ShoppingItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [items, setItems] = useState<ShoppingItem[]>(memoryShoppingList || []);
+  const [isLoading, setIsLoading] = useState(!memoryShoppingList);
 
   const loadItems = useCallback(async () => {
     try {
       const data = await LocalStorage.getShoppingList();
+      memoryShoppingList = data;
       setItems(data);
     } catch {
-      setItems([]);
+      if (!memoryShoppingList) setItems([]);
     } finally {
       setIsLoading(false);
     }
@@ -21,7 +24,10 @@ export function useShoppingList() {
   useEffect(() => {
     loadItems();
     const unsubscribe = LocalStorage.subscribe(() => {
-      LocalStorage.getShoppingList().then(setItems).catch(() => {});
+      LocalStorage.getShoppingList().then((data) => {
+        memoryShoppingList = data;
+        setItems(data);
+      }).catch(() => {});
     });
     return unsubscribe;
   }, [loadItems]);

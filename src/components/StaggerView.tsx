@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, ViewStyle, StyleProp } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { Animated, ViewStyle, StyleProp, Easing } from 'react-native';
 
 export type StaggerViewProps = {
   index?: number;
@@ -10,43 +10,44 @@ export type StaggerViewProps = {
 };
 
 /**
- * StaggerView: Componente nativo de entrada escalonada estilo Material 3.
- * Anima opacidad y traslación vertical con curva suave en cascada.
+ * StaggerView — entrada escalonada con fade + slide-up nativo (60 fps).
+ * index controla el delay: cada elemento espera index * delayMs ms.
  */
 export function StaggerView({
   index = 0,
-  delayMs = 40,
-  duration = 340,
+  delayMs = 55,
+  duration = 300,
   style,
   children,
 }: StaggerViewProps) {
-  const anim = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(16)).current;
 
   useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration,
-      delay: index * delayMs,
-      useNativeDriver: true,
-    }).start();
-  }, [anim, index, delayMs, duration]);
-
-  const translateY = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [18, 0],
-  });
+    const delay = index * delayMs;
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration,
+        delay,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration,
+        delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <Animated.View
-      style={[
-        style,
-        {
-          opacity: anim,
-          transform: [{ translateY }],
-        },
-      ]}
-    >
+    <Animated.View style={[style, { opacity, transform: [{ translateY }] }]}>
       {children}
     </Animated.View>
   );
 }
+

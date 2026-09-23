@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recipe } from '../types';
 import { colors, radii, spacing, typography, elevations } from '../theme';
@@ -45,13 +45,14 @@ export function RecipeCard({
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 250,
+        duration: 280,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
-      Animated.spring(slideAnim, {
+      Animated.timing(slideAnim, {
         toValue: 0,
-        friction: 8,
-        tension: 50,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start();
@@ -63,7 +64,9 @@ export function RecipeCard({
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.98,
+      toValue: 0.97,
+      tension: 300,
+      friction: 20,
       useNativeDriver: true,
     }).start();
   };
@@ -71,8 +74,8 @@ export function RecipeCard({
   const handlePressOut = () => {
     Animated.spring(scaleAnim, {
       toValue: 1,
-      friction: 4,
-      tension: 50,
+      tension: 200,
+      friction: 14,
       useNativeDriver: true,
     }).start();
 
@@ -91,8 +94,8 @@ export function RecipeCard({
   const handleSavePress = (e: any) => {
     e?.stopPropagation?.();
     Animated.sequence([
-      Animated.timing(heartScale, { toValue: 1.4, duration: 100, useNativeDriver: true }),
-      Animated.spring(heartScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }),
+      Animated.timing(heartScale, { toValue: 1.4, duration: 80, useNativeDriver: true }),
+      Animated.spring(heartScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
     ]).start();
     onSave?.();
   };

@@ -29,6 +29,8 @@ export function SearchInput({
         accessibilityRole="search"
         accessibilityLabel="Buscar en inventario"
         clearButtonMode="while-editing"
+        multiline={false}
+        numberOfLines={1}
       />
       {value.length > 0 && (
         <Pressable
@@ -50,7 +52,7 @@ export function SearchInput({
 
 const styles = StyleSheet.create({
   container: {
-    height: 52,
+    height: 48,
     backgroundColor: colors.surfaceVariant,
     borderRadius: radii.circular,
     borderWidth: 1,
@@ -65,6 +67,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: '100%',
+    paddingVertical: 0,
     fontSize: typography.sizes.body,
     color: colors.textPrimary,
   },

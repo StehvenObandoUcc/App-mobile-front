@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, PanResponder } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,22 +12,65 @@ export const NAV_BOTTOM_OFFSET = 12;
 export const getBottomContentPadding = (bottomInset: number) =>
   NAV_HEIGHT + Math.max(bottomInset, 0) + NAV_BOTTOM_OFFSET + 16;
 
+const MAIN_TABS = ['/', '/inventory', '/recipes', '/shopping-list'];
+
 export function AppBottomNav() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { pendingItems } = useShoppingList();
+  const isNavigatingRef = useRef(false);
 
   const isHome = pathname === '/' || pathname === '/index';
   const isInventory = pathname.startsWith('/inventory');
   const isRecipes = pathname.startsWith('/recipes');
   const isShopping = pathname.startsWith('/shopping-list');
 
+  const currentTabIndex = isHome ? 0 : isInventory ? 1 : isRecipes ? 2 : isShopping ? 3 : -1;
+
+  useEffect(() => {
+    isNavigatingRef.current = false;
+  }, [pathname]);
+
+  const navPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        if (currentTabIndex === -1 || isNavigatingRef.current) return false;
+        const { dx, dy } = gestureState;
+        return Math.abs(dx) > 16 && Math.abs(dx) > Math.abs(dy) * 1.5;
+      },
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        if (currentTabIndex === -1 || isNavigatingRef.current) return false;
+        const { dx, dy } = gestureState;
+        // Permite capturar deslizamientos sobre la barra inferior
+        return Math.abs(dx) > 16 && Math.abs(dx) > Math.abs(dy) * 1.5;
+      },
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderRelease: (_, gestureState) => {
+        if (currentTabIndex === -1 || isNavigatingRef.current) return;
+        const { dx, vx } = gestureState;
+
+        // Deslizar hacia la izquierda -> Siguiente pestaña
+        if ((dx < -25 || vx < -0.2) && currentTabIndex < MAIN_TABS.length - 1) {
+          isNavigatingRef.current = true;
+          router.replace(MAIN_TABS[currentTabIndex + 1] as any);
+        }
+        // Deslizar hacia la derecha -> Pestaña anterior
+        else if ((dx > 25 || vx > 0.2) && currentTabIndex > 0) {
+          isNavigatingRef.current = true;
+          router.replace(MAIN_TABS[currentTabIndex - 1] as any);
+        }
+      },
+    })
+  ).current;
+
   const bottomInset = Math.max(insets.bottom, 0);
   const bottomPosition = bottomInset + NAV_BOTTOM_OFFSET;
 
   return (
-    <View style={[styles.bottomNavWrapper, { bottom: bottomPosition }]}>
+    <View style={[styles.bottomNavWrapper, { bottom: bottomPosition }]} {...navPanResponder.panHandlers}>
       <View style={styles.bottomNavContainer}>
         {/* 1. Inicio */}
         <Pressable

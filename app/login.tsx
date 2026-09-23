@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Alert,
   Animated,
-  LayoutAnimation,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -65,7 +64,6 @@ export default function LoginScreen() {
     if (newMode === 'login') {
       nameInputRef.current?.blur();
     }
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setMode(newMode);
 
     indicatorAnim.stopAnimation();
@@ -229,9 +227,12 @@ export default function LoginScreen() {
                 setDialogConfig({
                   visible: true,
                   title: 'Sesión cerrada',
-                  message: 'Has cerrado tu sesión correctamente.',
+                  message: 'Has cerrado tu sesión correctamente. Te redirigiremos al inicio.',
                   type: 'info',
-                  onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+                  onConfirm: () => {
+                    setDialogConfig((prev) => ({ ...prev, visible: false }));
+                    router.replace('/');
+                  },
                 });
               }}
               style={styles.logoutButton}
@@ -480,6 +481,17 @@ export default function LoginScreen() {
                 </Text>
               </Pressable>
             </Animated.View>
+
+            <View style={{ height: spacing.lg }} />
+            <Pressable
+              onPress={() => router.replace('/')}
+              style={({ pressed }) => [styles.guestButton, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Explorar sin cuenta"
+            >
+              <Ionicons name="arrow-back-outline" size={18} color={colors.textSecondary} style={{ marginRight: 6 }} />
+              <Text style={styles.guestButtonText}>Volver al Inicio / Explorar sin cuenta</Text>
+            </Pressable>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -707,5 +719,18 @@ const styles = StyleSheet.create({
     color: colors.textInverse,
     fontSize: typography.sizes.body,
     fontWeight: '700',
+  },
+  guestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: radii.buttons,
+    backgroundColor: 'transparent',
+  },
+  guestButtonText: {
+    color: colors.textSecondary,
+    fontSize: typography.sizes.bodySmall,
+    fontWeight: '600',
   },
 });

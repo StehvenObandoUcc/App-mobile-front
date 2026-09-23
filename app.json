@@ -11,12 +11,16 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.foodai.app",
       "adaptiveIcon": {
         "backgroundColor": "#1B4332",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "CAMERA"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -25,7 +29,12 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "expo-camera",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Food AI necesita acceso a la cámara para escanear y reconocer los alimentos de tu despensa."
+        }
+      ],
       "expo-secure-store"
     ]
   }

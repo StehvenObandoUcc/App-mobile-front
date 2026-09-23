@@ -1,5 +1,9 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '../theme';
@@ -9,6 +13,8 @@ export type AppScreenProps = {
   scrollable?: boolean;
   contentContainerStyle?: any;
   style?: any;
+  /** @deprecated El swipe entre tabs ahora lo gestiona expo-router con animation:'fade' */
+  enableSwipeTabs?: boolean;
 };
 
 export function AppScreen({
@@ -18,7 +24,10 @@ export function AppScreen({
   style,
 }: AppScreenProps) {
   return (
-    <SafeAreaView style={[styles.safeArea, style]} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={[styles.safeArea, style]}
+      edges={['top', 'left', 'right']}
+    >
       <StatusBar style="dark" />
       {scrollable ? (
         <ScrollView
