@@ -116,3 +116,92 @@ export function isTimeValidForDifficulty(
 
   return { isValid: true };
 }
+
+/**
+ * Clasificación y validación de coherencia gastronómica cuando se seleccionan ingredientes para el Chef IA.
+ * Permite y valida casos de 1 solo ingrediente asegurando que sea coherente ("pero no está mal aún").
+ */
+const CONDIMENT_KEYWORDS = [
+  'sal',
+  'pimienta',
+  'aceite',
+  'vinagre',
+  'comino',
+  'oregano',
+  'orégano',
+  'azucar',
+  'azúcar',
+  'canela',
+  'laurel',
+  'tomillo',
+  'romero',
+  'agua',
+  'color',
+  'achiote',
+  'bicarbonato',
+  'polvo de hornear',
+  'esencia',
+];
+
+export interface IngredientSelectionCoherence {
+  isValid: boolean;
+  isSingleIngredient: boolean;
+  ingredientName?: string;
+  isCondimentOnly: boolean;
+  message: string;
+  badgeText: string;
+  badgeType: 'info' | 'warning' | 'success';
+}
+
+export function checkIngredientSelectionCoherence(
+  ingredients: Array<{ id: string; name: string; category?: string }>
+): IngredientSelectionCoherence {
+  if (ingredients.length === 0) {
+    return {
+      isValid: false,
+      isSingleIngredient: false,
+      isCondimentOnly: false,
+      message: 'Selecciona al menos un ingrediente para crear recetas.',
+      badgeText: 'Sin ingredientes',
+      badgeType: 'warning',
+    };
+  }
+
+  if (ingredients.length === 1) {
+    const single = ingredients[0];
+    const nameClean = single.name.toLowerCase().trim();
+    const isCondiment = CONDIMENT_KEYWORDS.some((kw) => nameClean.includes(kw));
+
+    if (isCondiment) {
+      return {
+        isValid: true, // Se permite pero con aviso orientativo
+        isSingleIngredient: true,
+        ingredientName: single.name,
+        isCondimentOnly: true,
+        message: `Has seleccionado únicamente "${single.name}" (sazonador/condimento). El Chef IA sugerirá complementos básicos, pero es recomendable añadir un alimento base (proteína, vegetal o grano).`,
+        badgeText: 'Condimento único (Se sugiere sumar base)',
+        badgeType: 'warning',
+      };
+    }
+
+    return {
+      isValid: true,
+      isSingleIngredient: true,
+      ingredientName: single.name,
+      isCondimentOnly: false,
+      message: `"${single.name}" será el ingrediente estrella. El Chef IA creará recetas coherentes y complementará con básicos de cocina.`,
+      badgeText: '1 ingrediente coherente',
+      badgeType: 'info',
+    };
+  }
+
+  return {
+    isValid: true,
+    isSingleIngredient: false,
+    isCondimentOnly: false,
+    message: `${ingredients.length} ingredientes listos para combinar armónicamente.`,
+    badgeText: `${ingredients.length} ingredientes`,
+    badgeType: 'success',
+  };
+}
+

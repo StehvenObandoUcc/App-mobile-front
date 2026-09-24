@@ -5,14 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShoppingList } from '../hooks/useShoppingList';
 import { colors, typography, spacing, radii, elevations } from '../theme';
+import {
+  MAIN_TABS,
+  setSwipeNavigation,
+  getSwipeTransition,
+} from '../utils/tabSwipeState';
 
 export const NAV_HEIGHT = 64;
 export const NAV_BOTTOM_OFFSET = 12;
 
 export const getBottomContentPadding = (bottomInset: number) =>
   NAV_HEIGHT + Math.max(bottomInset, 0) + NAV_BOTTOM_OFFSET + 16;
-
-const MAIN_TABS = ['/', '/inventory', '/recipes', '/shopping-list'];
 
 export function AppBottomNav() {
   const router = useRouter();
@@ -51,22 +54,31 @@ export function AppBottomNav() {
 
   useEffect(() => {
     isNavigatingRef.current = false;
-    // Micro-animación pop suave (escala 0.88 -> 1.0) al cambiar de pestaña
-    pillScale.setValue(0.88);
-    pillOpacity.setValue(0.7);
-    Animated.parallel([
-      Animated.spring(pillScale, {
-        toValue: 1,
-        tension: 180,
-        friction: 12,
-        useNativeDriver: true,
-      }),
-      Animated.timing(pillOpacity, {
-        toValue: 1,
-        duration: 160,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    const { isSwipe } = getSwipeTransition();
+
+    if (isSwipe) {
+      // Micro-animación pop suave (escala 0.88 -> 1.0) al cambiar de pestaña mediante swipe
+      pillScale.setValue(0.88);
+      pillOpacity.setValue(0.7);
+      Animated.parallel([
+        Animated.spring(pillScale, {
+          toValue: 1,
+          tension: 180,
+          friction: 12,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pillOpacity, {
+          toValue: 1,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Si fue una pulsación directa sin deslizar (ej. Inicio a Recetas),
+      // se establece inmediatamente sin animación para máxima rapidez y limpieza.
+      pillScale.setValue(1);
+      pillOpacity.setValue(1);
+    }
   }, [pathname, pillScale, pillOpacity]);
 
   const navigateToTab = (targetIndex: number) => {
@@ -88,16 +100,13 @@ export function AppBottomNav() {
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        if (currentTabIndexRef.current === -1 || isNavigatingRef.current) return false;
-        const { dx, dy } = gestureState;
-        return Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.1;
-      },
+      // No capturar en capture phase para no bloquear los eventos de pulsación normal sobre las pestañas
+      onMoveShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
         if (currentTabIndexRef.current === -1 || isNavigatingRef.current) return false;
         const { dx, dy } = gestureState;
-        // Solo captura deslizamiento horizontal claro sobre la barra (arco natural de pulgar)
-        return Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.1;
+        // Solo captura deslizamiento horizontal claro sobre la barra (umbral de 24px con ángulo horizontal dominante)
+        return Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy) * 1.4;
       },
       onPanResponderGrant: () => {
         navDragX.stopAnimation();
@@ -117,7 +126,7 @@ export function AppBottomNav() {
         const clamped = Math.max(Math.min(rawDx * 0.35, 40), -40);
         navDragX.setValue(clamped);
       },
-      onPanResponderTerminationRequest: () => false,
+      onPanResponderTerminationRequest: () => true,
       onPanResponderTerminate: () => {
         Animated.spring(navDragX, {
           toValue: 0,
@@ -131,8 +140,9 @@ export function AppBottomNav() {
         const { dx, vx } = gestureState;
         const curr = currentTabIndexRef.current;
 
-        // Deslizar hacia la izquierda (dedo a la izquierda) -> Pestaña siguiente
-        if ((dx < -18 || vx < -0.2) && curr < MAIN_TABS.length - 1) {
+        // Deslizar con intención hacia la izquierda -> Pestaña siguiente
+        if ((dx < -35 || (dx < -20 && vx < -0.35)) && curr < MAIN_TABS.length - 1) {
+          setSwipeNavigation(1);
           navigateToTab(curr + 1);
           Animated.spring(navDragX, {
             toValue: 0,
@@ -141,8 +151,9 @@ export function AppBottomNav() {
             useNativeDriver: true,
           }).start();
         }
-        // Deslizar hacia la derecha (dedo a la derecha) -> Pestaña anterior
-        else if ((dx > 18 || vx > 0.2) && curr > 0) {
+        // Deslizar con intención hacia la derecha -> Pestaña anterior
+        else if ((dx > 35 || (dx > 20 && vx > 0.35)) && curr > 0) {
+          setSwipeNavigation(-1);
           navigateToTab(curr - 1);
           Animated.spring(navDragX, {
             toValue: 0,

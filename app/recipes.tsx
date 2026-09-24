@@ -40,9 +40,10 @@ import {
   StaggerView,
   getBottomContentPadding,
   Chip,
+  M3Dialog,
 } from '../src/components';
 import { sortRecipes } from '../src/utils/recipe-sorter';
-import { getValidTimeOptionsForFocus } from '../src/utils/recipe-validation';
+import { getValidTimeOptionsForFocus, checkIngredientSelectionCoherence } from '../src/utils/recipe-validation';
 import { getExpirationStatus } from '../src/utils/expiration';
 import { colors, radii, spacing, typography } from '../src/theme';
 
@@ -156,6 +157,46 @@ export default function RecipesScreen() {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Modal de confirmación para eliminar recetas (ActionSheetModal idéntico a Despensa)
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    title: string;
+    description?: string;
+    confirmDestructive?: boolean;
+    confirmText?: string;
+    onConfirm?: () => void;
+  }>({
+    visible: false,
+    title: '',
+  });
+
+  // Diálogo informativo/alerta coherente con diseño atómico (M3Dialog idéntico a Despensa)
+  const [dialogConfig, setDialogConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type?: 'success' | 'info' | 'warning' | 'error';
+    iconName?: keyof typeof Ionicons.glyphMap;
+    confirmText?: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    confirmText: 'Entendido',
+    onConfirm: () => {},
+  });
+
+  // Ingredientes elegidos y validación de coherencia en tiempo real
+  const chosenIngredients = useMemo(() => {
+    return items.filter((i) => selectedIngredientIds.has(i.id));
+  }, [items, selectedIngredientIds]);
+
+  const ingredientCoherence = useMemo(() => {
+    return checkIngredientSelectionCoherence(chosenIngredients);
+  }, [chosenIngredients]);
+
   // Opciones de tiempo válidas según la lógica de compatibilidad
   const validTimes = useMemo(() => {
     return getValidTimeOptionsForFocus(selectedFocus, selectedDifficulty);
@@ -171,21 +212,31 @@ export default function RecipesScreen() {
   const handleGenerate = async () => {
     if (items.length === 0) {
       setIsAiModalOpen(false);
-      Alert.alert(
-        'Despensa vacía',
-        'Añade al menos un alimento a tu inventario para que el Chef IA pueda crear recetas con lo que tienes disponible.',
-        [{ text: 'Entendido', style: 'default' }]
-      );
+      setTimeout(() => {
+        setDialogConfig({
+          visible: true,
+          title: 'Despensa vacía',
+          message:
+            'Añade al menos un alimento a tu inventario para que el Chef IA pueda crear recetas con lo que tienes disponible.',
+          type: 'warning',
+          iconName: 'basket-outline',
+          confirmText: 'Entendido',
+          onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        });
+      }, 300);
       return;
     }
 
-    const chosenIngredients = items.filter((i) => selectedIngredientIds.has(i.id));
     if (chosenIngredients.length === 0) {
-      Alert.alert(
-        'Selecciona ingredientes',
-        'Por favor selecciona al menos un alimento o vegetal de tu despensa para crear recetas.',
-        [{ text: 'Entendido', style: 'default' }]
-      );
+      setDialogConfig({
+        visible: true,
+        title: 'Selecciona ingredientes',
+        message: 'Por favor selecciona al menos un alimento o vegetal de tu despensa para crear recetas.',
+        type: 'warning',
+        iconName: 'alert-circle-outline',
+        confirmText: 'Entendido',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
       return;
     }
 
@@ -205,19 +256,33 @@ export default function RecipesScreen() {
         selectedDifficulty,
         selectedDietaryPreference
       );
+      const countGenerated = generated.length;
       setIsAiModalOpen(false);
-      Alert.alert(
-        'Recetas Creadas',
-        `El Chef IA generó ${generated.length} receta(s) personalizadas con tus ingredientes seleccionados.`,
-        [{ text: 'Ver Recetas', style: 'default' }]
-      );
+      // Timeout seguro para evitar conflicto de animación entre el modal cerrado y la apertura del diálogo emergente
+      setTimeout(() => {
+        setDialogConfig({
+          visible: true,
+          title: '¡Recetas Creadas!',
+          message: `El Chef IA generó con éxito ${countGenerated} receta${countGenerated === 1 ? '' : 's'} personalizada${countGenerated === 1 ? '' : 's'} con tus ingredientes seleccionados.`,
+          type: 'success',
+          iconName: 'sparkles',
+          confirmText: 'Ver recetas',
+          onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        });
+      }, 350);
     } catch (err: any) {
-      Alert.alert(
-        'No se pudieron generar recetas',
-        err?.message || 'Ocurrió un error al comunicarse con el Chef IA. Intenta de nuevo más tarde.',
-        [{ text: 'Entendido', style: 'default' }]
-      );
       setIsAiModalOpen(false);
+      setTimeout(() => {
+        setDialogConfig({
+          visible: true,
+          title: 'No se pudieron generar recetas',
+          message: err?.message || 'Ocurrió un error al comunicarse con el Chef IA. Intenta de nuevo más tarde.',
+          type: 'error',
+          iconName: 'alert-circle-outline',
+          confirmText: 'Entendido',
+          onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        });
+      }, 350);
     } finally {
       setIsGenerating(false);
     }
@@ -263,22 +328,32 @@ export default function RecipesScreen() {
 
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
-    Alert.alert(
-      'Eliminar recetas seleccionadas',
-      `¿Deseas descartar permanentemente las ${selectedIds.size} receta(s) seleccionadas?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: `Eliminar (${selectedIds.size})`,
-          style: 'destructive',
-          onPress: async () => {
-            await deleteRecipes(Array.from(selectedIds));
-            setSelectedIds(new Set());
-            setIsSelectMode(false);
-          },
-        },
-      ]
-    );
+    const count = selectedIds.size;
+    setConfirmModal({
+      visible: true,
+      title: count === recipes.length ? 'Eliminar todas las recetas' : 'Eliminar recetas seleccionadas',
+      description: `¿Estás seguro de eliminar estas ${count} receta${count === 1 ? '' : 's'} de tu colección? Esta acción no se puede deshacer.`,
+      confirmDestructive: true,
+      confirmText: `Eliminar (${count})`,
+      onConfirm: async () => {
+        await deleteRecipes(Array.from(selectedIds));
+        setSelectedIds(new Set());
+        setIsSelectMode(false);
+      },
+    });
+  };
+
+  const handleDeleteRecipe = (recipe: Recipe) => {
+    setConfirmModal({
+      visible: true,
+      title: 'Eliminar receta',
+      description: `¿Deseas eliminar permanentemente la receta "${recipe.title}"?`,
+      confirmDestructive: true,
+      confirmText: 'Eliminar',
+      onConfirm: async () => {
+        await deleteRecipe(recipe.id);
+      },
+    });
   };
 
   const filteredRecipes = useMemo(() => {
@@ -313,6 +388,7 @@ export default function RecipesScreen() {
             })
           }
           onSave={() => toggleSave(item.id)}
+          onDelete={() => handleDeleteRecipe(item)}
           onLongPress={() => handleLongPress(item)}
           isSelectMode={isSelectMode}
           isSelected={selectedIds.has(item.id)}
@@ -320,7 +396,7 @@ export default function RecipesScreen() {
         />
       </StaggerView>
     ),
-    [router, toggleSave, isSelectMode, selectedIds]
+    [router, toggleSave, handleDeleteRecipe, isSelectMode, selectedIds]
   );
 
   return (
@@ -771,6 +847,36 @@ export default function RecipesScreen() {
                   </View>
                 )}
 
+                {items.length > 0 && selectedIngredientIds.size === 1 && (
+                  <View
+                    style={[
+                      styles.coherenceRow,
+                      ingredientCoherence.isCondimentOnly
+                        ? styles.coherenceRowWarning
+                        : styles.coherenceRowInfo,
+                    ]}
+                  >
+                    <Ionicons
+                      name={ingredientCoherence.isCondimentOnly ? 'alert-circle' : 'sparkles'}
+                      size={16}
+                      color={
+                        ingredientCoherence.isCondimentOnly
+                          ? colors.functional.expiringSoon.text
+                          : colors.primary
+                      }
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      style={[
+                        styles.coherenceText,
+                        ingredientCoherence.isCondimentOnly && styles.coherenceTextWarning,
+                      ]}
+                    >
+                      {ingredientCoherence.message}
+                    </Text>
+                  </View>
+                )}
+
                 {/* ── 3. Selector de Nivel de Dificultad ── */}
                 <Text style={styles.modalSectionLabel}>Nivel de Dificultad</Text>
                 <View style={styles.pillSelectorRow}>
@@ -998,6 +1104,29 @@ export default function RecipesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Modal de Confirmación Único (ActionSheetModal idéntico a Despensa) ── */}
+      <ActionSheetModal
+        visible={confirmModal.visible}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, visible: false }))}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        variant="confirmation"
+        confirmDestructive={confirmModal.confirmDestructive}
+        confirmText={confirmModal.confirmText}
+        onConfirm={confirmModal.onConfirm}
+      />
+
+      {/* ── Diálogo Emergente M3 (M3Dialog idéntico a Despensa) ── */}
+      <M3Dialog
+        visible={dialogConfig.visible}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        iconName={dialogConfig.iconName}
+        confirmText={dialogConfig.confirmText}
+        onConfirm={dialogConfig.onConfirm}
+      />
     </AppScreen>
   );
 }
@@ -1494,6 +1623,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 4,
     marginBottom: 4,
+  },
+  coherenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.cards,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  coherenceRowInfo: {
+    backgroundColor: colors.primaryContainer,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  coherenceRowWarning: {
+    backgroundColor: colors.functional.expiringSoon.background,
+    borderWidth: 1,
+    borderColor: colors.functional.expiringSoon.border,
+  },
+  coherenceText: {
+    flex: 1,
+    fontSize: typography.sizes.caption,
+    color: colors.primaryDark,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
+  coherenceTextWarning: {
+    color: colors.functional.expiringSoon.text,
   },
   customOptionsContainer: {
     marginTop: spacing.sm,

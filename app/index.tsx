@@ -16,6 +16,7 @@ import {
   Chip,
   StaggerView,
   getBottomContentPadding,
+  ActionSheetModal,
 } from '../src/components';
 import { useAuth } from '../src/hooks/useAuth';
 import { useShoppingList } from '../src/hooks/useShoppingList';
@@ -30,6 +31,18 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    title: string;
+    description?: string;
+    confirmDestructive?: boolean;
+    confirmText?: string;
+    onConfirm?: () => void;
+  }>({
+    visible: false,
+    title: '',
+  });
+
   useFocusEffect(
     React.useCallback(() => {
       if (user?.id) {
@@ -43,20 +56,16 @@ export default function HomeScreen() {
   );
 
   const handleLongPressRecipe = (recipe: Recipe) => {
-    Alert.alert(
-      'Descartar sugerencia',
-      `¿Deseas descartar la receta "${recipe.title}" de tus sugerencias?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Descartar',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteRecipe(recipe.id);
-          },
-        },
-      ]
-    );
+    setConfirmModal({
+      visible: true,
+      title: 'Descartar sugerencia',
+      description: `¿Deseas descartar la receta "${recipe.title}" de tus sugerencias?`,
+      confirmDestructive: true,
+      confirmText: 'Descartar',
+      onConfirm: async () => {
+        await deleteRecipe(recipe.id);
+      },
+    });
   };
 
   // Estadísticas reales calculadas reactivamente
@@ -384,11 +393,24 @@ export default function HomeScreen() {
                 })
               }
               onSave={() => toggleSave(recipe.id)}
+              onDelete={() => handleLongPressRecipe(recipe)}
               onLongPress={() => handleLongPressRecipe(recipe)}
             />
           ))}
         </View>
       </StaggerView>
+
+      {/* ── Modal de Confirmación Único (ActionSheetModal idéntico a Despensa) ── */}
+      <ActionSheetModal
+        visible={confirmModal.visible}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, visible: false }))}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        variant="confirmation"
+        confirmDestructive={confirmModal.confirmDestructive}
+        confirmText={confirmModal.confirmText}
+        onConfirm={confirmModal.onConfirm}
+      />
     </AppScreen>
   );
 }

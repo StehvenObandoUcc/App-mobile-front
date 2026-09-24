@@ -32,26 +32,55 @@ export function M3DatePickerModal({
   onChange,
   onClose,
 }: M3DatePickerModalProps) {
-  const initialDate = useMemo(() => {
-    if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const [y, m, d] = value.split('-').map(Number);
-      return new Date(y, m - 1, d);
-    }
-    return new Date();
-  }, [value]);
+  const getTodayStr = () => {
+    const now = new Date();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${now.getFullYear()}-${m}-${d}`;
+  };
 
-  const [currentYear, setCurrentYear] = useState(initialDate.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(initialDate.getMonth());
+  const todayStr = useMemo(() => getTodayStr(), []);
+
+  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
   const [selectedDateStr, setSelectedDateStr] = useState(value || '');
 
+  // Sincronización robusta: al abrirse el modal, asegurar que la vista del calendario
+  // NUNCA quede anclada en meses pasados o fechas caducadas antiguas
   React.useEffect(() => {
+    if (!visible) return;
+
+    const now = new Date();
+    const currentTodayStr = getTodayStr();
+
     if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const [y, m, d] = value.split('-').map(Number);
-      setCurrentYear(y);
-      setCurrentMonth(m - 1);
-      setSelectedDateStr(value);
+      // Si la fecha del alimento ya caducó (anterior a hoy),
+      // abrimos directamente en el mes y día ACTUAL para facilitar su actualización
+      if (value < currentTodayStr) {
+        setCurrentYear(now.getFullYear());
+        setCurrentMonth(now.getMonth());
+        setSelectedDateStr(currentTodayStr);
+      } else {
+        setCurrentYear(y);
+        setCurrentMonth(m - 1);
+        setSelectedDateStr(value);
+      }
+    } else {
+      // Sin fecha previa: inicializar siempre en el día y mes actual
+      setCurrentYear(now.getFullYear());
+      setCurrentMonth(now.getMonth());
+      setSelectedDateStr(currentTodayStr);
     }
-  }, [value]);
+  }, [visible, value]);
+
+  const handleGoToToday = () => {
+    const now = new Date();
+    const currentTodayStr = getTodayStr();
+    setCurrentYear(now.getFullYear());
+    setCurrentMonth(now.getMonth());
+    setSelectedDateStr(currentTodayStr);
+  };
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -94,13 +123,6 @@ export function M3DatePickerModal({
 
     return days;
   }, [currentYear, currentMonth]);
-
-  const todayStr = useMemo(() => {
-    const now = new Date();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${now.getFullYear()}-${m}-${d}`;
-  }, []);
 
   const handleQuickSelect = (daysToAdd: number) => {
     const target = new Date();
@@ -179,9 +201,21 @@ export function M3DatePickerModal({
               <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
             </Pressable>
 
-            <Text style={styles.monthTitle}>
-              {MONTH_NAMES[currentMonth]} {currentYear}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text style={styles.monthTitle}>
+                {MONTH_NAMES[currentMonth]} {currentYear}
+              </Text>
+              {(currentMonth !== new Date().getMonth() || currentYear !== new Date().getFullYear()) && (
+                <Pressable
+                  onPress={handleGoToToday}
+                  style={styles.todayPill}
+                  accessibilityRole="button"
+                  accessibilityLabel="Volver al mes actual"
+                >
+                  <Text style={styles.todayPillText}>Hoy</Text>
+                </Pressable>
+              )}
+            </View>
 
             <Pressable
               onPress={handleNextMonth}
@@ -268,6 +302,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
+    maxWidth: 400,
     backgroundColor: colors.surface,
     borderRadius: radii.containers,
     borderWidth: 1,
@@ -277,6 +312,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 8,
+  },
+  todayPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radii.circular,
+    backgroundColor: colors.primaryContainer,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  todayPillText: {
+    fontSize: typography.sizes.caption,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
   },
   header: {
     flexDirection: 'row',

@@ -9,6 +9,7 @@ export type RecipeCardProps = {
   onPress: () => void;
   onLongPress?: () => void;
   onSave?: () => void;
+  onDelete?: () => void;
   isSelectMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -25,6 +26,7 @@ export function RecipeCard({
   onPress,
   onLongPress,
   onSave,
+  onDelete,
   isSelectMode = false,
   isSelected = false,
   onToggleSelect,
@@ -153,23 +155,44 @@ export function RecipeCard({
             </View>
           )}
 
-          {onSave && (
-            <Pressable
-              onPress={handleSavePress}
-              hitSlop={8}
-              style={styles.saveButton}
-              accessibilityRole="button"
-              accessibilityLabel={recipe.isSaved ? 'Quitar de guardadas' : 'Guardar receta'}
-            >
-              <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+          <View style={styles.topActionsRow}>
+            {onSave && (
+              <Pressable
+                onPress={handleSavePress}
+                hitSlop={8}
+                style={styles.saveButton}
+                accessibilityRole="button"
+                accessibilityLabel={recipe.isSaved ? 'Quitar de guardadas' : 'Guardar receta'}
+              >
+                <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+                  <Ionicons
+                    name={recipe.isSaved ? 'heart' : 'heart-outline'}
+                    size={20}
+                    color={recipe.isSaved ? colors.primary : colors.textSecondary}
+                  />
+                </Animated.View>
+              </Pressable>
+            )}
+
+            {!isSelectMode && onDelete && (
+              <Pressable
+                onPress={(e) => {
+                  e?.stopPropagation?.();
+                  onDelete();
+                }}
+                hitSlop={8}
+                style={styles.deleteButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Eliminar receta ${recipe.title}`}
+              >
                 <Ionicons
-                  name={recipe.isSaved ? 'heart' : 'heart-outline'}
-                  size={20}
-                  color={recipe.isSaved ? colors.primary : colors.textSecondary}
+                  name="trash-outline"
+                  size={18}
+                  color={colors.error.text}
                 />
-              </Animated.View>
-            </Pressable>
-          )}
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/* Título y descripción */}
@@ -273,7 +296,20 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.label,
     fontWeight: typography.weights.bold,
   },
+  topActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   saveButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButton: {
     width: 38,
     height: 38,
     borderRadius: radii.circular,

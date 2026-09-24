@@ -140,6 +140,7 @@ const styles = StyleSheet.create({
   },
   dialogCard: {
     width: '100%',
+    maxWidth: 420,
     backgroundColor: colors.surface,
     borderRadius: radii.containers,
     borderWidth: 1,

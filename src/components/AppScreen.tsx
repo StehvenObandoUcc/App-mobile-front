@@ -11,8 +11,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, usePathname } from 'expo-router';
 import { colors, spacing } from '../theme';
-
-const MAIN_TABS = ['/', '/inventory', '/recipes', '/shopping-list'];
+import {
+  MAIN_TABS,
+  setSwipeNavigation,
+  getSwipeTransition,
+} from '../utils/tabSwipeState';
 
 export type AppScreenProps = {
   children: React.ReactNode;
@@ -22,8 +25,6 @@ export type AppScreenProps = {
   /** Activa el deslizamiento horizontal limpio entre las 4 pestañas principales */
   enableSwipeTabs?: boolean;
 };
-
-let lastActiveTabIndex = 0;
 
 export function AppScreen({
   children,
@@ -79,11 +80,12 @@ export function AppScreen({
     isNavigatingRef.current = false;
     dragX.setValue(0);
 
-    // Mini-animación direccional con inclinación hacia la vista siguiente/anterior
-    if (currentTabIndex !== -1) {
-      const direction = currentTabIndex >= lastActiveTabIndex ? 1 : -1;
-      lastActiveTabIndex = currentTabIndex;
+    const { isSwipe, direction } = getSwipeTransition();
 
+    // Solo anima si la navegación fue activada por un gesto de deslizamiento (swipe).
+    // Si fue una pulsación directa en la barra de navegación (ej. Inicio a Recetas),
+    // se coloca inmediatamente sin animación respetando el requerimiento de UX.
+    if (isSwipe && currentTabIndex !== -1) {
       entranceX.setValue(direction * 22);
       entranceTiltNum.setValue(direction * 1.8);
       entranceOpacity.setValue(0.88);
@@ -140,21 +142,19 @@ export function AppScreen({
   };
 
   // Detector de deslizamiento horizontal con arco natural para el pulgar
-  // Permite desviaciones diagonales normales sin perder el gesto ni bloquear el scroll vertical
+  // Permite desviaciones diagonales normales sin perder el gesto ni bloquear el scroll vertical ni componentes horizontales hijos
   const screenPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        if (!canSwipeRef.current || isNavigatingRef.current) return false;
-        const { dx, dy } = gestureState;
-        // Captura con umbral amigable (12px y ángulo permisivo de hasta ~41° respecto a la horizontal)
-        return Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.15;
-      },
+      // NUNCA capturar en capture phase para permitir que ScrollViews horizontales hijas
+      // (chips de categorías, filtros, selectores de unidad) procesen sus propios desplazamientos
+      onMoveShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
         if (!canSwipeRef.current || isNavigatingRef.current) return false;
         const { dx, dy } = gestureState;
-        return Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.15;
+        // Gesto horizontal claro y deliberado: umbral de al menos 35px y ángulo marcadamente horizontal (> 1.8x que dy)
+        return Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.8;
       },
       onPanResponderGrant: () => {
         dragX.stopAnimation();
@@ -176,7 +176,7 @@ export function AppScreen({
         const clamped = Math.max(Math.min(rawDx * 0.45, 95), -95);
         dragX.setValue(clamped);
       },
-      onPanResponderTerminationRequest: () => false,
+      onPanResponderTerminationRequest: () => true,
       onPanResponderTerminate: () => {
         Animated.spring(dragX, {
           toValue: 0,
@@ -190,8 +190,9 @@ export function AppScreen({
         const { dx, vx } = gestureState;
         const curr = currentTabIndexRef.current;
 
-        // Deslizar hacia la izquierda (dedo a la izquierda) -> Pestaña siguiente
-        if ((dx < -24 || vx < -0.2) && curr < MAIN_TABS.length - 1) {
+        // Deslizar con intención clara hacia la izquierda -> Pestaña siguiente
+        if ((dx < -60 || (dx < -30 && vx < -0.4)) && curr < MAIN_TABS.length - 1) {
+          setSwipeNavigation(1);
           navigateToTab(curr + 1);
           Animated.timing(dragX, {
             toValue: -100,
@@ -202,8 +203,9 @@ export function AppScreen({
             dragX.setValue(0);
           });
         }
-        // Deslizar hacia la derecha (dedo a la derecha) -> Pestaña anterior
-        else if ((dx > 24 || vx > 0.2) && curr > 0) {
+        // Deslizar con intención clara hacia la derecha -> Pestaña anterior
+        else if ((dx > 60 || (dx > 30 && vx > 0.4)) && curr > 0) {
+          setSwipeNavigation(-1);
           navigateToTab(curr - 1);
           Animated.timing(dragX, {
             toValue: 100,
