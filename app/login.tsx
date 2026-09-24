@@ -9,11 +9,15 @@ import {
   KeyboardAvoidingView,
   Alert,
   Animated,
+  Image,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../src/hooks/useAuth';
-import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog } from '../src/components';
+import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog, ProfileCard } from '../src/components';
 import { colors, radii, spacing, typography, elevations } from '../src/theme';
 
 export default function LoginScreen() {
@@ -27,6 +31,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<'name' | 'email' | 'password' | null>(null);
   const [tabsWidth, setTabsWidth] = useState(0);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const [dialogConfig, setDialogConfig] = useState<{
     visible: boolean;
@@ -47,7 +53,6 @@ export default function LoginScreen() {
   const formAnim = useRef(new Animated.Value(0)).current;
   const demoAnim = useRef(new Animated.Value(1)).current;
   const formPulseAnim = useRef(new Animated.Value(1)).current;
-  const logoutScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     return () => {
@@ -55,9 +60,8 @@ export default function LoginScreen() {
       formAnim.stopAnimation();
       demoAnim.stopAnimation();
       formPulseAnim.stopAnimation();
-      logoutScale.stopAnimation();
     };
-  }, [indicatorAnim, formAnim, demoAnim, formPulseAnim, logoutScale]);
+  }, [indicatorAnim, formAnim, demoAnim, formPulseAnim]);
 
   const handleModeChange = (newMode: 'login' | 'register') => {
     if (newMode === mode) return;
@@ -181,6 +185,66 @@ export default function LoginScreen() {
     }
   };
 
+  useEffect(() => {
+    if (user?.id) {
+      AsyncStorage.getItem(`@food_ai_avatar_${user.id}`).then((saved) => {
+        if (saved) setAvatarUri(saved);
+      }).catch(() => {});
+    } else {
+      setAvatarUri(null);
+    }
+  }, [user?.id]);
+
+  const handlePickAvatar = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          'Permiso necesario',
+          'Se requiere acceso a tus fotos para personalizar tu foto de perfil.',
+          [{ text: 'Entendido' }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]?.base64 && user?.id) {
+        const mime = result.assets[0].mimeType || 'image/jpeg';
+        const dataUri = `data:${mime};base64,${result.assets[0].base64}`;
+        setAvatarUri(dataUri);
+        await AsyncStorage.setItem(`@food_ai_avatar_${user.id}`, dataUri);
+      }
+    } catch (err: any) {
+      Alert.alert('Error', 'No se pudo seleccionar la foto: ' + (err?.message || 'Error desconocido'));
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    if (!user?.id) return;
+    Alert.alert(
+      'Eliminar foto',
+      '¿Deseas quitar tu foto de perfil actual?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            setAvatarUri(null);
+            await AsyncStorage.removeItem(`@food_ai_avatar_${user.id}`);
+          },
+        },
+      ]
+    );
+  };
+
   const handleFillDemo = () => {
     setEmail('demo@foodai.com');
     setPassword('123456');
@@ -190,68 +254,35 @@ export default function LoginScreen() {
   if (isAuthenticated && user) {
     return (
       <AppScreen style={styles.screen}>
-        <View style={styles.profileCard}>
-          <View style={styles.avatarLarge}>
-            <Ionicons name="person" size={40} color={colors.primary} />
-          </View>
-          <Text style={styles.profileName}>{user.name}</Text>
-          <Text style={styles.profileEmail}>{user.email}</Text>
-
-          <View style={styles.securityTag}>
-            <Ionicons name="shield-checkmark" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
-            <Text style={styles.securityTagText}>Sesión activa con token seguro</Text>
-          </View>
-
-          <View style={{ height: 28, width: '100%' }} />
-          <Animated.View style={{ transform: [{ scale: logoutScale }], width: '100%' }}>
-            <Pressable
-              onPressIn={() => {
-                Animated.spring(logoutScale, {
-                  toValue: 0.96,
-                  useNativeDriver: true,
-                }).start();
-              }}
-              onPressOut={() => {
-                Animated.spring(logoutScale, {
-                  toValue: 1.0,
-                  friction: 4,
-                  tension: 80,
-                  useNativeDriver: true,
-                }).start();
-              }}
-              onPress={async () => {
-                await logout();
-                setEmail('');
-                setPassword('');
-                handleModeChange('login');
-                setDialogConfig({
-                  visible: true,
-                  title: 'Sesión cerrada',
-                  message: 'Has cerrado tu sesión correctamente. Te redirigiremos al inicio.',
-                  type: 'info',
-                  onConfirm: () => {
-                    setDialogConfig((prev) => ({ ...prev, visible: false }));
-                    router.replace('/');
-                  },
-                });
-              }}
-              style={styles.logoutButton}
-              accessibilityRole="button"
-              accessibilityLabel="Cerrar sesión"
-            >
-              <Ionicons name="log-out-outline" size={20} color={colors.surface} style={{ marginRight: spacing.sm }} />
-              <Text style={styles.logoutButtonText}>Cerrar sesión</Text>
-            </Pressable>
-          </Animated.View>
-
-          <View style={{ height: 12 }} />
-          <SecondaryButton
-            title="Volver a mi cocina"
-            variant="outline"
-            iconName="restaurant-outline"
-            onPress={() => router.replace('/')}
+        <ScrollView
+          contentContainerStyle={styles.profileScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <ProfileCard
+            user={user}
+            avatarUri={avatarUri}
+            onPickAvatar={handlePickAvatar}
+            onRemoveAvatar={handleRemoveAvatar}
+            onReturnToKitchen={() => router.replace('/')}
+            onRequestLogout={() => setIsLogoutConfirmOpen(true)}
           />
-        </View>
+        </ScrollView>
+
+        <M3Dialog
+          visible={isLogoutConfirmOpen}
+          title="¿Cerrar sesión?"
+          message="¿Estás seguro de que deseas salir de tu cuenta? Tus datos locales se conservarán en este dispositivo."
+          type="warning"
+          iconName="log-out-outline"
+          confirmText="Cerrar sesión"
+          cancelText="Cancelar"
+          onCancel={() => setIsLogoutConfirmOpen(false)}
+          onConfirm={async () => {
+            setIsLogoutConfirmOpen(false);
+            await logout();
+            router.replace('/');
+          }}
+        />
       </AppScreen>
     );
   }
@@ -259,11 +290,12 @@ export default function LoginScreen() {
   return (
     <AppScreen style={styles.screen}>
       <KeyboardAvoidingView
-        behavior="height"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
         >
           {/* ── Cabecera Hero ── */}
@@ -663,62 +695,11 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.metadata,
     color: colors.primary,
   },
-  profileCard: {
-    flex: 1,
-    alignItems: 'center',
+  profileScrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: spacing.xxl,
-  },
-  avatarLarge: {
-    width: 84,
-    height: 84,
-    borderRadius: radii.circular,
-    backgroundColor: colors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  profileName: {
-    fontSize: typography.sizes.headline,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  profileEmail: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  securityTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceVariant,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radii.circular,
-    marginTop: 14,
-  },
-  securityTagText: {
-    fontSize: typography.sizes.label,
-    color: colors.textSecondary,
-    fontWeight: '700',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radii.buttons,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.xxl,
-    width: '100%',
-    ...elevations.md,
-  },
-  logoutButtonText: {
-    color: colors.textInverse,
-    fontSize: typography.sizes.body,
-    fontWeight: '700',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xxl,
   },
   guestButton: {
     flexDirection: 'row',

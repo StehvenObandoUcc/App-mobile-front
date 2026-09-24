@@ -221,7 +221,7 @@ export default function RecipeDetailScreen() {
         <View style={styles.sectionTitleRow}>
           <Ionicons name="list-outline" size={20} color={colors.textPrimary} style={{ marginRight: 6 }} />
           <Text style={styles.sectionTitle}>
-            Pasos de preparación {recipe.steps.length > 0 ? `(${completedSteps.length}/${recipe.steps.length})` : ''}
+            Pasos de preparación {(recipe.steps?.length || 0) > 0 ? `(${completedSteps.length}/${recipe.steps?.length})` : ''}
           </Text>
         </View>
 
@@ -268,13 +268,13 @@ export default function RecipeDetailScreen() {
           </View>
         )}
 
-        {!isLoadingSteps && !stepsError && recipe.steps.length === 0 && (
+        {!isLoadingSteps && !stepsError && (recipe.steps?.length || 0) === 0 && (
           <Text style={{ fontSize: typography.sizes.metadata, color: colors.textMuted, fontStyle: 'italic', paddingVertical: 10 }}>
             No hay pasos registrados para esta receta.
           </Text>
         )}
 
-        {recipe.steps.map((step, idx) => {
+        {(recipe.steps || []).map((step, idx) => {
           const isDone = completedSteps.includes(idx);
           return (
             <Pressable
@@ -283,6 +283,7 @@ export default function RecipeDetailScreen() {
               style={[styles.stepCard, isDone && styles.stepCardDone]}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isDone }}
+              accessibilityLabel={`Paso ${idx + 1}: ${step}`}
             >
               <View style={[styles.stepNumber, isDone && styles.stepNumberDone]}>
                 {isDone ? (

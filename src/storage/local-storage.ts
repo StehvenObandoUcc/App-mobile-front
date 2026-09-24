@@ -51,24 +51,72 @@ function ensureActiveUser(): string {
   return currentUserId;
 }
 
-async function persistToDisk() {
-  const uid = ensureActiveUser();
-  try {
-    await Promise.all([
-      AsyncStorage.setItem(getStorageKey(BASE_KEY_INVENTORY, uid), JSON.stringify(memoryInventory)),
-      AsyncStorage.setItem(getStorageKey(BASE_KEY_RECIPES, uid), JSON.stringify(memoryRecipes)),
-      AsyncStorage.setItem(
-        getStorageKey(BASE_KEY_DELETED_RECIPES, uid),
-        JSON.stringify(Array.from(deletedRecipeIds))
-      ),
-      AsyncStorage.setItem(
-        getStorageKey(BASE_KEY_SHOPPING_LIST, uid),
-        JSON.stringify(memoryShoppingList)
-      ),
-    ]);
-  } catch (err) {
-    console.warn('[LocalStorage] Error persistiendo datos de usuario a AsyncStorage:', err);
+type StoreKey = 'inventory' | 'recipes' | 'deleted_recipes' | 'shopping_list';
+const pendingStores = new Set<StoreKey>();
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function flushPendingSaves(): Promise<void> {
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
   }
+  if (!currentUserId || pendingStores.size === 0) return;
+
+  const uid = currentUserId;
+  const storesToPersist = Array.from(pendingStores);
+  pendingStores.clear();
+
+  const tasks: Promise<any>[] = [];
+  for (const store of storesToPersist) {
+    if (store === 'inventory') {
+      tasks.push(
+        AsyncStorage.setItem(getStorageKey(BASE_KEY_INVENTORY, uid), JSON.stringify(memoryInventory))
+      );
+    } else if (store === 'recipes') {
+      tasks.push(
+        AsyncStorage.setItem(getStorageKey(BASE_KEY_RECIPES, uid), JSON.stringify(memoryRecipes))
+      );
+    } else if (store === 'deleted_recipes') {
+      tasks.push(
+        AsyncStorage.setItem(
+          getStorageKey(BASE_KEY_DELETED_RECIPES, uid),
+          JSON.stringify(Array.from(deletedRecipeIds))
+        )
+      );
+    } else if (store === 'shopping_list') {
+      tasks.push(
+        AsyncStorage.setItem(
+          getStorageKey(BASE_KEY_SHOPPING_LIST, uid),
+          JSON.stringify(memoryShoppingList)
+        )
+      );
+    }
+  }
+
+  try {
+    await Promise.all(tasks);
+  } catch (err) {
+    console.warn('[LocalStorage] Error persistiendo tiendas a AsyncStorage:', err);
+  }
+}
+
+function schedulePersist(store: StoreKey): void {
+  ensureActiveUser();
+  pendingStores.add(store);
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+  }
+  persistTimer = setTimeout(() => {
+    flushPendingSaves().catch(() => {});
+  }, 50);
+}
+
+async function persistToDisk(): Promise<void> {
+  pendingStores.add('inventory');
+  pendingStores.add('recipes');
+  pendingStores.add('deleted_recipes');
+  pendingStores.add('shopping_list');
+  await flushPendingSaves();
 }
 
 export const LocalStorage = {
@@ -82,6 +130,7 @@ export const LocalStorage = {
    */
   async switchUser(userId: string): Promise<void> {
     if (!userId) return;
+    await flushPendingSaves();
     currentUserId = userId.trim();
 
     try {
@@ -166,14 +215,14 @@ export const LocalStorage = {
     ensureActiveUser();
     memoryInventory = [...items];
     emitChange();
-    await persistToDisk();
+    schedulePersist('inventory');
   },
 
   async addIngredient(item: Ingredient): Promise<Ingredient> {
     ensureActiveUser();
     memoryInventory = [item, ...memoryInventory];
     emitChange();
-    await persistToDisk();
+    schedulePersist('inventory');
     return item;
   },
 
@@ -183,7 +232,7 @@ export const LocalStorage = {
       item.id === updatedItem.id ? updatedItem : item
     );
     emitChange();
-    await persistToDisk();
+    schedulePersist('inventory');
     return updatedItem;
   },
 
@@ -191,7 +240,7 @@ export const LocalStorage = {
     ensureActiveUser();
     memoryInventory = memoryInventory.filter((item) => item.id !== id);
     emitChange();
-    await persistToDisk();
+    schedulePersist('inventory');
   },
 
   async deleteIngredients(ids: string[]): Promise<void> {
@@ -199,7 +248,7 @@ export const LocalStorage = {
     const idSet = new Set(ids);
     memoryInventory = memoryInventory.filter((item) => !idSet.has(item.id));
     emitChange();
-    await persistToDisk();
+    schedulePersist('inventory');
   },
 
   // ─── Recetas ────────────────────────────────────────────────────────────────
@@ -227,7 +276,7 @@ export const LocalStorage = {
       memoryRecipes.unshift(recipeWithTime);
     }
     emitChange();
-    await persistToDisk();
+    schedulePersist('recipes');
   },
 
   async toggleSaveRecipe(id: string): Promise<void> {
@@ -236,7 +285,7 @@ export const LocalStorage = {
       r.id === id ? { ...r, isSaved: !r.isSaved } : r
     );
     emitChange();
-    await persistToDisk();
+    schedulePersist('recipes');
   },
 
   async deleteRecipe(id: string): Promise<void> {
@@ -244,7 +293,8 @@ export const LocalStorage = {
     deletedRecipeIds.add(id);
     memoryRecipes = memoryRecipes.filter((r) => r.id !== id);
     emitChange();
-    await persistToDisk();
+    schedulePersist('recipes');
+    schedulePersist('deleted_recipes');
   },
 
   async deleteRecipes(ids: string[]): Promise<void> {
@@ -253,7 +303,8 @@ export const LocalStorage = {
     const idSet = new Set(ids);
     memoryRecipes = memoryRecipes.filter((r) => !idSet.has(r.id));
     emitChange();
-    await persistToDisk();
+    schedulePersist('recipes');
+    schedulePersist('deleted_recipes');
   },
 
   async consumeIngredients(consumed: { name: string; quantity: number }[]): Promise<string[]> {
@@ -281,7 +332,7 @@ export const LocalStorage = {
     });
 
     emitChange();
-    await persistToDisk();
+    schedulePersist('inventory');
     return consumedNames;
   },
 
@@ -294,14 +345,14 @@ export const LocalStorage = {
     ensureActiveUser();
     memoryShoppingList = [...items];
     emitChange();
-    await persistToDisk();
+    schedulePersist('shopping_list');
   },
 
   async addShoppingItem(item: ShoppingItem): Promise<ShoppingItem> {
     ensureActiveUser();
     memoryShoppingList = [item, ...memoryShoppingList];
     emitChange();
-    await persistToDisk();
+    schedulePersist('shopping_list');
     return item;
   },
 
@@ -309,7 +360,7 @@ export const LocalStorage = {
     ensureActiveUser();
     memoryShoppingList = [...items, ...memoryShoppingList];
     emitChange();
-    await persistToDisk();
+    schedulePersist('shopping_list');
     return items;
   },
 
@@ -319,7 +370,7 @@ export const LocalStorage = {
       item.id === updated.id ? updated : item
     );
     emitChange();
-    await persistToDisk();
+    schedulePersist('shopping_list');
     return updated;
   },
 
@@ -329,21 +380,21 @@ export const LocalStorage = {
       item.id === id ? { ...item, isBought: !item.isBought } : item
     );
     emitChange();
-    await persistToDisk();
+    schedulePersist('shopping_list');
   },
 
   async deleteShoppingItem(id: string): Promise<void> {
     ensureActiveUser();
     memoryShoppingList = memoryShoppingList.filter((item) => item.id !== id);
     emitChange();
-    await persistToDisk();
+    schedulePersist('shopping_list');
   },
 
   async deleteBoughtItems(): Promise<void> {
     ensureActiveUser();
     memoryShoppingList = memoryShoppingList.filter((item) => !item.isBought);
     emitChange();
-    await persistToDisk();
+    schedulePersist('shopping_list');
   },
 
   /**
@@ -411,7 +462,8 @@ export const LocalStorage = {
     memoryShoppingList = memoryShoppingList.filter((item) => !item.isBought);
 
     emitChange();
-    await persistToDisk();
+    schedulePersist('inventory');
+    schedulePersist('shopping_list');
     return movedCount;
   },
 

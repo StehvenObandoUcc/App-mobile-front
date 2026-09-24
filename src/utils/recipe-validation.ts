@@ -64,7 +64,10 @@ export function getValidTimeOptionsForFocus(focus: string, difficulty?: string):
   if (difficulty === 'easy') {
     return [15, 20, 30];
   }
-  return [15, 20, 30, 45];
+  if (difficulty === 'medium') {
+    return [20, 30, 45];
+  }
+  return [15, 20, 30, 45, 60];
 }
 
 /**

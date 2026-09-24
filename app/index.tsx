@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Image } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInventory } from '../src/hooks/useInventory';
 import { useRecipes } from '../src/hooks/useRecipes';
@@ -27,6 +28,19 @@ export default function HomeScreen() {
   const { recipes, toggleSave, deleteRecipe } = useRecipes();
   const { pendingItems } = useShoppingList();
   const { user } = useAuth();
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?.id) {
+        AsyncStorage.getItem(`@food_ai_avatar_${user.id}`).then((uri) => {
+          setAvatarUri(uri || null);
+        }).catch(() => {});
+      } else {
+        setAvatarUri(null);
+      }
+    }, [user?.id])
+  );
 
   const handleLongPressRecipe = (recipe: Recipe) => {
     Alert.alert(
@@ -89,7 +103,15 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel={user ? `Sesión de ${user.name}` : 'Iniciar sesión'}
             >
-              <Ionicons name={user ? 'person' : 'person-outline'} size={20} color={colors.primary} />
+              {avatarUri ? (
+                <Image
+                  source={{ uri: avatarUri }}
+                  style={{ width: 38, height: 38, borderRadius: radii.circular, overflow: 'hidden' }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Ionicons name={user ? 'person' : 'person-outline'} size={20} color={colors.primary} />
+              )}
               {user && <View style={styles.onlineDot} />}
             </Pressable>
 

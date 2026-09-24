@@ -120,6 +120,59 @@ export type ChefValidationRule = {
 
 
 
+// ─── Contratos de Preferencias Dietarias ───────────────────────────────────────
+export type DietaryPreference =
+  | 'any'
+  | 'vegetarian'
+  | 'vegan'
+  | 'keto'
+  | 'low_carb'
+  | 'gluten_free';
+
+export interface DietaryOption {
+  key: DietaryPreference;
+  label: string;
+}
+
+export const DIETARY_OPTIONS: readonly DietaryOption[] = [
+  { key: 'any', label: 'Cualquiera' },
+  { key: 'vegetarian', label: 'Vegetariana' },
+  { key: 'vegan', label: 'Vegana' },
+  { key: 'keto', label: 'Keto' },
+  { key: 'gluten_free', label: 'Sin Gluten' },
+] as const;
+
+// ─── Contratos de Enfoque Culinario del Chef IA ──────────────────────────────
+export type RecipeFocus = 'waste_reduction' | 'quick' | 'custom';
+
+export interface RecipeFocusOption {
+  key: RecipeFocus;
+  title: string;
+  description: string;
+  iconName: 'leaf-outline' | 'flash-outline' | 'color-wand-outline';
+}
+
+export const RECIPE_FOCUS_OPTIONS: readonly RecipeFocusOption[] = [
+  {
+    key: 'waste_reduction',
+    title: 'Aprovechar por vencer (Cero Desperdicio)',
+    description: 'Prioriza ingredientes próximos a caducar para no botar comida.',
+    iconName: 'leaf-outline',
+  },
+  {
+    key: 'quick',
+    title: 'Rápida y Express',
+    description: 'Platos sencillos con menor cantidad de pasos y utensilios.',
+    iconName: 'flash-outline',
+  },
+  {
+    key: 'custom',
+    title: 'Personalizada y Creativa',
+    description: 'Libertad gastronómica total: define estilo, técnica o antojo.',
+    iconName: 'color-wand-outline',
+  },
+] as const;
+
 // ─── Contratos de Escaneo ─────────────────────────────────────────────────────
 export type ScanInput = {
   imageUri: string;

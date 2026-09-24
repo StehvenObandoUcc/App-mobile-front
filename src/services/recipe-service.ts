@@ -1,4 +1,4 @@
-import { Recipe } from '../types';
+import { Recipe, DietaryPreference } from '../types';
 import { LocalStorage } from '../storage/local-storage';
 import { generateRecipesWithApi, getRecipeStepsWithApi } from './api-client';
 import { getFriendlyErrorMessage } from '../utils/error-messages';
@@ -17,7 +17,8 @@ export interface RecipeService {
     maxPrepTime?: number,
     focus?: string,
     count?: number,
-    difficulty?: string
+    difficulty?: string,
+    dietaryPreference?: DietaryPreference
   ): Promise<Recipe[]>;
 }
 
@@ -92,10 +93,11 @@ export const mockRecipeService: RecipeService = {
     maxPrepTime: number = 30,
     focus: string = 'waste_reduction',
     count: number = 2,
-    difficulty: string = 'any'
+    difficulty: string = 'any',
+    dietaryPreference: DietaryPreference = 'any'
   ): Promise<Recipe[]> {
     try {
-      const generated = await generateRecipesWithApi(ingredients, maxPrepTime, focus, count, difficulty);
+      const generated = await generateRecipesWithApi(ingredients, maxPrepTime, focus, count, difficulty, dietaryPreference);
       if (!Array.isArray(generated) || generated.length === 0) {
         throw new Error('No pudimos generar tus recetas en este momento. Intenta con menos recetas o vuelve a intentarlo.');
       }

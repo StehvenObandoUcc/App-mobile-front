@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import type { DietaryPreference } from '../types';
 
 const API_PORT = '8000';
 
@@ -193,7 +194,8 @@ export async function generateRecipesWithApi(
   maxPrepTime: number = 30,
   focus: string = 'waste_reduction',
   count: number = 2,
-  difficulty: string = 'any'
+  difficulty: string = 'any',
+  dietaryPreference: DietaryPreference = 'any'
 ): Promise<any[]> {
   return requestJson<any[]>(`${API_BASE_URL}/api/v1/recipes/generate`, {
     method: 'POST',
@@ -204,6 +206,7 @@ export async function generateRecipesWithApi(
       focus,
       count,
       difficulty,
+      dietary_preference: dietaryPreference,
     }),
   });
 }

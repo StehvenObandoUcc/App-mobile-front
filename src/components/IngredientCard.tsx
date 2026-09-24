@@ -120,6 +120,9 @@ export function IngredientCard({
             onPress={onToggleSelect}
             hitSlop={10}
             style={[styles.checkbox, isSelected && styles.checkboxActive]}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: isSelected }}
+            accessibilityLabel={`Seleccionar alimento ${ingredient.name}`}
           >
             <Ionicons
               name={isSelected ? 'checkmark' : 'ellipse-outline'}

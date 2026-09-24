@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AsyncStatus, Recipe } from '../types';
+import { AsyncStatus, Recipe, DietaryPreference } from '../types';
 import { RecipeService, mockRecipeService } from '../services/recipe-service';
 import { LocalStorage } from '../storage/local-storage';
 
@@ -46,7 +46,6 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
   const toggleSave = async (id: string) => {
     try {
       await service.toggleSave(id);
-      await loadRecipes();
     } catch (err: any) {
       setError(err?.message || 'Error al actualizar favorita');
     }
@@ -55,7 +54,6 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
   const prepareRecipe = async (id: string): Promise<string[]> => {
     try {
       const consumedNames = await service.prepareRecipe(id);
-      await loadRecipes();
       return consumedNames;
     } catch (err: any) {
       setError(err?.message || 'Error al procesar la preparación');
@@ -66,7 +64,6 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
   const deleteRecipe = async (id: string) => {
     try {
       await service.deleteRecipe(id);
-      await loadRecipes();
     } catch (err: any) {
       setError(err?.message || 'Error al descartar la receta');
     }
@@ -82,7 +79,6 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
   const deleteRecipes = async (ids: string[]) => {
     try {
       await service.deleteRecipes(ids);
-      await loadRecipes();
     } catch (err: any) {
       setError(err?.message || 'Error al eliminar recetas seleccionadas');
     }
@@ -93,17 +89,29 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
     maxPrepTime: number = 30,
     focus: string = 'waste_reduction',
     count: number = 2,
-    difficulty: string = 'any'
+    difficulty: string = 'any',
+    dietaryPreference: DietaryPreference = 'any'
   ): Promise<Recipe[]> => {
-    setStatus('loading');
+    const hadNoRecipes = recipes.length === 0;
+    if (hadNoRecipes) {
+      setStatus('loading');
+    }
     try {
-      const generated = await service.generateRecipesWithAi(ingredients, maxPrepTime, focus, count, difficulty);
-      await loadRecipes();
+      const generated = await service.generateRecipesWithAi(
+        ingredients,
+        maxPrepTime,
+        focus,
+        count,
+        difficulty,
+        dietaryPreference
+      );
       setStatus('success');
       return generated;
     } catch (err: any) {
       setError(err?.message || 'Error generando recetas con IA');
-      setStatus('error');
+      if (hadNoRecipes) {
+        setStatus('error');
+      }
       throw err;
     }
   };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -337,6 +338,24 @@ export default function InventoryScreen() {
     });
   };
 
+  const renderIngredientItem = useCallback(
+    ({ item, index }: { item: Ingredient; index: number }) => (
+      <StaggerView index={Math.min(index, 8)}>
+        <IngredientCard
+          ingredient={item}
+          isSelectMode={isSelectMode}
+          isSelected={selectedIds.has(item.id)}
+          onToggleSelect={() => toggleSelectItem(item.id)}
+          onLongPress={() => toggleSelectItem(item.id)}
+          onPress={() => (isSelectMode ? toggleSelectItem(item.id) : openEditModal(item))}
+          onDelete={() => handleDelete(item.id, item.name)}
+          onConsume={() => handleConsume(item.id, item.name)}
+        />
+      </StaggerView>
+    ),
+    [isSelectMode, selectedIds, toggleSelectItem, openEditModal, handleDelete, handleConsume]
+  );
+
   return (
     <AppScreen style={styles.screen}>
       {/* ── Cabecera Editorial Despensa ── */}
@@ -354,6 +373,7 @@ export default function InventoryScreen() {
           style={({ pressed }) => [styles.scanHeaderBtn, pressed && styles.scanHeaderBtnPressed]}
           accessibilityRole="button"
           accessibilityLabel="Escanear con cámara"
+          accessibilityHint="Abre la cámara para detectar alimentos automáticamente"
         >
           <Ionicons name="camera-outline" size={20} color={colors.primary} />
         </Pressable>
@@ -483,20 +503,11 @@ export default function InventoryScreen() {
             { paddingBottom: Math.max(100, getBottomContentPadding(insets.bottom)) },
           ]}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => (
-            <StaggerView index={Math.min(index, 8)}>
-              <IngredientCard
-                ingredient={item}
-                isSelectMode={isSelectMode}
-                isSelected={selectedIds.has(item.id)}
-                onToggleSelect={() => toggleSelectItem(item.id)}
-                onLongPress={() => toggleSelectItem(item.id)}
-                onPress={() => (isSelectMode ? toggleSelectItem(item.id) : openEditModal(item))}
-                onDelete={() => handleDelete(item.id, item.name)}
-                onConsume={() => handleConsume(item.id, item.name)}
-              />
-            </StaggerView>
-          )}
+          renderItem={renderIngredientItem}
+          initialNumToRender={8}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListEmptyComponent={
             searchQuery.trim() || selectedCategory !== 'all' ? (
               <EmptyState

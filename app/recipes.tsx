@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,15 +6,27 @@ import {
   ScrollView,
   Pressable,
   Text,
+  TextInput,
   Alert,
   Modal,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRecipes } from '../src/hooks/useRecipes';
 import { useInventory } from '../src/hooks/useInventory';
-import { Recipe, RecipeSortOption, RecipeDifficultyFilter, RecipeDifficulty } from '../src/types';
+import {
+  Recipe,
+  RecipeSortOption,
+  RecipeDifficultyFilter,
+  RecipeDifficulty,
+  DietaryPreference,
+  DIETARY_OPTIONS,
+  RecipeFocus,
+  RECIPE_FOCUS_OPTIONS,
+} from '../src/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AppScreen,
@@ -31,9 +43,18 @@ import {
 } from '../src/components';
 import { sortRecipes } from '../src/utils/recipe-sorter';
 import { getValidTimeOptionsForFocus } from '../src/utils/recipe-validation';
+import { getExpirationStatus } from '../src/utils/expiration';
 import { colors, radii, spacing, typography } from '../src/theme';
 
 type FilterTab = 'all' | 'high_match' | 'quick' | 'saved';
+
+const CUSTOM_STYLE_TAGS = [
+  '✨ Gourmet',
+  '🥗 Cena Ligera',
+  '🍲 Guiso o Sopa',
+  '🔥 Al Horno',
+  '🥐 Dulce o Postre',
+] as const;
 
 export default function RecipesScreen() {
   const router = useRouter();
@@ -58,10 +79,46 @@ export default function RecipesScreen() {
   // Modal Chef IA
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [selectedTime, setSelectedTime] = useState<number>(20);
-  const [selectedFocus, setSelectedFocus] = useState<string>('waste_reduction');
+  const [selectedFocus, setSelectedFocus] = useState<RecipeFocus>('waste_reduction');
+  const [customNote, setCustomNote] = useState('');
+  const [selectedStyleTag, setSelectedStyleTag] = useState<string | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<RecipeDifficulty>('easy');
+  const [selectedDietaryPreference, setSelectedDietaryPreference] = useState<DietaryPreference>('any');
+  const [selectedIngredientIds, setSelectedIngredientIds] = useState<Set<string>>(new Set());
   const [selectedCount, setSelectedCount] = useState<number>(2);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Inicializar selección de ingredientes limpiamente al pulsar abrir modal (evita deselecciones accidentales por sincronización en segundo plano)
+  const handleOpenAiModal = () => {
+    if (items.length > 0) {
+      setSelectedIngredientIds(new Set(items.map((i) => i.id)));
+    } else {
+      setSelectedIngredientIds(new Set());
+    }
+    setCustomNote('');
+    setSelectedStyleTag(null);
+    setIsAiModalOpen(true);
+  };
+
+  const toggleSelectIngredient = (id: string) => {
+    setSelectedIngredientIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllIngredients = () => {
+    setSelectedIngredientIds(new Set(items.map((i) => i.id)));
+  };
+
+  const handleClearAllIngredients = () => {
+    setSelectedIngredientIds(new Set());
+  };
 
   // Modo Selección Múltiple (idéntico a Inventario)
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -89,19 +146,37 @@ export default function RecipesScreen() {
       );
       return;
     }
+
+    const chosenIngredients = items.filter((i) => selectedIngredientIds.has(i.id));
+    if (chosenIngredients.length === 0) {
+      Alert.alert(
+        'Selecciona ingredientes',
+        'Por favor selecciona al menos un alimento o vegetal de tu despensa para crear recetas.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
+
     setIsGenerating(true);
     try {
+      let effectiveFocus: string = selectedFocus;
+      if (selectedFocus === 'custom') {
+        const parts = [selectedStyleTag, customNote.trim()].filter(Boolean);
+        effectiveFocus = parts.length > 0 ? `custom: ${parts.join(', ')}` : 'custom';
+      }
+
       const generated = await generateWithAi(
-        items,
+        chosenIngredients,
         selectedTime,
-        selectedFocus,
+        effectiveFocus,
         selectedCount,
-        selectedDifficulty
+        selectedDifficulty,
+        selectedDietaryPreference
       );
       setIsAiModalOpen(false);
       Alert.alert(
         'Recetas Creadas',
-        `El Chef IA generó ${generated.length} receta(s) personalizadas con tus ingredientes.`,
+        `El Chef IA generó ${generated.length} receta(s) personalizadas con tus ingredientes seleccionados.`,
         [{ text: 'Ver Recetas', style: 'default' }]
       );
     } catch (err: any) {
@@ -194,6 +269,28 @@ export default function RecipesScreen() {
     return sortRecipes(matched, sortBy);
   }, [recipes, searchQuery, activeTab, difficultyFilter, sortBy]);
 
+  const renderRecipeItem = useCallback(
+    ({ item, index }: { item: Recipe; index: number }) => (
+      <StaggerView index={Math.min(index, 8)}>
+        <RecipeCard
+          recipe={item}
+          onPress={() =>
+            router.push({
+              pathname: '/recipe-detail',
+              params: { recipeId: item.id },
+            })
+          }
+          onSave={() => toggleSave(item.id)}
+          onLongPress={() => handleLongPress(item)}
+          isSelectMode={isSelectMode}
+          isSelected={selectedIds.has(item.id)}
+          onToggleSelect={() => toggleSelectRecipe(item.id)}
+        />
+      </StaggerView>
+    ),
+    [router, toggleSave, isSelectMode, selectedIds]
+  );
+
   return (
     <AppScreen style={styles.screen}>
       {status === 'loading' && (
@@ -234,7 +331,7 @@ export default function RecipesScreen() {
               {/* ── Banner Principal IA ── */}
               <View style={styles.aiBannerWrapper}>
                 <Pressable
-                  onPress={() => setIsAiModalOpen(true)}
+                  onPress={handleOpenAiModal}
                   style={({ pressed }) => [styles.aiBanner, pressed && styles.aiBannerPressed]}
                   accessibilityRole="button"
                   accessibilityLabel="Abrir generador de recetas con inteligencia artificial"
@@ -417,24 +514,11 @@ export default function RecipesScreen() {
               )}
             </View>
           }
-          renderItem={({ item, index }) => (
-            <StaggerView index={Math.min(index, 8)}>
-              <RecipeCard
-                recipe={item}
-                onPress={() =>
-                  router.push({
-                    pathname: '/recipe-detail',
-                    params: { recipeId: item.id },
-                  })
-                }
-                onSave={() => toggleSave(item.id)}
-                onLongPress={() => handleLongPress(item)}
-                isSelectMode={isSelectMode}
-                isSelected={selectedIds.has(item.id)}
-                onToggleSelect={() => toggleSelectRecipe(item.id)}
-              />
-            </StaggerView>
-          )}
+          renderItem={renderRecipeItem}
+          initialNumToRender={6}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListEmptyComponent={
             searchQuery.trim() || activeTab !== 'all' ? (
               <EmptyState
@@ -456,7 +540,7 @@ export default function RecipesScreen() {
                 title="No hay recetas disponibles"
                 description="Genera recetas con el Chef IA o añade más alimentos a tu inventario."
                 actionLabel="Generar con IA"
-                onAction={() => setIsAiModalOpen(true)}
+                onAction={handleOpenAiModal}
                 iconName="restaurant-outline"
               />
             )
@@ -469,12 +553,17 @@ export default function RecipesScreen() {
         visible={isAiModalOpen}
         animationType="slide"
         transparent
-        onRequestClose={() => setIsAiModalOpen(false)}
+        onRequestClose={() => {
+          if (!isGenerating) setIsAiModalOpen(false);
+        }}
       >
         <View style={styles.modalBackdrop}>
           <Pressable
             style={styles.modalDismissArea}
-            onPress={() => setIsAiModalOpen(false)}
+            disabled={isGenerating}
+            onPress={() => {
+              if (!isGenerating) setIsAiModalOpen(false);
+            }}
           />
           <View style={styles.modalSheet}>
             <View style={styles.sheetHandle} />
@@ -490,172 +579,348 @@ export default function RecipesScreen() {
                 </Text>
               </View>
               <Pressable
-                onPress={() => setIsAiModalOpen(false)}
+                disabled={isGenerating}
+                onPress={() => {
+                  if (!isGenerating) setIsAiModalOpen(false);
+                }}
                 hitSlop={10}
                 accessibilityRole="button"
                 accessibilityLabel="Cerrar generador de recetas con IA"
+                style={{ opacity: isGenerating ? 0.3 : 1 }}
               >
                 <Ionicons name="close-circle" size={26} color={colors.textMuted} />
               </Pressable>
             </View>
 
-            {/* Selector de Nivel de Dificultad */}
-            <Text style={styles.modalSectionLabel}>Nivel de Dificultad</Text>
-            <View style={styles.pillSelectorRow}>
-              {[
-                { key: 'easy', label: 'Fácil' },
-                { key: 'medium', label: 'Media' },
-                { key: 'hard', label: 'Difícil' },
-              ].map((d) => (
-                <Pressable
-                  key={d.key}
-                  onPress={() => setSelectedDifficulty(d.key as RecipeDifficulty)}
-                  style={[
-                    styles.timePill,
-                    selectedDifficulty === d.key && styles.timePillActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.timePillText,
-                      selectedDifficulty === d.key && styles.timePillTextActive,
-                    ]}
-                  >
-                    {d.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {/* Selector de Enfoque */}
-            <Text style={styles.modalSectionLabel}>Enfoque Culinario</Text>
-            <View style={styles.focusOptions}>
-              <Pressable
-                onPress={() => setSelectedFocus('waste_reduction')}
-                style={[
-                  styles.focusCard,
-                  selectedFocus === 'waste_reduction' && styles.focusCardActive,
-                ]}
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{ flexShrink: 1 }}
+            >
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 28 }}
+                keyboardShouldPersistTaps="handled"
               >
-                <Ionicons
-                  name="leaf-outline"
-                  size={20}
-                  color={selectedFocus === 'waste_reduction' ? colors.primary : colors.textSecondary}
-                />
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text
-                    style={[
-                      styles.focusTitle,
-                      selectedFocus === 'waste_reduction' && styles.focusTitleActive,
-                    ]}
-                  >
-                    Aprovechar por vencer (Cero Desperdicio)
-                  </Text>
-                  <Text style={styles.focusDesc}>
-                    Prioriza ingredientes próximos a caducar para no botar comida.
-                  </Text>
+                {/* ── 1. Preferencia Dietaria con Ajuste Flexible y Ergonómico ── */}
+                <Text style={styles.modalSectionLabel}>Preferencia Dietaria</Text>
+                <View style={styles.dietaryPillsWrap}>
+                  {DIETARY_OPTIONS.map((diet) => {
+                    const isSelected = selectedDietaryPreference === diet.key;
+                    return (
+                      <Pressable
+                        key={diet.key}
+                        onPress={() => setSelectedDietaryPreference(diet.key)}
+                        style={[
+                          styles.dietaryPill,
+                          isSelected && styles.dietaryPillActive,
+                        ]}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: isSelected }}
+                        accessibilityLabel={`Preferencia ${diet.label}`}
+                      >
+                        <Text
+                          style={[
+                            styles.dietaryPillText,
+                            isSelected && styles.dietaryPillTextActive,
+                          ]}
+                        >
+                          {diet.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
-              </Pressable>
 
-              <Pressable
-                onPress={() => setSelectedFocus('quick')}
-                style={[
-                  styles.focusCard,
-                  selectedFocus === 'quick' && styles.focusCardActive,
-                ]}
-              >
-                <Ionicons
-                  name="flash-outline"
-                  size={20}
-                  color={selectedFocus === 'quick' ? colors.primary : colors.textSecondary}
-                />
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text
-                    style={[
-                      styles.focusTitle,
-                      selectedFocus === 'quick' && styles.focusTitleActive,
-                    ]}
-                  >
-                    Rápida y Express
-                  </Text>
-                  <Text style={styles.focusDesc}>
-                    Platos sencillos con menor cantidad de pasos y utensilios.
-                  </Text>
-                </View>
-              </Pressable>
-            </View>
-
-            {/* Selector de Tiempo con Bloqueo Lógico */}
-            <View style={styles.labelWithHint}>
-              <Text style={styles.modalSectionLabel}>Tiempo Máximo de Preparación</Text>
-              {selectedFocus === 'quick' && (
-                <Text style={styles.validationHintText}>Máx. 20 min en modo Express</Text>
-              )}
-              {selectedDifficulty === 'hard' && (
-                <Text style={styles.validationHintText}>Mín. 30 min en recetas complejas</Text>
-              )}
-            </View>
-            <View style={styles.pillSelectorRow}>
-              {[15, 20, 30, 45, 60].map((mins) => {
-                const isAllowed = validTimes.includes(mins);
-                const isSelected = selectedTime === mins;
-                return (
-                  <Pressable
-                    key={mins}
-                    disabled={!isAllowed}
-                    onPress={() => setSelectedTime(mins)}
-                    style={[
-                      styles.timePill,
-                      isSelected && styles.timePillActive,
-                      !isAllowed && styles.timePillDisabled,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.timePillText,
-                        isSelected && styles.timePillTextActive,
-                        !isAllowed && styles.timePillTextDisabled,
-                      ]}
-                    >
-                      {mins} min
+                {/* ── 2. Selector de Ingredientes de la Despensa ── */}
+                <View style={styles.ingredientSectionHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalSectionLabel}>Ingredientes a Utilizar</Text>
+                    <Text style={styles.ingredientCountHint}>
+                      {items.length > 0
+                        ? `${selectedIngredientIds.size} de ${items.length} seleccionados`
+                        : 'Sin ingredientes disponibles'}
                     </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+                  </View>
 
-            {/* Selector de Cantidad de Recetas (mitigación temporal BUG-04) */}
-            <Text style={styles.modalSectionLabel}>¿Cuántas recetas deseas generar?</Text>
-            <View style={styles.pillSelectorRow}>
-              {[1, 2, 3].map((cnt) => (
-                <Pressable
-                  key={cnt}
-                  onPress={() => setSelectedCount(cnt)}
-                  style={[
-                    styles.timePill,
-                    selectedCount === cnt && styles.timePillActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.timePillText,
-                      selectedCount === cnt && styles.timePillTextActive,
-                    ]}
-                  >
-                    {cnt} {cnt === 1 ? 'Receta' : 'Recetas'}
+                  {items.length > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Pressable
+                        onPress={handleSelectAllIngredients}
+                        style={styles.ingredientActionBtn}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Seleccionar todos los ingredientes"
+                      >
+                        <Text style={styles.ingredientActionBtnText}>Todos</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={handleClearAllIngredients}
+                        style={styles.ingredientActionBtn}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Deseleccionar todos los ingredientes"
+                      >
+                        <Text style={styles.ingredientActionBtnText}>Ninguno</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+
+                {items.length === 0 ? (
+                  <View style={styles.emptyPantryModalCard}>
+                    <Ionicons name="basket-outline" size={32} color={colors.textMuted} />
+                    <Text style={styles.emptyPantryModalTitle}>Tu despensa está vacía</Text>
+                    <Text style={styles.emptyPantryModalDesc}>
+                      Agrega ingredientes en tu inventario o escanea un ticket antes de crear recetas personalizadas.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.ingredientChipsWrap}>
+                    {items.map((ing) => {
+                      const isSelected = selectedIngredientIds.has(ing.id);
+                      const exp = getExpirationStatus(ing.expirationDate);
+                      const isUrgent = exp.status === 'expiringSoon' || exp.status === 'expired';
+                      return (
+                        <Pressable
+                          key={ing.id}
+                          onPress={() => toggleSelectIngredient(ing.id)}
+                          style={[
+                            styles.ingredientChip,
+                            isSelected && styles.ingredientChipSelected,
+                            isUrgent && styles.ingredientChipUrgent,
+                          ]}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: isSelected }}
+                          accessibilityLabel={`${ing.name} ${isSelected ? 'seleccionado' : 'no seleccionado'}${isUrgent ? `, ${exp.label}` : ''}`}
+                        >
+                          <Ionicons
+                            name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+                            size={15}
+                            color={isSelected ? colors.primary : colors.textMuted}
+                            style={{ marginRight: 5 }}
+                          />
+                          <Text
+                            style={[
+                              styles.ingredientChipText,
+                              isSelected && styles.ingredientChipTextSelected,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {ing.name}{ing.quantity ? ` (${ing.quantity} ${ing.unit || ''})` : ''}
+                          </Text>
+                          {isUrgent && (
+                            <View style={styles.urgentBadge}>
+                              <Text style={styles.urgentBadgeText}>⚠️ {exp.label}</Text>
+                            </View>
+                          )}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {items.length > 0 && selectedIngredientIds.size === 0 && (
+                  <Text style={styles.validationHintText}>
+                    ⚠️ Selecciona al menos 1 alimento o vegetal de tu despensa.
                   </Text>
-                </Pressable>
-              ))}
-            </View>
+                )}
 
-            <View style={{ height: 16 }} />
+                {/* ── 3. Selector de Nivel de Dificultad ── */}
+                <Text style={styles.modalSectionLabel}>Nivel de Dificultad</Text>
+                <View style={styles.pillSelectorRow}>
+                  {[
+                    { key: 'easy', label: 'Fácil' },
+                    { key: 'medium', label: 'Media' },
+                    { key: 'hard', label: 'Difícil' },
+                  ].map((d) => (
+                    <Pressable
+                      key={d.key}
+                      onPress={() => setSelectedDifficulty(d.key as RecipeDifficulty)}
+                      style={[
+                        styles.timePill,
+                        selectedDifficulty === d.key && styles.timePillActive,
+                      ]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: selectedDifficulty === d.key }}
+                      accessibilityLabel={`Dificultad ${d.label}`}
+                    >
+                      <Text
+                        style={[
+                          styles.timePillText,
+                          selectedDifficulty === d.key && styles.timePillTextActive,
+                        ]}
+                      >
+                        {d.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
 
-            <PrimaryButton
-              title={`Generar ${selectedCount} ${selectedCount === 1 ? 'Receta' : 'Recetas'} con IA`}
-              onPress={handleGenerate}
-              isLoading={isGenerating}
-              iconName="sparkles"
-            />
+                {/* ── 4. Selector de Enfoque Culinario ── */}
+                <Text style={styles.modalSectionLabel}>Enfoque Culinario</Text>
+                <View style={styles.focusOptions}>
+                  {RECIPE_FOCUS_OPTIONS.map((f) => {
+                    const isActive = selectedFocus === f.key;
+                    return (
+                      <Pressable
+                        key={f.key}
+                        onPress={() => setSelectedFocus(f.key)}
+                        style={[
+                          styles.focusCard,
+                          isActive && styles.focusCardActive,
+                        ]}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: isActive }}
+                        accessibilityLabel={`Enfoque ${f.title}`}
+                      >
+                        <Ionicons
+                          name={f.iconName}
+                          size={20}
+                          color={isActive ? colors.primary : colors.textSecondary}
+                        />
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                          <Text
+                            style={[
+                              styles.focusTitle,
+                              isActive && styles.focusTitleActive,
+                            ]}
+                          >
+                            {f.title}
+                          </Text>
+                          <Text style={styles.focusDesc}>
+                            {f.description}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {/* Sub-opciones cuando el enfoque es Personalizada y Creativa */}
+                {selectedFocus === 'custom' && (
+                  <View style={styles.customOptionsContainer}>
+                    <Text style={styles.customSubLabel}>Estilo o Técnica Culinaria (Opcional)</Text>
+                    <View style={styles.customTagsWrap}>
+                      {CUSTOM_STYLE_TAGS.map((tag) => {
+                        const isTagSelected = selectedStyleTag === tag;
+                        return (
+                          <Pressable
+                            key={tag}
+                            onPress={() => setSelectedStyleTag(isTagSelected ? null : tag)}
+                            style={[
+                              styles.customTagChip,
+                              isTagSelected && styles.customTagChipActive,
+                            ]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Estilo ${tag}`}
+                          >
+                            <Text
+                              style={[
+                                styles.customTagText,
+                                isTagSelected && styles.customTagTextActive,
+                              ]}
+                            >
+                              {tag}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    <Text style={styles.customSubLabel}>Indicación o antojo especial (Opcional)</Text>
+                    <TextInput
+                      value={customNote}
+                      onChangeText={setCustomNote}
+                      placeholder="Ej. salsa cremosa, cena ligera, plato caliente..."
+                      placeholderTextColor={colors.textMuted}
+                      maxLength={60}
+                      style={styles.customTextInput}
+                      returnKeyType="done"
+                      accessibilityLabel="Indicación o antojo especial para la receta"
+                    />
+                  </View>
+                )}
+
+                {/* ── 5. Selector de Tiempo con Bloqueo Lógico ── */}
+                <View style={styles.labelWithHint}>
+                  <Text style={styles.modalSectionLabel}>Tiempo Máximo de Preparación</Text>
+                  {selectedFocus === 'quick' && (
+                    <Text style={styles.validationHintText}>Máx. 20 min en modo Express</Text>
+                  )}
+                  {selectedDifficulty === 'hard' && selectedFocus !== 'quick' && (
+                    <Text style={styles.validationHintText}>Mín. 30 min en recetas complejas</Text>
+                  )}
+                </View>
+                <View style={styles.pillSelectorRow}>
+                  {[15, 20, 30, 45, 60].map((mins) => {
+                    const isAllowed = validTimes.includes(mins);
+                    const isSelected = selectedTime === mins;
+                    return (
+                      <Pressable
+                        key={mins}
+                        disabled={!isAllowed}
+                        onPress={() => setSelectedTime(mins)}
+                        style={[
+                          styles.timePill,
+                          isSelected && styles.timePillActive,
+                          !isAllowed && styles.timePillDisabled,
+                        ]}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: isSelected, disabled: !isAllowed }}
+                        accessibilityLabel={`${mins} minutos`}
+                      >
+                        <Text
+                          style={[
+                            styles.timePillText,
+                            isSelected && styles.timePillTextActive,
+                            !isAllowed && styles.timePillTextDisabled,
+                          ]}
+                        >
+                          {mins} min
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {/* ── 6. Selector de Cantidad de Recetas ── */}
+                <Text style={styles.modalSectionLabel}>¿Cuántas recetas deseas generar?</Text>
+                <View style={styles.pillSelectorRow}>
+                  {[1, 2, 3].map((cnt) => (
+                    <Pressable
+                      key={cnt}
+                      onPress={() => setSelectedCount(cnt)}
+                      style={[
+                        styles.timePill,
+                        selectedCount === cnt && styles.timePillActive,
+                      ]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: selectedCount === cnt }}
+                      accessibilityLabel={`${cnt} ${cnt === 1 ? 'receta' : 'recetas'}`}
+                    >
+                      <Text
+                        style={[
+                          styles.timePillText,
+                          selectedCount === cnt && styles.timePillTextActive,
+                        ]}
+                      >
+                        {cnt} {cnt === 1 ? 'Receta' : 'Recetas'}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={{ height: 18 }} />
+
+                <PrimaryButton
+                  title={`Generar ${selectedCount} ${selectedCount === 1 ? 'Receta' : 'Recetas'} con IA`}
+                  onPress={handleGenerate}
+                  isLoading={isGenerating}
+                  disabled={selectedIngredientIds.size === 0 || isGenerating}
+                  iconName="sparkles"
+                />
+              </ScrollView>
+            </KeyboardAvoidingView>
           </View>
         </View>
       </Modal>
@@ -1018,5 +1283,188 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.label,
     fontWeight: '700',
     color: colors.textSecondary,
+  },
+  ingredientSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  ingredientCountHint: {
+    fontSize: typography.sizes.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  ingredientActionBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    minHeight: 34,
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
+    marginLeft: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ingredientActionBtnText: {
+    fontSize: typography.sizes.caption,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  dietaryPillsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  dietaryPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    minHeight: 40,
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dietaryPillActive: {
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
+  },
+  dietaryPillText: {
+    fontSize: typography.sizes.label,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  dietaryPillTextActive: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  emptyPantryModalCard: {
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: radii.cards,
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyPantryModalTitle: {
+    fontSize: typography.sizes.body,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginTop: spacing.xs,
+  },
+  emptyPantryModalDesc: {
+    fontSize: typography.sizes.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  ingredientChipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+    marginBottom: spacing.sm,
+  },
+  ingredientChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  ingredientChipSelected: {
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
+  },
+  ingredientChipText: {
+    fontSize: typography.sizes.label,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    maxWidth: 180,
+  },
+  ingredientChipTextSelected: {
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  ingredientChipUrgent: {
+    borderColor: colors.functional.expiringSoon.border,
+  },
+  urgentBadge: {
+    backgroundColor: colors.functional.expiringSoon.background,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radii.circular,
+    marginLeft: 6,
+  },
+  urgentBadgeText: {
+    fontSize: typography.sizes.micro,
+    color: colors.functional.expiringSoon.text,
+    fontWeight: '700',
+  },
+  customOptionsContainer: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: radii.containers,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  customSubLabel: {
+    fontSize: typography.sizes.label,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginTop: spacing.xs,
+    marginBottom: 6,
+  },
+  customTagsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  customTagChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radii.circular,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  customTagChipActive: {
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
+  },
+  customTagText: {
+    fontSize: typography.sizes.caption,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  customTagTextActive: {
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  customTextInput: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.buttons,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textPrimary,
+    minHeight: 44,
   },
 });

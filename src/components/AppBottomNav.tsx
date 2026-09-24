@@ -78,8 +78,9 @@ export function AppBottomNav() {
           onPress={() => {
             if (!isHome) router.push('/');
           }}
-          accessibilityRole="button"
-          accessibilityLabel="Ir a Inicio"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: isHome }}
+          accessibilityLabel="Inicio"
         >
           {isHome ? (
             <View style={styles.navActivePill}>
@@ -97,8 +98,9 @@ export function AppBottomNav() {
           onPress={() => {
             if (!isInventory) router.push('/inventory');
           }}
-          accessibilityRole="button"
-          accessibilityLabel="Ir a Despensa"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: isInventory }}
+          accessibilityLabel="Despensa"
         >
           {isInventory ? (
             <View style={styles.navActivePill}>
@@ -128,8 +130,9 @@ export function AppBottomNav() {
           onPress={() => {
             if (!isRecipes) router.push('/recipes');
           }}
-          accessibilityRole="button"
-          accessibilityLabel="Ir a Recetas"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: isRecipes }}
+          accessibilityLabel="Recetas"
         >
           {isRecipes ? (
             <View style={styles.navActivePill}>
@@ -147,8 +150,9 @@ export function AppBottomNav() {
           onPress={() => {
             if (!isShopping) router.push('/shopping-list');
           }}
-          accessibilityRole="button"
-          accessibilityLabel="Ir a Lista de Compras"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: isShopping }}
+          accessibilityLabel="Lista de Compras"
         >
           <View style={{ position: 'relative' }}>
             {isShopping ? (

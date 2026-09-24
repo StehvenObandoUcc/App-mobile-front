@@ -98,7 +98,12 @@ export function ActionSheetModal({
     >
       <Animated.View style={[styles.overlay, { opacity: backdropOpacity }]}>
         {/* Tap fuera para cerrar */}
-        <Pressable style={RNStyleSheet.absoluteFill} onPress={onClose} />
+        <Pressable
+          style={RNStyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar ventana emergente"
+        />
 
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}

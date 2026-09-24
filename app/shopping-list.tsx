@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   TextInput,
   Pressable,
   ScrollView,
+  SectionList,
+  FlatList,
   Alert,
   KeyboardAvoidingView,
 } from 'react-native';
@@ -227,246 +229,293 @@ export default function ShoppingListScreen() {
     });
   };
 
+  type ShoppingSection = {
+    type: 'pending' | 'bought';
+    title: string;
+    data: ShoppingItem[];
+  };
+
+  const sections = useMemo<ShoppingSection[]>(() => {
+    const list: ShoppingSection[] = [
+      {
+        type: 'pending',
+        title: `Por Comprar (${pendingItems.length})`,
+        data: pendingItems,
+      },
+    ];
+    if (boughtItems.length > 0) {
+      list.push({
+        type: 'bought',
+        title: `Comprados (${boughtItems.length})`,
+        data: boughtItems,
+      });
+    }
+    return list;
+  }, [pendingItems, boughtItems]);
+
+  const renderShoppingItem = useCallback(
+    ({ item, section }: { item: ShoppingItem; section: ShoppingSection }) => {
+      const isBought = section.type === 'bought';
+      return (
+        <View style={[styles.itemCard, isBought && styles.itemCardBought]}>
+          <Pressable
+            onPress={() => toggleBought(item.id)}
+            style={[styles.checkboxCircle, isBought && styles.checkboxCircleChecked]}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: isBought }}
+          >
+            {isBought ? (
+              <Ionicons name="checkmark" size={14} color={colors.surface} />
+            ) : (
+              <View style={styles.checkboxInnerUnchecked} />
+            )}
+          </Pressable>
+
+          <View style={{ flex: 1, marginHorizontal: spacing.md }}>
+            <Text style={[styles.itemName, isBought && styles.itemNameBought]}>{item.name}</Text>
+            {item.recipeSource && (
+              <View style={styles.sourceBadge}>
+                <Ionicons name="restaurant-outline" size={11} color={colors.primaryDark} style={{ marginRight: 3 }} />
+                <Text style={styles.sourceText} numberOfLines={1}>
+                  Receta: {item.recipeSource}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {item.quantity !== null && (
+            <Text style={[styles.itemQty, isBought && styles.itemQtyBought]}>
+              {item.quantity} {item.unit}
+            </Text>
+          )}
+
+          <Pressable
+            onPress={() => deleteItem(item.id)}
+            style={styles.deleteButton}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Eliminar ${item.name}`}
+          >
+            <Ionicons name="trash-outline" size={18} color={isBought ? colors.textMuted : colors.error.text} />
+          </Pressable>
+        </View>
+      );
+    },
+    [toggleBought, deleteItem]
+  );
+
+  const handleConfirmClearBought = useCallback(() => {
+    Alert.alert(
+      '¿Limpiar compras finalizadas?',
+      `¿Deseas quitar de la lista los ${boughtItems.length} producto(s) marcados como comprados?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Limpiar',
+          style: 'destructive',
+          onPress: () => clearBought(),
+        },
+      ]
+    );
+  }, [boughtItems.length, clearBought]);
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: ShoppingSection }) => {
+      const isBought = section.type === 'bought';
+      return (
+        <View style={[styles.sectionHeader, isBought && { marginTop: spacing.xl }]}>
+          <Text style={[styles.sectionTitle, isBought && { color: colors.functional.fresh.text }]}>
+            {section.title}
+          </Text>
+          {isBought && (
+            <Pressable
+              onPress={handleConfirmClearBought}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Limpiar productos comprados"
+            >
+              <Text style={styles.clearText}>Limpiar</Text>
+            </Pressable>
+          )}
+        </View>
+      );
+    },
+    [handleConfirmClearBought]
+  );
+
+  const renderSectionFooter = useCallback(
+    ({ section }: { section: ShoppingSection }) => {
+      if (section.type === 'pending' && pendingItems.length === 0) {
+        return (
+          <EmptyState
+            title="No tienes compras pendientes"
+            description="Agrega productos arriba o desde los ingredientes que te falten en cualquier receta."
+            iconName="basket-outline"
+          />
+        );
+      }
+      if (section.type === 'bought' && boughtItems.length > 0) {
+        return (
+          <View style={{ marginTop: spacing.lg, marginBottom: spacing.md }}>
+            <PrimaryButton
+              title={`Pasar ${boughtItems.length} a mi despensa`}
+              iconName="arrow-up-circle"
+              onPress={handleMoveToInventory}
+              isLoading={isMoving}
+            />
+          </View>
+        );
+      }
+      return null;
+    },
+    [pendingItems.length, boughtItems.length, handleMoveToInventory, isMoving]
+  );
+
+  const renderListHeader = useCallback(() => (
+    <>
+      {/* ── Cabecera Editorial ── */}
+      <View style={styles.headerSection}>
+        <Text style={styles.screenTitle}>Lista de Compras</Text>
+        <Text style={styles.screenSubtitle}>
+          {items.length === 0
+            ? 'Agrega productos para planificar tu compra'
+            : `${pendingItems.length} pendiente${pendingItems.length === 1 ? '' : 's'} · ${boughtItems.length} comprada${boughtItems.length === 1 ? '' : 's'}`}
+        </Text>
+      </View>
+
+      {/* ── Resumen Estadístico ── */}
+      <View style={styles.summaryRow}>
+        <View style={[styles.summaryCard, styles.summaryPending]}>
+          <View style={styles.summaryIconCirclePending}>
+            <Ionicons name="cart-outline" size={20} color={colors.primary} />
+          </View>
+          <View>
+            <Text style={styles.summaryNum}>{pendingItems.length}</Text>
+            <Text style={styles.summaryLabel}>Por comprar</Text>
+          </View>
+        </View>
+
+        <View style={[styles.summaryCard, styles.summaryBought]}>
+          <View style={styles.summaryIconCircleBought}>
+            <Ionicons name="checkmark-done" size={20} color={colors.functional.fresh.text} />
+          </View>
+          <View>
+            <Text style={styles.summaryNum}>{boughtItems.length}</Text>
+            <Text style={styles.summaryLabel}>Comprados</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── Botón / Formulario Rápido de Añadir ── */}
+      {!isAdding ? (
+        <Pressable
+          style={({ pressed }) => [styles.addTriggerButton, pressed && styles.cardPressed]}
+          onPress={() => setIsAddChooserVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Agregar producto a comprar"
+        >
+          <Ionicons name="add-circle" size={22} color={colors.primary} style={{ marginRight: spacing.sm }} />
+          <Text style={styles.addTriggerText}>Agregar producto a la lista</Text>
+        </Pressable>
+      ) : (
+        <View style={styles.formCard}>
+          <View style={styles.formHeader}>
+            <Text style={styles.formTitle}>Nuevo Producto</Text>
+            <Pressable
+              onPress={() => setIsAdding(false)}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar formulario de nuevo producto"
+            >
+              <Ionicons name="close-circle-outline" size={22} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Nombre (ej. Leche, Tomates, Huevos)"
+            placeholderTextColor={colors.textMuted}
+            maxLength={60}
+            style={styles.textInput}
+            autoFocus
+          />
+
+          <View style={styles.qtyRow}>
+            <TextInput
+              value={quantity}
+              onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
+              placeholder="Cant. (positiva)"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numeric"
+              maxLength={8}
+              style={[styles.textInput, { flex: 1, marginRight: 10 }]}
+            />
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1.5 }}>
+              <View style={styles.unitChipContainer}>
+                {UNITS.map((u) => (
+                  <Chip
+                    key={u.value}
+                    label={u.label}
+                    selected={unit === u.value}
+                    onPress={() => setUnit(u.value)}
+                    variant="filter"
+                  />
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* Categorías */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: spacing.sm }}>
+            <View style={styles.categoryChipContainer}>
+              {CATEGORIES.map((cat) => (
+                <Chip
+                  key={cat.value}
+                  label={cat.label}
+                  icon={cat.icon}
+                  selected={category === cat.value}
+                  onPress={() => setCategory(cat.value)}
+                  variant="filter"
+                />
+              ))}
+            </View>
+          </ScrollView>
+
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
+            <View style={{ flex: 1 }}>
+              <SecondaryButton title="Cancelar" variant="outline" onPress={() => setIsAdding(false)} />
+            </View>
+            <View style={{ flex: 1.5 }}>
+              <PrimaryButton title="Guardar" iconName="checkmark" onPress={handleAddItem} />
+            </View>
+          </View>
+        </View>
+      )}
+    </>
+  ), [items.length, pendingItems.length, boughtItems.length, isAdding, name, quantity, unit, category]);
+
   return (
     <AppScreen style={styles.screen}>
       <KeyboardAvoidingView
         behavior="height"
         style={{ flex: 1 }}
       >
-        <ScrollView
+        <SectionList<ShoppingItem, ShoppingSection>
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          renderItem={renderShoppingItem}
+          renderSectionHeader={renderSectionHeader}
+          renderSectionFooter={renderSectionFooter}
+          ListHeaderComponent={renderListHeader}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.scrollContent,
             { paddingBottom: Math.max(110, getBottomContentPadding(insets.bottom)) },
           ]}
-        >
-          {/* ── Cabecera Editorial ── */}
-          <View style={styles.headerSection}>
-            <Text style={styles.screenTitle}>Lista de Compras</Text>
-            <Text style={styles.screenSubtitle}>
-              {items.length === 0
-                ? 'Agrega productos para planificar tu compra'
-                : `${pendingItems.length} pendiente${pendingItems.length === 1 ? '' : 's'} · ${boughtItems.length} comprada${boughtItems.length === 1 ? '' : 's'}`}
-            </Text>
-          </View>
-
-          {/* ── Resumen Estadístico ── */}
-          <View style={styles.summaryRow}>
-            <View style={[styles.summaryCard, styles.summaryPending]}>
-              <View style={styles.summaryIconCirclePending}>
-                <Ionicons name="cart-outline" size={20} color={colors.primary} />
-              </View>
-              <View>
-                <Text style={styles.summaryNum}>{pendingItems.length}</Text>
-                <Text style={styles.summaryLabel}>Por comprar</Text>
-              </View>
-            </View>
-
-            <View style={[styles.summaryCard, styles.summaryBought]}>
-              <View style={styles.summaryIconCircleBought}>
-                <Ionicons name="checkmark-done" size={20} color={colors.functional.fresh.text} />
-              </View>
-              <View>
-                <Text style={styles.summaryNum}>{boughtItems.length}</Text>
-                <Text style={styles.summaryLabel}>Comprados</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* ── Botón / Formulario Rápido de Añadir ── */}
-          {!isAdding ? (
-            <Pressable
-              style={({ pressed }) => [styles.addTriggerButton, pressed && styles.cardPressed]}
-              onPress={() => setIsAddChooserVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Agregar producto a comprar"
-            >
-              <Ionicons name="add-circle" size={22} color={colors.primary} style={{ marginRight: spacing.sm }} />
-              <Text style={styles.addTriggerText}>Agregar producto a la lista</Text>
-            </Pressable>
-          ) : (
-            <View style={styles.formCard}>
-              <View style={styles.formHeader}>
-                <Text style={styles.formTitle}>Nuevo Producto</Text>
-                <Pressable onPress={() => setIsAdding(false)} hitSlop={10}>
-                  <Ionicons name="close-circle-outline" size={22} color={colors.textSecondary} />
-                </Pressable>
-              </View>
-
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Nombre (ej. Leche, Tomates, Huevos)"
-                placeholderTextColor={colors.textMuted}
-                maxLength={60}
-                style={styles.textInput}
-                autoFocus
-              />
-
-              <View style={styles.qtyRow}>
-                <TextInput
-                  value={quantity}
-                  onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
-                  placeholder="Cant. (positiva)"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="numeric"
-                  maxLength={8}
-                  style={[styles.textInput, { flex: 1, marginRight: 10 }]}
-                />
-
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1.5 }}>
-                  <View style={styles.unitChipContainer}>
-                    {UNITS.map((u) => (
-                      <Chip
-                        key={u.value}
-                        label={u.label}
-                        selected={unit === u.value}
-                        onPress={() => setUnit(u.value)}
-                        variant="filter"
-                      />
-                    ))}
-                  </View>
-                </ScrollView>
-              </View>
-
-              {/* Categorías */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: spacing.sm }}>
-                <View style={styles.categoryChipContainer}>
-                  {CATEGORIES.map((cat) => (
-                    <Chip
-                      key={cat.value}
-                      label={cat.label}
-                      icon={cat.icon}
-                      selected={category === cat.value}
-                      onPress={() => setCategory(cat.value)}
-                      variant="filter"
-                    />
-                  ))}
-                </View>
-              </ScrollView>
-
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
-                <View style={{ flex: 1 }}>
-                  <SecondaryButton title="Cancelar" variant="outline" onPress={() => setIsAdding(false)} />
-                </View>
-                <View style={{ flex: 1.5 }}>
-                  <PrimaryButton title="Guardar" iconName="checkmark" onPress={handleAddItem} />
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* ── Lista de Pendientes ── */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Por Comprar ({pendingItems.length})</Text>
-          </View>
-
-          {pendingItems.length === 0 && (
-            <EmptyState
-              title="No tienes compras pendientes"
-              description="Agrega productos arriba o desde los ingredientes que te falten en cualquier receta."
-              iconName="basket-outline"
-            />
-          )}
-
-          {pendingItems.map((item) => (
-            <View key={item.id} style={styles.itemCard}>
-              <Pressable
-                onPress={() => toggleBought(item.id)}
-                style={styles.checkboxCircle}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: false }}
-              >
-                <View style={styles.checkboxInnerUnchecked} />
-              </Pressable>
-
-              <View style={{ flex: 1, marginHorizontal: spacing.md }}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                {item.recipeSource && (
-                  <View style={styles.sourceBadge}>
-                    <Ionicons name="restaurant-outline" size={11} color={colors.primaryDark} style={{ marginRight: 3 }} />
-                    <Text style={styles.sourceText} numberOfLines={1}>
-                      Receta: {item.recipeSource}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              {item.quantity !== null && (
-                <Text style={styles.itemQty}>
-                  {item.quantity} {item.unit}
-                </Text>
-              )}
-
-              <Pressable
-                onPress={() => deleteItem(item.id)}
-                style={styles.deleteButton}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={`Eliminar ${item.name}`}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.error.text} />
-              </Pressable>
-            </View>
-          ))}
-
-          {/* ── Lista de Comprados ── */}
-          {boughtItems.length > 0 && (
-            <View style={{ marginTop: spacing.xxl }}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: colors.functional.fresh.text }]}>
-                  Comprados ({boughtItems.length})
-                </Text>
-                <Pressable onPress={clearBought}>
-                  <Text style={styles.clearText}>Limpiar</Text>
-                </Pressable>
-              </View>
-
-              {boughtItems.map((item) => (
-                <View key={item.id} style={[styles.itemCard, styles.itemCardBought]}>
-                  <Pressable
-                    onPress={() => toggleBought(item.id)}
-                    style={[styles.checkboxCircle, styles.checkboxCircleChecked]}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: true }}
-                  >
-                    <Ionicons name="checkmark" size={14} color={colors.surface} />
-                  </Pressable>
-
-                  <View style={{ flex: 1, marginHorizontal: spacing.md }}>
-                    <Text style={[styles.itemName, styles.itemNameBought]}>{item.name}</Text>
-                  </View>
-
-                  {item.quantity !== null && (
-                    <Text style={[styles.itemQty, styles.itemQtyBought]}>
-                      {item.quantity} {item.unit}
-                    </Text>
-                  )}
-
-                  <Pressable
-                    onPress={() => deleteItem(item.id)}
-                    style={styles.deleteButton}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Eliminar ${item.name} de compras`}
-                  >
-                    <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
-                  </Pressable>
-                </View>
-              ))}
-
-              {/* Botón Mover a Inventario */}
-              <View style={{ marginTop: spacing.lg, marginBottom: spacing.md }}>
-                <PrimaryButton
-                  title={`Pasar ${boughtItems.length} a mi despensa`}
-                  iconName="arrow-up-circle"
-                  onPress={handleMoveToInventory}
-                  isLoading={isMoving}
-                />
-              </View>
-            </View>
-          )}
-        </ScrollView>
+        />
       </KeyboardAvoidingView>
 
       {/* ── Selector de Tipo de Adición (BUG/Feature UI) ── */}
@@ -533,66 +582,69 @@ export default function ShoppingListScreen() {
               />
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 360 }}>
-              {filteredInventory.length === 0 ? (
+            <FlatList
+              data={filteredInventory}
+              keyExtractor={(inv) => inv.id}
+              showsVerticalScrollIndicator={false}
+              style={{ maxHeight: 360 }}
+              renderItem={({ item: inv }) => {
+                const s = getExpirationStatus(inv.expirationDate);
+                const isAlreadyInList = pendingItems.some(
+                  (p) => p.name.toLowerCase() === inv.name.toLowerCase()
+                );
+
+                return (
+                  <Pressable
+                    key={inv.id}
+                    onPress={() => handleAddFromInventory(inv)}
+                    style={({ pressed }) => [
+                      styles.invPickerRow,
+                      pressed && styles.cardPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Agregar ${inv.name} a compras`}
+                  >
+                    <View style={[styles.invPickerIcon, { backgroundColor: colors.primaryContainer }]}>
+                      <Ionicons name="nutrition-outline" size={18} color={colors.primary} />
+                    </View>
+
+                    <View style={{ flex: 1, marginHorizontal: 10 }}>
+                      <Text style={styles.invPickerName} numberOfLines={1}>
+                        {inv.name}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                        {inv.quantity !== null && (
+                          <Text style={styles.invPickerQty}>
+                            Stock: {inv.quantity} {inv.unit}
+                          </Text>
+                        )}
+                        <Chip variant="status" status={s.status} label={s.label} />
+                      </View>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.invPickerAddBtn,
+                        isAlreadyInList && styles.invPickerAddBtnAdded,
+                      ]}
+                    >
+                      <Ionicons
+                        name={isAlreadyInList ? 'checkmark' : 'add'}
+                        size={18}
+                        color={isAlreadyInList ? colors.functional.fresh.text : colors.surface}
+                      />
+                    </View>
+                  </Pressable>
+                );
+              }}
+              ListEmptyComponent={
                 <EmptyState
                   title={inventorySearch.trim() ? 'No hay alimentos que coincidan' : 'No tienes alimentos en tu inventario'}
                   description={inventorySearch.trim() ? 'Prueba con otro término de búsqueda.' : 'Agrega alimentos desde la pestaña Despensa.'}
                   iconName="basket-outline"
                 />
-              ) : (
-                filteredInventory.map((inv) => {
-                  const s = getExpirationStatus(inv.expirationDate);
-                  const isAlreadyInList = pendingItems.some(
-                    (p) => p.name.toLowerCase() === inv.name.toLowerCase()
-                  );
-
-                  return (
-                    <Pressable
-                      key={inv.id}
-                      onPress={() => handleAddFromInventory(inv)}
-                      style={({ pressed }) => [
-                        styles.invPickerRow,
-                        pressed && styles.cardPressed,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Agregar ${inv.name} a compras`}
-                    >
-                      <View style={[styles.invPickerIcon, { backgroundColor: colors.primaryContainer }]}>
-                        <Ionicons name="nutrition-outline" size={18} color={colors.primary} />
-                      </View>
-
-                      <View style={{ flex: 1, marginHorizontal: 10 }}>
-                        <Text style={styles.invPickerName} numberOfLines={1}>
-                          {inv.name}
-                        </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                          {inv.quantity !== null && (
-                            <Text style={styles.invPickerQty}>
-                              Stock: {inv.quantity} {inv.unit}
-                            </Text>
-                          )}
-                          <Chip variant="status" status={s.status} label={s.label} />
-                        </View>
-                      </View>
-
-                      <View
-                        style={[
-                          styles.invPickerAddBtn,
-                          isAlreadyInList && styles.invPickerAddBtnAdded,
-                        ]}
-                      >
-                        <Ionicons
-                          name={isAlreadyInList ? 'checkmark' : 'add'}
-                          size={18}
-                          color={isAlreadyInList ? colors.functional.fresh.text : colors.surface}
-                        />
-                      </View>
-                    </Pressable>
-                  );
-                })
-              )}
-            </ScrollView>
+              }
+            />
 
             <View style={{ marginTop: 14 }}>
               <SecondaryButton

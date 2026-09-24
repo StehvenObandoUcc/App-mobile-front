@@ -69,11 +69,10 @@ export function useInventory() {
 
   const addItem = async (item: Ingredient) => {
     try {
-      // Optimista: guarda en local primero
+      // Optimista: guarda en local primero e impacta UI inmediatamente
       await LocalStorage.addIngredient(item);
-      await loadItems();
 
-      // Sincroniza con Supabase en la nube
+      // Sincroniza con Supabase en segundo plano sin bloquear la UI ni recargar todo el inventario
       try {
         const createdRemote = await createInventoryItemWithApi(item);
         if (createdRemote && createdRemote.id !== item.id) {
@@ -92,9 +91,8 @@ export function useInventory() {
     try {
       // Optimista: actualiza en local primero
       await LocalStorage.updateIngredient(item);
-      await loadItems();
 
-      // Sincroniza con Supabase en la nube
+      // Sincroniza con Supabase en segundo plano sin recargar todo el inventario
       try {
         await updateInventoryItemWithApi(item.id, item);
       } catch (remoteErr: any) {
@@ -110,9 +108,8 @@ export function useInventory() {
     try {
       // Optimista: elimina en local primero
       await LocalStorage.deleteIngredient(id);
-      await loadItems();
 
-      // Sincroniza eliminación con Supabase en la nube
+      // Sincroniza eliminación con Supabase en segundo plano
       try {
         await deleteInventoryItemWithApi(id);
       } catch (remoteErr: any) {
@@ -128,9 +125,8 @@ export function useInventory() {
     try {
       // Optimista: elimina lote en local primero
       await LocalStorage.deleteIngredients(ids);
-      await loadItems();
 
-      // Sincroniza lote con Supabase en la nube
+      // Sincroniza lote con Supabase en segundo plano
       try {
         await batchDeleteInventoryItemsWithApi(ids);
       } catch (remoteErr: any) {

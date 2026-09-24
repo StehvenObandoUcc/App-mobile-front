@@ -19,7 +19,9 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -33,6 +35,12 @@
         "expo-camera",
         {
           "cameraPermission": "Food AI necesita acceso a la cámara para escanear y reconocer los alimentos de tu despensa."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Food AI necesita acceso a tus fotos para personalizar tu foto de perfil."
         }
       ],
       "expo-secure-store"
