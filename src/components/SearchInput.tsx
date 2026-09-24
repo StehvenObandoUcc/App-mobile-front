@@ -40,7 +40,7 @@ export function SearchInput({
           }}
           accessibilityRole="button"
           accessibilityLabel="Limpiar búsqueda"
-          hitSlop={8}
+          hitSlop={12}
           style={styles.clearButton}
         >
           <Ionicons name="close-circle" size={18} color={colors.textSecondary} />

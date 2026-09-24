@@ -10,6 +10,7 @@ import {
   StyleSheet as RNStyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing, radii } from '../theme';
 
 export interface ActionSheetOption {
@@ -46,6 +47,7 @@ export function ActionSheetModal({
   onConfirm,
   cancelText = 'Cancelar',
 }: ActionSheetModalProps) {
+  const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(400)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
@@ -106,7 +108,13 @@ export function ActionSheetModal({
         />
 
         <Animated.View
-          style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
+          style={[
+            styles.sheet,
+            {
+              transform: [{ translateY: slideAnim }],
+              paddingBottom: Math.max(insets.bottom + 12, 28),
+            },
+          ]}
         >
           {/* Tirador visual */}
           <View style={styles.handle} />

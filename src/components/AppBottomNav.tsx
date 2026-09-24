@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, Pressable, PanResponder, Animated } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ export function AppBottomNav() {
   const insets = useSafeAreaInsets();
   const { pendingItems } = useShoppingList();
   const isNavigatingRef = useRef(false);
+  const dragX = useRef(new Animated.Value(0)).current;
 
   const isHome = pathname === '/' || pathname === '/index';
   const isInventory = pathname.startsWith('/inventory');
@@ -30,7 +31,13 @@ export function AppBottomNav() {
 
   useEffect(() => {
     isNavigatingRef.current = false;
-  }, [pathname]);
+    Animated.spring(dragX, {
+      toValue: 0,
+      tension: 140,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+  }, [pathname, dragX]);
 
   const navPanResponder = useRef(
     PanResponder.create({
@@ -39,28 +46,56 @@ export function AppBottomNav() {
       onMoveShouldSetPanResponder: (_, gestureState) => {
         if (currentTabIndex === -1 || isNavigatingRef.current) return false;
         const { dx, dy } = gestureState;
-        return Math.abs(dx) > 16 && Math.abs(dx) > Math.abs(dy) * 1.5;
+        return Math.abs(dx) > 22 && Math.abs(dx) > Math.abs(dy) * 1.8;
       },
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        if (currentTabIndex === -1 || isNavigatingRef.current) return false;
-        const { dx, dy } = gestureState;
-        // Permite capturar deslizamientos sobre la barra inferior
-        return Math.abs(dx) > 16 && Math.abs(dx) > Math.abs(dy) * 1.5;
+      onMoveShouldSetPanResponderCapture: () => false,
+      onPanResponderMove: (_, gestureState) => {
+        if (currentTabIndex === -1 || isNavigatingRef.current) return;
+        // Respuesta elástica suave en tiempo real (30% del desplazamiento real)
+        dragX.setValue(gestureState.dx * 0.3);
       },
-      onPanResponderTerminationRequest: () => false,
+      onPanResponderTerminationRequest: () => true,
+      onPanResponderTerminate: () => {
+        Animated.spring(dragX, {
+          toValue: 0,
+          tension: 140,
+          friction: 9,
+          useNativeDriver: true,
+        }).start();
+      },
       onPanResponderRelease: (_, gestureState) => {
         if (currentTabIndex === -1 || isNavigatingRef.current) return;
         const { dx, vx } = gestureState;
 
         // Deslizar hacia la izquierda -> Siguiente pestaña
-        if ((dx < -25 || vx < -0.2) && currentTabIndex < MAIN_TABS.length - 1) {
+        if ((dx < -28 || vx < -0.25) && currentTabIndex < MAIN_TABS.length - 1) {
           isNavigatingRef.current = true;
-          router.replace(MAIN_TABS[currentTabIndex + 1] as any);
+          Animated.timing(dragX, {
+            toValue: -20,
+            duration: 120,
+            useNativeDriver: true,
+          }).start(() => {
+            router.replace(MAIN_TABS[currentTabIndex + 1] as any);
+          });
         }
         // Deslizar hacia la derecha -> Pestaña anterior
-        else if ((dx > 25 || vx > 0.2) && currentTabIndex > 0) {
+        else if ((dx > 28 || vx > 0.25) && currentTabIndex > 0) {
           isNavigatingRef.current = true;
-          router.replace(MAIN_TABS[currentTabIndex - 1] as any);
+          Animated.timing(dragX, {
+            toValue: 20,
+            duration: 120,
+            useNativeDriver: true,
+          }).start(() => {
+            router.replace(MAIN_TABS[currentTabIndex - 1] as any);
+          });
+        } else {
+          // Rebote elástico al soltar sin superar el umbral
+          Animated.spring(dragX, {
+            toValue: 0,
+            tension: 140,
+            friction: 9,
+            useNativeDriver: true,
+          }).start();
         }
       },
     })
@@ -70,7 +105,16 @@ export function AppBottomNav() {
   const bottomPosition = bottomInset + NAV_BOTTOM_OFFSET;
 
   return (
-    <View style={[styles.bottomNavWrapper, { bottom: bottomPosition }]} {...navPanResponder.panHandlers}>
+    <Animated.View
+      style={[
+        styles.bottomNavWrapper,
+        {
+          bottom: bottomPosition,
+          transform: [{ translateX: dragX }],
+        },
+      ]}
+      {...navPanResponder.panHandlers}
+    >
       <View style={styles.bottomNavContainer}>
         {/* 1. Inicio */}
         <Pressable
@@ -171,7 +215,7 @@ export function AppBottomNav() {
           <Text style={isShopping ? styles.navLabelActive : styles.navLabel}>Compras</Text>
         </Pressable>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

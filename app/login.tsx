@@ -245,13 +245,8 @@ export default function LoginScreen() {
     );
   };
 
-  const handleFillDemo = () => {
-    setEmail('demo@foodai.com');
-    setPassword('123456');
-    handleModeChange('login');
-  };
-
   if (isAuthenticated && user) {
+
     return (
       <AppScreen style={styles.screen}>
         <ScrollView
@@ -489,7 +484,7 @@ export default function LoginScreen() {
               iconName={mode === 'login' ? 'log-in-outline' : 'person-add-outline'}
             />
 
-            {/* Acceso Rápido Cuenta Demo con transición animada suave */}
+            {/* Información estática de credenciales de prueba (solo lectura para testers) */}
             <Animated.View
               style={{
                 height: mode === 'login' ? undefined : 0,
@@ -504,15 +499,24 @@ export default function LoginScreen() {
                   },
                 ],
               }}
-              pointerEvents={mode === 'login' ? 'auto' : 'none'}
+              pointerEvents="none"
+              accessibilityRole="text"
+              accessibilityLabel="Credenciales de prueba: Correo demo@foodai.com, contraseña 123456"
             >
-              <Pressable onPress={handleFillDemo} style={styles.demoButton}>
-                <Ionicons name="sparkles" size={15} color={colors.primary} style={{ marginRight: 6 }} />
-                <Text style={styles.demoButtonText}>
-                  Usar credenciales de prueba (<Text style={{ fontWeight: '700' }}>demo@foodai.com</Text>)
+              <View style={styles.demoInfoBox}>
+                <View style={styles.demoInfoHeader}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+                  <Text style={styles.demoInfoTitle}>Credenciales de prueba</Text>
+                </View>
+                <Text style={styles.demoInfoText}>
+                  Correo: <Text style={styles.demoInfoValue}>demo@foodai.com</Text>
                 </Text>
-              </Pressable>
+                <Text style={styles.demoInfoText}>
+                  Contraseña: <Text style={styles.demoInfoValue}>123456</Text>
+                </Text>
+              </View>
             </Animated.View>
+
 
             <View style={{ height: spacing.lg }} />
             <Pressable
@@ -684,17 +688,35 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 16,
   },
-  demoButton: {
+  demoInfoBox: {
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: radii.cards,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  demoInfoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 18,
-    paddingVertical: spacing.sm,
+    marginBottom: 4,
   },
-  demoButtonText: {
+  demoInfoTitle: {
     fontSize: typography.sizes.metadata,
-    color: colors.primary,
+    fontWeight: '700',
+    color: colors.textPrimary,
   },
+  demoInfoText: {
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  demoInfoValue: {
+    fontWeight: '700',
+    color: colors.textPrimary,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+
   profileScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',

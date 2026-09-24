@@ -51,18 +51,18 @@ export default function Layout() {
         }}
       >
         <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
-        <Stack.Screen name="index" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="index" options={{ headerShown: false, animation: 'fade', animationDuration: 180 }} />
         <Stack.Screen
           name="inventory"
-          options={{ headerShown: false, animation: 'fade' }}
+          options={{ headerShown: false, animation: 'fade', animationDuration: 180 }}
         />
         <Stack.Screen
           name="recipes"
-          options={{ headerShown: false, animation: 'fade' }}
+          options={{ headerShown: false, animation: 'fade', animationDuration: 180 }}
         />
         <Stack.Screen
           name="shopping-list"
-          options={{ headerShown: false, animation: 'fade' }}
+          options={{ headerShown: false, animation: 'fade', animationDuration: 180 }}
         />
         <Stack.Screen
           name="scan"
