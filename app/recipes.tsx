@@ -48,12 +48,44 @@ import { colors, radii, spacing, typography } from '../src/theme';
 
 type FilterTab = 'all' | 'high_match' | 'quick' | 'saved';
 
-const CUSTOM_STYLE_TAGS = [
-  '✨ Gourmet',
-  '🥗 Cena Ligera',
-  '🍲 Guiso o Sopa',
-  '🔥 Al Horno',
-  '🥐 Dulce o Postre',
+interface CustomStyleOption {
+  key: string;
+  label: string;
+  iconName: keyof typeof Ionicons.glyphMap;
+  description: string;
+}
+
+const CUSTOM_STYLE_OPTIONS: readonly CustomStyleOption[] = [
+  {
+    key: 'Gourmet',
+    label: 'Gourmet',
+    iconName: 'sparkles-outline',
+    description: 'Técnicas refinadas, salsas elaboradas y emplatado de alta cocina.',
+  },
+  {
+    key: 'Cena Ligera',
+    label: 'Cena Ligera',
+    iconName: 'leaf-outline',
+    description: 'Bajo impacto calórico, digestión suave y porciones balanceadas.',
+  },
+  {
+    key: 'Guiso o Sopa',
+    label: 'Guiso o Sopa',
+    iconName: 'water-outline',
+    description: 'Cocción a fuego lento, caldos concentrados y platos reconfortantes.',
+  },
+  {
+    key: 'Al Horno',
+    label: 'Al Horno',
+    iconName: 'flame-outline',
+    description: 'Cocción envolvente, texturas crujientes o dorados gratinados.',
+  },
+  {
+    key: 'Dulce o Postre',
+    label: 'Dulce o Postre',
+    iconName: 'cafe-outline',
+    description: 'Preparaciones dulces, bocadillos o repostería con frutas.',
+  },
 ] as const;
 
 export default function RecipesScreen() {
@@ -710,7 +742,13 @@ export default function RecipesScreen() {
                           </Text>
                           {isUrgent && (
                             <View style={styles.urgentBadge}>
-                              <Text style={styles.urgentBadgeText}>⚠️ {exp.label}</Text>
+                              <Ionicons
+                                name="time-outline"
+                                size={10}
+                                color={colors.functional.expiringSoon.text}
+                                style={{ marginRight: 3 }}
+                              />
+                              <Text style={styles.urgentBadgeText}>{exp.label}</Text>
                             </View>
                           )}
                         </Pressable>
@@ -720,9 +758,17 @@ export default function RecipesScreen() {
                 )}
 
                 {items.length > 0 && selectedIngredientIds.size === 0 && (
-                  <Text style={styles.validationHintText}>
-                    ⚠️ Selecciona al menos 1 alimento o vegetal de tu despensa.
-                  </Text>
+                  <View style={styles.ingredientWarningRow}>
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={14}
+                      color={colors.functional.expiringSoon.text}
+                      style={{ marginRight: 5 }}
+                    />
+                    <Text style={styles.validationHintText}>
+                      Selecciona al menos 1 alimento o vegetal de tu despensa.
+                    </Text>
+                  </View>
                 )}
 
                 {/* ── 3. Selector de Nivel de Dificultad ── */}
@@ -801,31 +847,59 @@ export default function RecipesScreen() {
                   <View style={styles.customOptionsContainer}>
                     <Text style={styles.customSubLabel}>Estilo o Técnica Culinaria (Opcional)</Text>
                     <View style={styles.customTagsWrap}>
-                      {CUSTOM_STYLE_TAGS.map((tag) => {
-                        const isTagSelected = selectedStyleTag === tag;
+                      {CUSTOM_STYLE_OPTIONS.map((opt) => {
+                        const isTagSelected = selectedStyleTag === opt.key;
                         return (
                           <Pressable
-                            key={tag}
-                            onPress={() => setSelectedStyleTag(isTagSelected ? null : tag)}
+                            key={opt.key}
+                            onPress={() => setSelectedStyleTag(isTagSelected ? null : opt.key)}
                             style={[
                               styles.customTagChip,
                               isTagSelected && styles.customTagChipActive,
                             ]}
                             accessibilityRole="button"
-                            accessibilityLabel={`Estilo ${tag}`}
+                            accessibilityState={{ selected: isTagSelected }}
+                            accessibilityLabel={`Estilo culinario ${opt.label}`}
                           >
+                            <Ionicons
+                              name={opt.iconName}
+                              size={14}
+                              color={isTagSelected ? colors.primaryDark : colors.textSecondary}
+                              style={{ marginRight: 6 }}
+                            />
                             <Text
                               style={[
                                 styles.customTagText,
                                 isTagSelected && styles.customTagTextActive,
                               ]}
                             >
-                              {tag}
+                              {opt.label}
                             </Text>
                           </Pressable>
                         );
                       })}
                     </View>
+
+                    {selectedStyleTag && (() => {
+                      const activeOpt = CUSTOM_STYLE_OPTIONS.find((o) => o.key === selectedStyleTag);
+                      if (!activeOpt) return null;
+                      return (
+                        <View style={styles.styleFeedbackBox}>
+                          <View style={styles.styleFeedbackHeader}>
+                            <Ionicons
+                              name={activeOpt.iconName}
+                              size={15}
+                              color={colors.primary}
+                              style={{ marginRight: 6 }}
+                            />
+                            <Text style={styles.styleFeedbackTitle}>
+                              Enfoque culinario: {activeOpt.label}
+                            </Text>
+                          </View>
+                          <Text style={styles.styleFeedbackDesc}>{activeOpt.description}</Text>
+                        </View>
+                      );
+                    })()}
 
                     <Text style={styles.customSubLabel}>Indicación o antojo especial (Opcional)</Text>
                     <TextInput
@@ -1402,6 +1476,8 @@ const styles = StyleSheet.create({
     borderColor: colors.functional.expiringSoon.border,
   },
   urgentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.functional.expiringSoon.background,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -1412,6 +1488,12 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.micro,
     color: colors.functional.expiringSoon.text,
     fontWeight: '700',
+  },
+  ingredientWarningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 4,
   },
   customOptionsContainer: {
     marginTop: spacing.sm,
@@ -1436,6 +1518,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   customTagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: radii.circular,
@@ -1455,6 +1539,29 @@ const styles = StyleSheet.create({
   customTagTextActive: {
     color: colors.primaryDark,
     fontWeight: '700',
+  },
+  styleFeedbackBox: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.cards,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+    marginBottom: spacing.sm,
+  },
+  styleFeedbackHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  styleFeedbackTitle: {
+    fontSize: typography.sizes.caption,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  styleFeedbackDesc: {
+    fontSize: typography.sizes.micro,
+    color: colors.textSecondary,
+    lineHeight: 16,
   },
   customTextInput: {
     backgroundColor: colors.surface,

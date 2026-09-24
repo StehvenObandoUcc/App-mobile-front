@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, PanResponder, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, PanResponder, Animated, Easing } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,80 +20,142 @@ export function AppBottomNav() {
   const insets = useSafeAreaInsets();
   const { pendingItems } = useShoppingList();
   const isNavigatingRef = useRef(false);
-  const dragX = useRef(new Animated.Value(0)).current;
 
-  const isHome = pathname === '/' || pathname === '/index';
+  // Micro-animación nativa y suave para la píldora activa de navegación
+  const pillScale = useRef(new Animated.Value(1)).current;
+  const pillOpacity = useRef(new Animated.Value(1)).current;
+
+  // Arrastre interactivo en la barra con traslación e inclinación elástica suave
+  const navDragX = useRef(new Animated.Value(0)).current;
+
+  const navDragTilt = navDragX.interpolate({
+    inputRange: [-60, 0, 60],
+    outputRange: ['-1.8deg', '0deg', '1.8deg'],
+    extrapolate: 'clamp',
+  });
+
+  const navDragScale = navDragX.interpolate({
+    inputRange: [-60, 0, 60],
+    outputRange: [0.985, 1, 0.985],
+    extrapolate: 'clamp',
+  });
+
+  const isHome = pathname === '/' || pathname === '/index' || pathname === '';
   const isInventory = pathname.startsWith('/inventory');
   const isRecipes = pathname.startsWith('/recipes');
   const isShopping = pathname.startsWith('/shopping-list');
 
   const currentTabIndex = isHome ? 0 : isInventory ? 1 : isRecipes ? 2 : isShopping ? 3 : -1;
+  const currentTabIndexRef = useRef(currentTabIndex);
+  currentTabIndexRef.current = currentTabIndex;
 
   useEffect(() => {
     isNavigatingRef.current = false;
-    Animated.spring(dragX, {
-      toValue: 0,
-      tension: 140,
-      friction: 10,
-      useNativeDriver: true,
-    }).start();
-  }, [pathname, dragX]);
+    // Micro-animación pop suave (escala 0.88 -> 1.0) al cambiar de pestaña
+    pillScale.setValue(0.88);
+    pillOpacity.setValue(0.7);
+    Animated.parallel([
+      Animated.spring(pillScale, {
+        toValue: 1,
+        tension: 180,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pillOpacity, {
+        toValue: 1,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [pathname, pillScale, pillOpacity]);
+
+  const navigateToTab = (targetIndex: number) => {
+    const curr = currentTabIndexRef.current;
+    if (targetIndex < 0 || targetIndex >= MAIN_TABS.length) return;
+    if (targetIndex === curr) return;
+    if (isNavigatingRef.current) return;
+
+    isNavigatingRef.current = true;
+    router.push(MAIN_TABS[targetIndex] as any);
+
+    // Timeout de seguridad que previene bloqueos bajo cualquier circunstancia
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 280);
+  };
 
   const navPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        if (currentTabIndex === -1 || isNavigatingRef.current) return false;
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        if (currentTabIndexRef.current === -1 || isNavigatingRef.current) return false;
         const { dx, dy } = gestureState;
-        return Math.abs(dx) > 22 && Math.abs(dx) > Math.abs(dy) * 1.8;
+        return Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.1;
       },
-      onMoveShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        if (currentTabIndexRef.current === -1 || isNavigatingRef.current) return false;
+        const { dx, dy } = gestureState;
+        // Solo captura deslizamiento horizontal claro sobre la barra (arco natural de pulgar)
+        return Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.1;
+      },
+      onPanResponderGrant: () => {
+        navDragX.stopAnimation();
+      },
       onPanResponderMove: (_, gestureState) => {
-        if (currentTabIndex === -1 || isNavigatingRef.current) return;
-        // Respuesta elástica suave en tiempo real (30% del desplazamiento real)
-        dragX.setValue(gestureState.dx * 0.3);
+        if (currentTabIndexRef.current === -1 || isNavigatingRef.current) return;
+        const rawDx = gestureState.dx;
+        const curr = currentTabIndexRef.current;
+        if (curr === 0 && rawDx > 0) {
+          navDragX.setValue(Math.min(rawDx * 0.15, 10));
+          return;
+        }
+        if (curr === MAIN_TABS.length - 1 && rawDx < 0) {
+          navDragX.setValue(Math.max(rawDx * 0.15, -10));
+          return;
+        }
+        const clamped = Math.max(Math.min(rawDx * 0.35, 40), -40);
+        navDragX.setValue(clamped);
       },
-      onPanResponderTerminationRequest: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderTerminate: () => {
-        Animated.spring(dragX, {
+        Animated.spring(navDragX, {
           toValue: 0,
-          tension: 140,
-          friction: 9,
+          tension: 200,
+          friction: 12,
           useNativeDriver: true,
         }).start();
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (currentTabIndex === -1 || isNavigatingRef.current) return;
+        if (currentTabIndexRef.current === -1 || isNavigatingRef.current) return;
         const { dx, vx } = gestureState;
+        const curr = currentTabIndexRef.current;
 
-        // Deslizar hacia la izquierda -> Siguiente pestaña
-        if ((dx < -28 || vx < -0.25) && currentTabIndex < MAIN_TABS.length - 1) {
-          isNavigatingRef.current = true;
-          Animated.timing(dragX, {
-            toValue: -20,
-            duration: 120,
-            useNativeDriver: true,
-          }).start(() => {
-            router.replace(MAIN_TABS[currentTabIndex + 1] as any);
-          });
-        }
-        // Deslizar hacia la derecha -> Pestaña anterior
-        else if ((dx > 28 || vx > 0.25) && currentTabIndex > 0) {
-          isNavigatingRef.current = true;
-          Animated.timing(dragX, {
-            toValue: 20,
-            duration: 120,
-            useNativeDriver: true,
-          }).start(() => {
-            router.replace(MAIN_TABS[currentTabIndex - 1] as any);
-          });
-        } else {
-          // Rebote elástico al soltar sin superar el umbral
-          Animated.spring(dragX, {
+        // Deslizar hacia la izquierda (dedo a la izquierda) -> Pestaña siguiente
+        if ((dx < -18 || vx < -0.2) && curr < MAIN_TABS.length - 1) {
+          navigateToTab(curr + 1);
+          Animated.spring(navDragX, {
             toValue: 0,
-            tension: 140,
-            friction: 9,
+            tension: 200,
+            friction: 14,
+            useNativeDriver: true,
+          }).start();
+        }
+        // Deslizar hacia la derecha (dedo a la derecha) -> Pestaña anterior
+        else if ((dx > 18 || vx > 0.2) && curr > 0) {
+          navigateToTab(curr - 1);
+          Animated.spring(navDragX, {
+            toValue: 0,
+            tension: 200,
+            friction: 14,
+            useNativeDriver: true,
+          }).start();
+        } else {
+          // Rebote elástico si no superó el umbral
+          Animated.spring(navDragX, {
+            toValue: 0,
+            tension: 200,
+            friction: 12,
             useNativeDriver: true,
           }).start();
         }
@@ -105,31 +167,44 @@ export function AppBottomNav() {
   const bottomPosition = bottomInset + NAV_BOTTOM_OFFSET;
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.bottomNavWrapper,
         {
           bottom: bottomPosition,
-          transform: [{ translateX: dragX }],
         },
       ]}
       {...navPanResponder.panHandlers}
     >
-      <View style={styles.bottomNavContainer}>
+      <Animated.View
+        style={[
+          styles.bottomNavContainer,
+          {
+            transform: [
+              { translateX: navDragX },
+              { rotate: navDragTilt },
+              { scale: navDragScale },
+            ],
+          },
+        ]}
+      >
         {/* 1. Inicio */}
         <Pressable
           style={({ pressed }) => [styles.navItem, pressed && styles.cardPressed]}
-          onPress={() => {
-            if (!isHome) router.push('/');
-          }}
+          onPress={() => navigateToTab(0)}
           accessibilityRole="tab"
           accessibilityState={{ selected: isHome }}
           accessibilityLabel="Inicio"
         >
           {isHome ? (
-            <View style={styles.navActivePill}>
+            <Animated.View
+              style={[
+                styles.navActivePill,
+                { transform: [{ scale: pillScale }], opacity: pillOpacity },
+              ]}
+            >
               <Ionicons name="home" size={20} color={colors.primary} />
-            </View>
+            </Animated.View>
           ) : (
             <Ionicons name="home-outline" size={22} color={colors.textSecondary} />
           )}
@@ -139,17 +214,20 @@ export function AppBottomNav() {
         {/* 2. Despensa */}
         <Pressable
           style={({ pressed }) => [styles.navItem, pressed && styles.cardPressed]}
-          onPress={() => {
-            if (!isInventory) router.push('/inventory');
-          }}
+          onPress={() => navigateToTab(1)}
           accessibilityRole="tab"
           accessibilityState={{ selected: isInventory }}
           accessibilityLabel="Despensa"
         >
           {isInventory ? (
-            <View style={styles.navActivePill}>
+            <Animated.View
+              style={[
+                styles.navActivePill,
+                { transform: [{ scale: pillScale }], opacity: pillOpacity },
+              ]}
+            >
               <Ionicons name="basket" size={20} color={colors.primary} />
-            </View>
+            </Animated.View>
           ) : (
             <Ionicons name="basket-outline" size={22} color={colors.textSecondary} />
           )}
@@ -171,17 +249,20 @@ export function AppBottomNav() {
         {/* 4. Recetas */}
         <Pressable
           style={({ pressed }) => [styles.navItem, pressed && styles.cardPressed]}
-          onPress={() => {
-            if (!isRecipes) router.push('/recipes');
-          }}
+          onPress={() => navigateToTab(2)}
           accessibilityRole="tab"
           accessibilityState={{ selected: isRecipes }}
           accessibilityLabel="Recetas"
         >
           {isRecipes ? (
-            <View style={styles.navActivePill}>
+            <Animated.View
+              style={[
+                styles.navActivePill,
+                { transform: [{ scale: pillScale }], opacity: pillOpacity },
+              ]}
+            >
               <Ionicons name="restaurant" size={20} color={colors.primary} />
-            </View>
+            </Animated.View>
           ) : (
             <Ionicons name="restaurant-outline" size={22} color={colors.textSecondary} />
           )}
@@ -191,18 +272,21 @@ export function AppBottomNav() {
         {/* 5. Compras */}
         <Pressable
           style={({ pressed }) => [styles.navItem, pressed && styles.cardPressed]}
-          onPress={() => {
-            if (!isShopping) router.push('/shopping-list');
-          }}
+          onPress={() => navigateToTab(3)}
           accessibilityRole="tab"
           accessibilityState={{ selected: isShopping }}
           accessibilityLabel="Lista de Compras"
         >
           <View style={{ position: 'relative' }}>
             {isShopping ? (
-              <View style={styles.navActivePill}>
+              <Animated.View
+                style={[
+                  styles.navActivePill,
+                  { transform: [{ scale: pillScale }], opacity: pillOpacity },
+                ]}
+              >
                 <Ionicons name="cart" size={20} color={colors.primary} />
-              </View>
+              </Animated.View>
             ) : (
               <Ionicons name="cart-outline" size={22} color={colors.textSecondary} />
             )}
@@ -214,8 +298,8 @@ export function AppBottomNav() {
           </View>
           <Text style={isShopping ? styles.navLabelActive : styles.navLabel}>Compras</Text>
         </Pressable>
-      </View>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 

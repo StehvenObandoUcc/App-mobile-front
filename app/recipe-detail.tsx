@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useRecipes } from '../src/hooks/useRecipes';
 import { Recipe } from '../src/types';
-import { AppScreen, PrimaryButton, SecondaryButton } from '../src/components';
+import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog } from '../src/components';
 
 import { validateRecipeIngredients } from '../src/utils/recipe-validation';
 import { useShoppingList } from '../src/hooks/useShoppingList';
@@ -21,6 +21,25 @@ export default function RecipeDetailScreen() {
   const [isFinishing, setIsFinishing] = useState(false);
   const [isLoadingSteps, setIsLoadingSteps] = useState(false);
   const [stepsError, setStepsError] = useState<string | null>(null);
+
+  const [dialogConfig, setDialogConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type?: 'success' | 'info' | 'warning' | 'error';
+    iconName?: keyof typeof Ionicons.glyphMap;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    confirmText: 'Entendido',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     if (recipeId) {
@@ -61,55 +80,84 @@ export default function RecipeDetailScreen() {
 
   const handleFinishCooking = () => {
     if (!validation.canPrepare) {
-      Alert.alert(
-        'Preparar receta',
-        'No cuentas con todos los ingredientes necesarios en tu inventario. ¿Deseas preparar la receta de todos modos? (No se descontará ningún ingrediente de tu despensa).',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Preparar de todos modos',
-            style: 'default',
-            onPress: () => {
-              Alert.alert(
-                '¡Buen provecho!',
-                'Has preparado esta receta. Tu inventario se mantiene intacto ya que faltaban algunos ingredientes.',
-                [{ text: 'Ver recetas', onPress: () => router.replace('/recipes') }]
-              );
+      setDialogConfig({
+        visible: true,
+        title: 'Preparar receta',
+        message:
+          'No cuentas con todos los ingredientes necesarios en tu inventario. ¿Deseas preparar la receta de todos modos? (No se descontará ningún ingrediente de tu despensa).',
+        type: 'warning',
+        iconName: 'warning-outline',
+        confirmText: 'Preparar de todos modos',
+        cancelText: 'Cancelar',
+        onCancel: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        onConfirm: () => {
+          setDialogConfig({
+            visible: true,
+            title: '¡Buen provecho!',
+            message:
+              'Has preparado esta receta. Tu inventario se mantiene intacto ya que faltaban algunos ingredientes.',
+            type: 'success',
+            iconName: 'restaurant-outline',
+            confirmText: 'Ver recetas',
+            cancelText: undefined,
+            onCancel: undefined,
+            onConfirm: () => {
+              setDialogConfig((prev) => ({ ...prev, visible: false }));
+              router.replace('/recipes');
             },
-          },
-        ]
-      );
+          });
+        },
+      });
       return;
     }
 
-    Alert.alert(
-      '¿Finalizar preparación?',
-      validation.inventoryDeductionNotice,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sí, finalizar y descontar',
-          style: 'default',
-          onPress: async () => {
-            setIsFinishing(true);
-            try {
-              const consumed = await prepareRecipe(recipe.id);
-              Alert.alert(
-                'Preparación completada',
-                `Receta preparada con éxito. Se descontaron: ${
-                  consumed.join(', ') || 'los ingredientes utilizados'
-                }.`,
-                [{ text: 'Ver inventario', onPress: () => router.replace('/inventory') }]
-              );
-            } catch {
-              Alert.alert('Aviso', 'No se pudieron descontar los ingredientes.');
-            } finally {
-              setIsFinishing(false);
-            }
-          },
-        },
-      ]
-    );
+    setDialogConfig({
+      visible: true,
+      title: '¿Finalizar preparación?',
+      message: validation.inventoryDeductionNotice,
+      type: 'info',
+      iconName: 'restaurant-outline',
+      confirmText: 'Sí, finalizar y descontar',
+      cancelText: 'Cancelar',
+      onCancel: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      onConfirm: async () => {
+        setDialogConfig((prev) => ({ ...prev, visible: false }));
+        setIsFinishing(true);
+        try {
+          const consumed = await prepareRecipe(recipe.id);
+          setDialogConfig({
+            visible: true,
+            title: 'Preparación completada',
+            message: `Receta preparada con éxito. Se descontaron: ${
+              consumed.join(', ') || 'los ingredientes utilizados'
+            }.`,
+            type: 'success',
+            iconName: 'checkmark-circle-outline',
+            confirmText: 'Ver inventario',
+            cancelText: undefined,
+            onCancel: undefined,
+            onConfirm: () => {
+              setDialogConfig((prev) => ({ ...prev, visible: false }));
+              router.replace('/inventory');
+            },
+          });
+        } catch {
+          setDialogConfig({
+            visible: true,
+            title: 'Aviso',
+            message: 'No se pudieron descontar los ingredientes.',
+            type: 'error',
+            iconName: 'alert-circle-outline',
+            confirmText: 'Entendido',
+            cancelText: undefined,
+            onCancel: undefined,
+            onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+          });
+        } finally {
+          setIsFinishing(false);
+        }
+      },
+    });
   };
 
   return (
@@ -198,14 +246,20 @@ export default function RecipeDetailScreen() {
             style={styles.addMissingButton}
             onPress={async () => {
               const res = await addFromRecipe(recipe.missingIngredients, recipe.title);
-              Alert.alert(
-                'Lista de compras',
-                `Se procesaron ${recipe.missingIngredients.length} ingredientes: ${res.addedCount} agregados y ${res.mergedCount} fusionados sin duplicados.`,
-                [
-                  { text: 'Ir a la lista', onPress: () => router.push('/shopping-list') },
-                  { text: 'Entendido', style: 'cancel' },
-                ]
-              );
+              setDialogConfig({
+                visible: true,
+                title: 'Lista de compras',
+                message: `Se procesaron ${recipe.missingIngredients.length} ingredientes: ${res.addedCount} agregados y ${res.mergedCount} fusionados sin duplicados.`,
+                type: 'success',
+                iconName: 'cart-outline',
+                confirmText: 'Ir a la lista',
+                cancelText: 'Entendido',
+                onConfirm: () => {
+                  setDialogConfig((prev) => ({ ...prev, visible: false }));
+                  router.push('/shopping-list');
+                },
+                onCancel: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+              });
             }}
             accessibilityRole="button"
             accessibilityLabel="Añadir ingredientes faltantes a la lista de compras"
@@ -325,6 +379,18 @@ export default function RecipeDetailScreen() {
           onPress={() => router.back()}
         />
       </View>
+
+      <M3Dialog
+        visible={dialogConfig.visible}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        type={dialogConfig.type}
+        iconName={dialogConfig.iconName}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={dialogConfig.onCancel}
+      />
     </AppScreen>
   );
 }
