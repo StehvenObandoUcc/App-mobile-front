@@ -22,8 +22,10 @@ import { colors, radii, spacing, typography, elevations } from '../src/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, login, register, logout, status, error } = useAuth();
+  const { user, isAuthenticated, isGuest, login, register, continueAsGuest, logout, status, error } = useAuth();
 
+  // 'welcome' muestra el onboarding visual hero; 'form' muestra el formulario de login/registro
+  const [screenView, setScreenView] = useState<'welcome' | 'form'>('welcome');
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,17 +53,13 @@ export default function LoginScreen() {
   const nameInputRef = useRef<TextInput>(null);
   const indicatorAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
-  const demoAnim = useRef(new Animated.Value(1)).current;
-  const formPulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     return () => {
       indicatorAnim.stopAnimation();
       formAnim.stopAnimation();
-      demoAnim.stopAnimation();
-      formPulseAnim.stopAnimation();
     };
-  }, [indicatorAnim, formAnim, demoAnim, formPulseAnim]);
+  }, [indicatorAnim, formAnim]);
 
   const handleModeChange = (newMode: 'login' | 'register') => {
     if (newMode === mode) return;
@@ -84,21 +82,45 @@ export default function LoginScreen() {
       duration: 220,
       useNativeDriver: true,
     }).start();
+  };
 
-    demoAnim.stopAnimation();
-    Animated.timing(demoAnim, {
-      toValue: newMode === 'login' ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
+  const handleContinueAsGuest = async () => {
+    try {
+      await continueAsGuest();
+      router.replace('/');
+    } catch (err: any) {
+      setDialogConfig({
+        visible: true,
+        title: 'Error de modo local',
+        message: err?.message || 'No se pudo iniciar el modo invitado.',
+        type: 'error',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
+    }
+  };
 
-    formPulseAnim.setValue(0.98);
-    Animated.spring(formPulseAnim, {
-      toValue: 1,
-      friction: 6,
-      tension: 100,
-      useNativeDriver: true,
-    }).start();
+  const handleQuickDemoLogin = async () => {
+    try {
+      await login('demo@foodai.com', '123456');
+      setDialogConfig({
+        visible: true,
+        title: '¡Bienvenido Chef Demo!',
+        message: 'Has iniciado sesión con la cuenta de prueba oficial.',
+        type: 'success',
+        onConfirm: () => {
+          setDialogConfig((prev) => ({ ...prev, visible: false }));
+          router.replace('/');
+        },
+      });
+    } catch (err: any) {
+      setDialogConfig({
+        visible: true,
+        title: 'Error de conexión',
+        message: err?.message || 'No se pudo iniciar sesión demo.',
+        type: 'error',
+        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+      });
+    }
   };
 
   const handleSubmit = async () => {
@@ -245,7 +267,57 @@ export default function LoginScreen() {
     );
   };
 
+  // ─── Estado 1: Usuario ya autenticado ───────────────────────────────────────
   if (isAuthenticated && user) {
+    if (isGuest) {
+      return (
+        <AppScreen style={styles.screen}>
+          <ScrollView contentContainerStyle={styles.profileScrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.guestCard}>
+              <View style={styles.guestIconBadge}>
+                <Ionicons name="person-circle-outline" size={64} color={colors.primary} />
+              </View>
+              <Text style={styles.guestTitle}>Modo Invitado Activo</Text>
+              <Text style={styles.guestSubtitle}>
+                Estás usando la app de manera local. Tus recetas y alimentos se guardan de forma privada en la memoria de este dispositivo.
+              </Text>
+              <View style={styles.guestPill}>
+                <Ionicons name="cloud-offline-outline" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
+                <Text style={styles.guestPillText}>Almacenamiento Local (Sin Nube)</Text>
+              </View>
+
+              <View style={{ width: '100%', marginTop: spacing.xl, gap: spacing.md }}>
+                <PrimaryButton
+                  title="Crear cuenta para sincronizar"
+                  iconName="cloud-upload-outline"
+                  onPress={async () => {
+                    await logout();
+                    setScreenView('form');
+                    setMode('register');
+                  }}
+                />
+                <SecondaryButton
+                  title="Iniciar sesión existente"
+                  iconName="log-in-outline"
+                  variant="outline"
+                  onPress={async () => {
+                    await logout();
+                    setScreenView('form');
+                    setMode('login');
+                  }}
+                />
+                <Pressable
+                  onPress={() => router.replace('/')}
+                  style={({ pressed }) => [styles.guestReturnBtn, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={styles.guestReturnText}>Volver a mi cocina</Text>
+                </Pressable>
+              </View>
+            </View>
+          </ScrollView>
+        </AppScreen>
+      );
+    }
 
     return (
       <AppScreen style={styles.screen}>
@@ -275,13 +347,112 @@ export default function LoginScreen() {
           onConfirm={async () => {
             setIsLogoutConfirmOpen(false);
             await logout();
-            router.replace('/');
+            setScreenView('welcome');
           }}
         />
       </AppScreen>
     );
   }
 
+  // ─── Estado 2: Pantalla de Bienvenida / Onboarding (Matching Reference) ────
+  if (screenView === 'welcome') {
+    return (
+      <AppScreen style={styles.screen}>
+        <ScrollView
+          contentContainerStyle={styles.welcomeScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Hero Branding */}
+          <View style={styles.welcomeHero}>
+            <View style={styles.brandIconCircle}>
+              <Ionicons name="restaurant" size={38} color={colors.primary} />
+            </View>
+            <Text style={styles.brandTitle}>Food AI</Text>
+            <Text style={styles.brandTagline}>Tu cocina inteligente. Hecha para ti.</Text>
+            <Text style={styles.brandDescription}>
+              Aprovecha al máximo cada ingrediente, reduce el desperdicio y crea recetas deliciosas al instante con Inteligencia Artificial.
+            </Text>
+          </View>
+
+          {/* Tarjetas de Beneficios */}
+          <View style={styles.featuresList}>
+            <View style={styles.featureItem}>
+              <View style={[styles.featureIconBox, { backgroundColor: colors.primaryContainer }]}>
+                <Ionicons name="camera" size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featureTitle}>Escaneo visual con IA</Text>
+                <Text style={styles.featureDesc}>Identifica ingredientes de tu nevera con una sola fotografía.</Text>
+              </View>
+            </View>
+
+            <View style={styles.featureItem}>
+              <View style={[styles.featureIconBox, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="sparkles" size={20} color="#D97706" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featureTitle}>Recetas personalizadas</Text>
+                <Text style={styles.featureDesc}>Genera sugerencias deliciosas basadas en lo que tienes.</Text>
+              </View>
+            </View>
+
+            <View style={styles.featureItem}>
+              <View style={[styles.featureIconBox, { backgroundColor: '#DCFCE7' }]}>
+                <Ionicons name="cart" size={20} color="#15803D" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featureTitle}>Lista de compras conectada</Text>
+                <Text style={styles.featureDesc}>Agrega faltantes y sincroniza tus compras con tu despensa.</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Botones de Entrada Principal */}
+          <View style={styles.welcomeActions}>
+            <PrimaryButton
+              title="Iniciar sesión o Registrarse"
+              iconName="log-in-outline"
+              onPress={() => setScreenView('form')}
+            />
+
+            <SecondaryButton
+              title="Continuar como invitado (Modo Local)"
+              iconName="person-outline"
+              variant="outline"
+              onPress={handleContinueAsGuest}
+            />
+
+            <Pressable
+              style={({ pressed }) => [styles.demoButton, pressed && { opacity: 0.8 }]}
+              onPress={handleQuickDemoLogin}
+              accessibilityRole="button"
+              accessibilityLabel="Entrar como Chef Demo"
+            >
+              <Ionicons name="flash-outline" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+              <Text style={styles.demoButtonText}>Acceso rápido con Chef Demo (1 toque)</Text>
+            </Pressable>
+
+            {/* Aviso Legal Referencia */}
+            <Text style={styles.legalDisclaimer}>
+              Al continuar, estás indicando que has leído y aceptas nuestros{' '}
+              <Text style={styles.legalLink}>Términos</Text> y{' '}
+              <Text style={styles.legalLink}>Política de privacidad</Text>.
+            </Text>
+          </View>
+        </ScrollView>
+
+        <M3Dialog
+          visible={dialogConfig.visible}
+          title={dialogConfig.title}
+          message={dialogConfig.message}
+          type={dialogConfig.type}
+          onConfirm={dialogConfig.onConfirm}
+        />
+      </AppScreen>
+    );
+  }
+
+  // ─── Estado 3: Formulario de Autenticación (Login / Registro) ──────────────
   return (
     <AppScreen style={styles.screen}>
       <KeyboardAvoidingView
@@ -293,18 +464,23 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
         >
-          {/* ── Cabecera Hero ── */}
-          <View style={styles.heroSection}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="restaurant" size={30} color={colors.primary} />
-            </View>
-            <Text style={styles.heroTitle}>Food AI Assistant</Text>
-            <Text style={styles.heroSubtitle}>
-              Tu despensa inteligente y recetas personalizadas
+          {/* Navegación Superior Retorno a Bienvenida */}
+          <View style={styles.formTopNav}>
+            <Pressable
+              onPress={() => setScreenView('welcome')}
+              style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Volver al menú de bienvenida"
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+            </Pressable>
+            <Text style={styles.formNavTitle}>
+              {mode === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}
             </Text>
+            <View style={{ width: 24 }} />
           </View>
 
-          {/* ── Selector de Modo (Login / Registro) con Píldora Animada ── */}
+          {/* Selector de Modo (Login / Registro) con Píldora Animada */}
           <View
             style={styles.tabsContainer}
             onLayout={(e) => setTabsWidth(e.nativeEvent.layout.width)}
@@ -351,8 +527,8 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          {/* ── Formulario con pulso coreografiado ── */}
-          <Animated.View style={[styles.formCard, { transform: [{ scale: formPulseAnim }] }]}>
+          {/* Formulario */}
+          <View style={styles.formCard}>
             {error && (
               <View style={styles.errorBanner}>
                 <Ionicons name="alert-circle" size={18} color={colors.error.text} style={{ marginRight: 6 }} />
@@ -360,7 +536,7 @@ export default function LoginScreen() {
               </View>
             )}
 
-            {/* Campo "Tu Nombre" con control estricto de foco, accesibilidad y animación */}
+            {/* Campo "Tu Nombre" en modo Registro */}
             <Animated.View
               style={[
                 styles.inputGroup,
@@ -379,9 +555,6 @@ export default function LoginScreen() {
                 },
               ]}
               pointerEvents={mode === 'register' ? 'auto' : 'none'}
-              importantForAccessibility={mode === 'register' ? 'auto' : 'no-hide-descendants'}
-              accessibilityElementsHidden={mode !== 'register'}
-              aria-hidden={mode !== 'register'}
             >
               <Text style={styles.inputLabel}>Tu Nombre</Text>
               <View style={[styles.inputWrapper, focusedField === 'name' && styles.inputWrapperFocused]}>
@@ -399,7 +572,6 @@ export default function LoginScreen() {
                   placeholderTextColor={colors.textMuted}
                   maxLength={50}
                   style={styles.textInput}
-                  autoFocus={false}
                   editable={mode === 'register'}
                   onFocus={() => setFocusedField('name')}
                   onBlur={() => setFocusedField(null)}
@@ -467,7 +639,6 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Aviso de seguridad amigable */}
             <View style={styles.cryptoNotice}>
               <Ionicons name="shield-checkmark" size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
               <Text style={styles.cryptoNoticeText}>
@@ -484,51 +655,17 @@ export default function LoginScreen() {
               iconName={mode === 'login' ? 'log-in-outline' : 'person-add-outline'}
             />
 
-            {/* Información estática de credenciales de prueba (solo lectura para testers) */}
-            <Animated.View
-              style={{
-                height: mode === 'login' ? undefined : 0,
-                overflow: 'hidden',
-                opacity: demoAnim,
-                transform: [
-                  {
-                    translateY: demoAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [10, 0],
-                    }),
-                  },
-                ],
-              }}
-              pointerEvents="none"
-              accessibilityRole="text"
-              accessibilityLabel="Credenciales de prueba: Correo demo@foodai.com, contraseña 123456"
-            >
-              <View style={styles.demoInfoBox}>
-                <View style={styles.demoInfoHeader}>
-                  <Ionicons name="information-circle-outline" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-                  <Text style={styles.demoInfoTitle}>Credenciales de prueba</Text>
-                </View>
-                <Text style={styles.demoInfoText}>
-                  Correo: <Text style={styles.demoInfoValue}>demo@foodai.com</Text>
-                </Text>
-                <Text style={styles.demoInfoText}>
-                  Contraseña: <Text style={styles.demoInfoValue}>123456</Text>
-                </Text>
-              </View>
-            </Animated.View>
-
-
             <View style={{ height: spacing.lg }} />
             <Pressable
-              onPress={() => router.replace('/')}
+              onPress={handleContinueAsGuest}
               style={({ pressed }) => [styles.guestButton, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Explorar sin cuenta"
             >
-              <Ionicons name="arrow-back-outline" size={18} color={colors.textSecondary} style={{ marginRight: 6 }} />
-              <Text style={styles.guestButtonText}>Volver al Inicio / Explorar sin cuenta</Text>
+              <Ionicons name="arrow-forward-outline" size={18} color={colors.textSecondary} style={{ marginRight: 6 }} />
+              <Text style={styles.guestButtonText}>Continuar como invitado (Modo Local)</Text>
             </Pressable>
-          </Animated.View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -545,195 +682,296 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: colors.background },
+  welcomeScrollContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.section,
+    alignItems: 'center',
+  },
+  welcomeHero: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    paddingTop: spacing.md,
+  },
+  brandIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+    ...elevations.sm,
+  },
+  brandTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  brandTagline: {
+    fontSize: typography.sizes.cardTitle,
+    fontWeight: '700',
+    color: colors.primary,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  brandDescription: {
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 20,
+    maxWidth: 320,
+  },
+  featuresList: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: radii.containers,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.lg,
+    marginBottom: spacing.xl,
+    ...elevations.sm,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  featureIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.buttons,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureTitle: {
+    fontSize: typography.sizes.body,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  featureDesc: {
+    fontSize: typography.sizes.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  welcomeActions: {
+    width: '100%',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  demoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.circular,
+    backgroundColor: colors.surfaceVariant,
+    marginTop: spacing.xs,
+  },
+  demoButtonText: {
+    fontSize: typography.sizes.bodySmall,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  legalDisclaimer: {
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    lineHeight: 16,
+    paddingHorizontal: spacing.lg,
+  },
+  legalLink: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  formTopNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  formNavTitle: {
+    fontSize: typography.sizes.cardTitle,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
   scrollContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.section,
+  },
+  profileScrollContent: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xxl,
     paddingBottom: spacing.section,
   },
-  heroSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: radii.floatingNav,
-    backgroundColor: colors.primaryContainer,
-    borderWidth: 1.5,
+  guestCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.containers,
+    borderWidth: 1,
     borderColor: colors.border,
+    padding: spacing.xxl,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...elevations.md,
   },
-  heroTitle: {
-    fontSize: typography.sizes.headline,
+  guestIconBadge: {
+    marginBottom: spacing.md,
+  },
+  guestTitle: {
+    fontSize: typography.sizes.cardTitle,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.5,
+    textAlign: 'center',
   },
-  heroSubtitle: {
+  guestSubtitle: {
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
-    marginTop: spacing.xs,
     textAlign: 'center',
+    marginTop: spacing.xs,
+    lineHeight: 20,
+  },
+  guestPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceVariant,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radii.circular,
+    marginTop: spacing.md,
+  },
+  guestPillText: {
+    fontSize: typography.sizes.label,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  guestReturnBtn: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  guestReturnText: {
+    fontSize: typography.sizes.bodySmall,
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceVariant,
-    borderRadius: radii.cards,
-    padding: spacing.xs,
+    borderRadius: radii.buttons,
+    padding: 4,
     marginBottom: spacing.xl,
     position: 'relative',
+    height: 48,
+    alignItems: 'center',
   },
   tabIndicator: {
     position: 'absolute',
     top: 4,
-    left: 4,
     bottom: 4,
+    left: 4,
     backgroundColor: colors.surface,
-    borderRadius: radii.chips,
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: radii.buttons - 2,
+    ...elevations.sm,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.chips,
+    height: '100%',
     zIndex: 1,
   },
   tabButtonText: {
     fontSize: typography.sizes.bodySmall,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.textSecondary,
   },
   tabButtonTextActive: {
-    color: colors.primary,
-    fontWeight: '700',
+    color: colors.textPrimary,
   },
   formCard: {
     backgroundColor: colors.surface,
     borderRadius: radii.containers,
-    padding: spacing.xl,
     borderWidth: 1,
     borderColor: colors.border,
-    ...elevations.sm,
+    padding: spacing.xl,
+    ...elevations.md,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.error.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
     borderRadius: radii.buttons,
+    padding: spacing.md,
     marginBottom: spacing.lg,
   },
   errorText: {
     color: colors.error.text,
-    fontSize: typography.sizes.metadata,
-    fontWeight: '600',
+    fontSize: typography.sizes.bodySmall,
     flex: 1,
+    fontWeight: '600',
   },
   inputGroup: {
     marginBottom: spacing.lg,
   },
   inputLabel: {
-    fontSize: typography.sizes.metadata,
+    fontSize: typography.sizes.bodySmall,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 6,
+    marginBottom: spacing.xs,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radii.buttons,
-    paddingHorizontal: 14,
-    height: 50,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    height: 52,
   },
   inputWrapperFocused: {
     borderColor: colors.primary,
     backgroundColor: colors.surface,
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: spacing.sm,
   },
   textInput: {
     flex: 1,
     fontSize: typography.sizes.body,
     color: colors.textPrimary,
+    height: '100%',
   },
   cryptoNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceVariant,
-    padding: 10,
-    borderRadius: radii.chips,
     marginTop: spacing.xs,
   },
   cryptoNoticeText: {
-    fontSize: typography.sizes.caption,
+    fontSize: typography.sizes.label,
     color: colors.textSecondary,
-    flex: 1,
-    lineHeight: 16,
-  },
-  demoInfoBox: {
-    backgroundColor: colors.surfaceVariant,
-    borderRadius: radii.cards,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginTop: spacing.md,
-  },
-  demoInfoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  demoInfoTitle: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  demoInfoText: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  demoInfoValue: {
-    fontWeight: '700',
-    color: colors.textPrimary,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-
-  profileScrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xxl,
   },
   guestButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: radii.buttons,
-    backgroundColor: 'transparent',
+    paddingVertical: spacing.sm,
   },
   guestButtonText: {
-    color: colors.textSecondary,
     fontSize: typography.sizes.bodySmall,
-    fontWeight: '600',
+    color: colors.primary,
+    fontWeight: '700',
   },
 });

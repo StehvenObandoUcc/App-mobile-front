@@ -224,6 +224,7 @@ export type User = {
   id: string;
   email: string;
   name: string;
+  isGuest?: boolean;
 };
 
 export type AuthSession = {

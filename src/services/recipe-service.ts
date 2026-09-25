@@ -1,6 +1,13 @@
 import { Recipe, DietaryPreference } from '../types';
 import { LocalStorage } from '../storage/local-storage';
-import { generateRecipesWithApi, getRecipeStepsWithApi } from './api-client';
+import {
+  generateRecipesWithApi,
+  getRecipeStepsWithApi,
+  fetchSavedRecipesFromApi,
+  saveRecipeWithApi,
+  deleteRecipeWithApi,
+  batchDeleteRecipesWithApi,
+} from './api-client';
 import { getFriendlyErrorMessage } from '../utils/error-messages';
 
 export interface RecipeService {
@@ -24,7 +31,20 @@ export interface RecipeService {
 
 export const mockRecipeService: RecipeService = {
   async getRecipes(): Promise<Recipe[]> {
-    return LocalStorage.getRecipes();
+    const local = await LocalStorage.getRecipes();
+
+    // Sincronización en segundo plano con la base de datos (Supabase)
+    fetchSavedRecipesFromApi()
+      .then(async (remote) => {
+        if (Array.isArray(remote) && remote.length > 0) {
+          for (const r of remote) {
+            await LocalStorage.saveRecipe(r);
+          }
+        }
+      })
+      .catch(() => {});
+
+    return local;
   },
 
   async getRecipeById(id: string): Promise<Recipe | null> {
@@ -34,7 +54,7 @@ export const mockRecipeService: RecipeService = {
 
   /**
    * Fase 2 (Opción A Stateless): Obtiene los pasos detallados de preparación bajo demanda
-   * y los guarda en LocalStorage para evitar re-consultar a la IA.
+   * y los guarda en LocalStorage y base de datos para evitar re-consultar a la IA.
    */
   async getRecipeSteps(recipe: Recipe): Promise<string[]> {
     if (recipe.steps && recipe.steps.length > 0) {
@@ -50,6 +70,7 @@ export const mockRecipeService: RecipeService = {
       });
       const updatedRecipe: Recipe = { ...recipe, steps };
       await LocalStorage.saveRecipe(updatedRecipe);
+      saveRecipeWithApi(updatedRecipe).catch(() => {});
       return steps;
     } catch (err: any) {
       console.warn('[RecipeService] Error obteniendo pasos con IA:', err);
@@ -59,18 +80,30 @@ export const mockRecipeService: RecipeService = {
 
   async saveRecipe(id: string): Promise<void> {
     await LocalStorage.toggleSaveRecipe(id);
+    const updated = await this.getRecipeById(id);
+    if (updated) {
+      saveRecipeWithApi(updated).catch((err) =>
+        console.warn('[RecipeService] Error persistiendo receta en la nube:', err?.message)
+      );
+    }
   },
 
   async toggleSave(id: string): Promise<void> {
-    await LocalStorage.toggleSaveRecipe(id);
+    await this.saveRecipe(id);
   },
 
   async deleteRecipe(id: string): Promise<void> {
     await LocalStorage.deleteRecipe(id);
+    deleteRecipeWithApi(id).catch((err) =>
+      console.warn('[RecipeService] Error eliminando receta de la nube:', err?.message)
+    );
   },
 
   async deleteRecipes(ids: string[]): Promise<void> {
     await LocalStorage.deleteRecipes(ids);
+    batchDeleteRecipesWithApi(ids).catch((err) =>
+      console.warn('[RecipeService] Error eliminando lote de recetas de la nube:', err?.message)
+    );
   },
 
   /**
@@ -105,8 +138,13 @@ export const mockRecipeService: RecipeService = {
         ...rec,
         createdAt: rec.createdAt || new Date().toISOString(),
       }));
+
       for (const rec of enriched) {
         await LocalStorage.saveRecipe(rec);
+        // Persistencia garantizada en base de datos en segundo plano
+        saveRecipeWithApi(rec).catch((err) =>
+          console.warn('[RecipeService] Error persistiendo receta generada en base de datos:', err?.message)
+        );
       }
       return enriched;
     } catch (err: any) {

@@ -79,7 +79,9 @@ export default function HomeScreen() {
   const featuredRecipe = availableRecipes.length > 0 ? availableRecipes[0] : null;
 
   const displayName = user?.name
-    ? user.name.toLowerCase().startsWith('chef')
+    ? user.isGuest
+      ? 'Modo Invitado'
+      : user.name.toLowerCase().startsWith('chef')
       ? user.name
       : `Chef ${user.name.split(' ')[0]}`
     : 'Mi Cocina';
@@ -97,7 +99,9 @@ export default function HomeScreen() {
       <StaggerView index={0}>
         <View style={styles.header}>
           <View style={{ flex: 1, marginRight: spacing.md }}>
-            <Text style={styles.subtitle}>Aprovecha mejor tu despensa hoy</Text>
+            <Text style={styles.subtitle}>
+              {user?.isGuest ? 'Almacenamiento Local Offline' : 'Aprovecha mejor tu despensa hoy'}
+            </Text>
             <Text style={styles.title}>{displayName}</Text>
           </View>
 
@@ -119,9 +123,9 @@ export default function HomeScreen() {
                   resizeMode="cover"
                 />
               ) : (
-                <Ionicons name={user ? 'person' : 'person-outline'} size={20} color={colors.primary} />
+                <Ionicons name={user ? (user.isGuest ? 'person-circle-outline' : 'person') : 'person-outline'} size={20} color={colors.primary} />
               )}
-              {user && <View style={styles.onlineDot} />}
+              {user && <View style={[styles.onlineDot, user.isGuest && { backgroundColor: '#F59E0B' }]} />}
             </Pressable>
 
             <Pressable
@@ -143,6 +147,27 @@ export default function HomeScreen() {
           </View>
         </View>
       </StaggerView>
+
+      {/* ── Banner de Modo Invitado / Sincronización en la Nube ── */}
+      {user?.isGuest && (
+        <StaggerView index={0}>
+          <Pressable
+            style={({ pressed }) => [styles.guestBanner, pressed && { opacity: 0.85 }]}
+            onPress={() => router.push('/login')}
+            accessibilityRole="button"
+            accessibilityLabel="Modo invitado activo. Toca para sincronizar en la nube"
+          >
+            <View style={styles.guestBannerLeft}>
+              <Ionicons name="cloud-offline-outline" size={18} color={colors.primary} />
+              <Text style={styles.guestBannerText}>Modo Local: tus datos no están sincronizados</Text>
+            </View>
+            <View style={styles.guestBannerAction}>
+              <Text style={styles.guestBannerActionText}>Crear cuenta</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </View>
+          </Pressable>
+        </StaggerView>
+      )}
 
       {/* ── 2. Acción Principal: Escanear Alimentos (Hero Editorial Card) ── */}
       <StaggerView index={1}>
@@ -489,6 +514,41 @@ const styles = StyleSheet.create({
     color: colors.textInverse,
     fontSize: typography.sizes.micro,
     fontWeight: '700',
+  },
+  guestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: radii.buttons,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  guestBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  guestBannerText: {
+    fontSize: typography.sizes.caption,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginLeft: spacing.xs,
+  },
+  guestBannerAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  guestBannerActionText: {
+    fontSize: typography.sizes.caption,
+    fontWeight: '700',
+    color: colors.primary,
   },
   heroActionCard: {
     flexDirection: 'row',

@@ -57,6 +57,21 @@ export function useAuth() {
     }
   }, []);
 
+  const continueAsGuest = useCallback(async () => {
+    setStatus('loading');
+    setError(null);
+    try {
+      const res = await AuthService.continueAsGuest();
+      setStatus('success');
+      return res;
+    } catch (err: any) {
+      const msg = err?.message || 'Error al iniciar modo invitado';
+      setError(msg);
+      setStatus('error');
+      throw err;
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     setSession(null);
     setStatus('idle');
@@ -68,11 +83,13 @@ export function useAuth() {
     user: session?.user || null,
     token: session?.accessToken || null,
     isAuthenticated: !!session,
+    isGuest: !!session?.user?.isGuest,
     isHydrated,
     status,
     error,
     login,
     register,
+    continueAsGuest,
     logout,
   };
 }

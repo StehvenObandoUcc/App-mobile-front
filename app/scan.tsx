@@ -167,16 +167,6 @@ export default function ScanScreen() {
               variant="outline"
               onPress={handlePickFromGallery}
             />
-            <Pressable
-              onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-              style={{ alignItems: 'center', paddingVertical: spacing.sm }}
-              accessibilityRole="button"
-              accessibilityLabel="Volver"
-            >
-              <Text style={{ color: colors.textSecondary, fontSize: typography.sizes.bodySmall, fontWeight: '600' }}>
-                Volver
-              </Text>
-            </Pressable>
           </View>
         </View>
       </AppScreen>

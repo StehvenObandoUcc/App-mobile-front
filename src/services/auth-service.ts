@@ -225,6 +225,28 @@ export class AuthService {
   }
 
   /**
+   * Inicia sesión en modo invitado explícito (almacenamiento 100% local, sin cuenta en la nube).
+   */
+  static async continueAsGuest(): Promise<AuthSession> {
+    const guestSession: AuthSession = {
+      accessToken: 'guest-local-session-token',
+      expiresAt: new Date(Date.now() + 365 * 86400000).toISOString(),
+      user: {
+        id: 'guest',
+        email: 'invitado@foodai.local',
+        name: 'Invitado',
+        isGuest: true,
+      },
+    };
+
+    await saveSecureSession(guestSession);
+    currentSession = guestSession;
+    await LocalStorage.switchUser(guestSession.user.id);
+    notifyListeners();
+    return guestSession;
+  }
+
+  /**
    * Cierra la sesión activa:
    * - Elimina la sesión de SecureStore
    * - Limpia el estado en memoria de LocalStorage (conservando datos en AsyncStorage)

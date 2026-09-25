@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient, IngredientCategory } from '../types';
 import { Chip } from './Chip';
-import { colors, typography, spacing, radii, elevations } from '../theme';
+import { colors, typography, spacing, radii, elevations, getCategoryConfig } from '../theme';
 import { getExpirationStatus } from '../utils/expiration';
 
 export { getExpirationStatus };
@@ -20,18 +20,6 @@ export type IngredientCardProps = {
   onToggleSelect?: () => void;
 };
 
-const CATEGORY_ICONS: Record<IngredientCategory, keyof typeof Ionicons.glyphMap> = {
-  vegetable: 'leaf-outline',
-  fruit: 'nutrition-outline',
-  protein: 'restaurant-outline',
-  dairy: 'water-outline',
-  grain: 'grid-outline',
-  legume: 'ellipse-outline',
-  sauce: 'color-fill-outline',
-  snack: 'fast-food-outline',
-  other: 'cube-outline',
-};
-
 export function IngredientCard({
   ingredient,
   onPress,
@@ -43,8 +31,9 @@ export function IngredientCard({
   isSelected = false,
   onToggleSelect,
 }: IngredientCardProps) {
+  const catConfig = getCategoryConfig(ingredient.category);
   const catColor = colors.categories[ingredient.category] || colors.categories.other;
-  const catIcon = CATEGORY_ICONS[ingredient.category] || CATEGORY_ICONS.other;
+  const catIcon = catConfig.icon;
   const expiry = getExpirationStatus(ingredient.expirationDate);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;

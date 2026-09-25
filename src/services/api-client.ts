@@ -54,7 +54,7 @@ export interface ApiScanResponse {
   }[];
 }
 
-import { Ingredient } from '../types';
+import { Ingredient, Recipe, ShoppingItem } from '../types';
 
 let getAuthTokenFn: (() => string | null) | null = null;
 
@@ -346,6 +346,229 @@ export async function batchDeleteInventoryItemsWithApi(ids: string[]): Promise<b
     body: JSON.stringify({ ids }),
   });
   return true;
+}
+
+// ─── Recetas Persistentes (Supabase / Cloud API) ──────────────────────────────
+
+/**
+ * Obtiene las recetas guardadas del usuario desde la base de datos en la nube.
+ */
+export async function fetchSavedRecipesFromApi(): Promise<Recipe[]> {
+  const data = await requestJson<any[]>(`${API_BASE_URL}/api/v1/recipes/saved`, {
+    method: 'GET',
+  });
+  if (!Array.isArray(data)) return [];
+  return data.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description || '',
+    prepTimeMinutes: r.prepTimeMinutes || r.prep_time_minutes || 30,
+    servings: r.servings || 2,
+    difficulty: r.difficulty || 'easy',
+    matchScore: r.matchScore || r.match_score || 90,
+    availableIngredients: Array.isArray(r.availableIngredients) ? r.availableIngredients : [],
+    missingIngredients: Array.isArray(r.missingIngredients) ? r.missingIngredients : [],
+    steps: Array.isArray(r.steps) ? r.steps : [],
+    isSaved: r.isSaved !== undefined ? r.isSaved : true,
+    isPrepared: r.isPrepared !== undefined ? r.isPrepared : false,
+    createdAt: r.createdAt || r.created_at,
+  }));
+}
+
+/**
+ * Guarda o actualiza una receta en la base de datos en la nube.
+ */
+export async function saveRecipeWithApi(recipe: Recipe): Promise<Recipe> {
+  const payload = {
+    id: recipe.id,
+    title: recipe.title,
+    description: recipe.description,
+    prepTimeMinutes: recipe.prepTimeMinutes,
+    servings: recipe.servings,
+    difficulty: recipe.difficulty,
+    matchScore: recipe.matchScore,
+    availableIngredients: recipe.availableIngredients,
+    missingIngredients: recipe.missingIngredients,
+    steps: recipe.steps,
+    isSaved: recipe.isSaved ?? true,
+    isPrepared: recipe.isPrepared ?? false,
+  };
+  const saved = await requestJson<any>(`${API_BASE_URL}/api/v1/recipes/save`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return {
+    id: saved.id,
+    title: saved.title,
+    description: saved.description || '',
+    prepTimeMinutes: saved.prepTimeMinutes || saved.prep_time_minutes || 30,
+    servings: saved.servings || 2,
+    difficulty: saved.difficulty || 'easy',
+    matchScore: saved.matchScore || saved.match_score || 90,
+    availableIngredients: Array.isArray(saved.availableIngredients) ? saved.availableIngredients : [],
+    missingIngredients: Array.isArray(saved.missingIngredients) ? saved.missingIngredients : [],
+    steps: Array.isArray(saved.steps) ? saved.steps : [],
+    isSaved: saved.isSaved !== undefined ? saved.isSaved : true,
+    isPrepared: saved.isPrepared !== undefined ? saved.isPrepared : false,
+  };
+}
+
+/**
+ * Elimina una receta guardada de la base de datos en la nube.
+ */
+export async function deleteRecipeWithApi(id: string): Promise<boolean> {
+  await requestJson(`${API_BASE_URL}/api/v1/recipes/saved/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  return true;
+}
+
+/**
+ * Elimina un lote de recetas guardadas de la base de datos en la nube.
+ */
+export async function batchDeleteRecipesWithApi(ids: string[]): Promise<boolean> {
+  await requestJson(`${API_BASE_URL}/api/v1/recipes/saved/batch-delete`, {
+    method: 'POST',
+    body: JSON.stringify(ids),
+  });
+  return true;
+}
+
+// ─── Lista de Compras Persistente (Supabase / Cloud API) ──────────────────────
+
+
+/**
+ * Obtiene los artículos de la lista de compras del usuario desde la base de datos en la nube.
+ */
+export async function fetchShoppingListFromApi(): Promise<ShoppingItem[]> {
+  const data = await requestJson<any[]>(`${API_BASE_URL}/api/v1/shopping`, {
+    method: 'GET',
+  });
+  if (!Array.isArray(data)) return [];
+  return data.map((item) => ({
+    id: item.id,
+    name: item.name,
+    quantity: item.quantity !== undefined ? item.quantity : null,
+    unit: item.unit || 'units',
+    category: item.category || 'other',
+    isBought: item.isBought !== undefined ? item.isBought : (item.is_bought ?? false),
+    recipeSource: item.recipeSource || item.recipe_source || null,
+    createdAt: item.createdAt || item.created_at || new Date().toISOString(),
+  }));
+}
+
+/**
+ * Persiste un nuevo artículo en la lista de compras en la nube.
+ */
+export async function createShoppingItemWithApi(item: Partial<ShoppingItem>): Promise<ShoppingItem> {
+  const payload = {
+    id: item.id,
+    name: item.name,
+    quantity: item.quantity,
+    unit: item.unit || 'units',
+    category: item.category || 'other',
+    isBought: item.isBought ?? false,
+    recipeSource: item.recipeSource || null,
+  };
+  const created = await requestJson<any>(`${API_BASE_URL}/api/v1/shopping`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return {
+    id: created.id,
+    name: created.name,
+    quantity: created.quantity !== undefined ? created.quantity : null,
+    unit: created.unit || 'units',
+    category: created.category || 'other',
+    isBought: created.isBought !== undefined ? created.isBought : (created.is_bought ?? false),
+    recipeSource: created.recipeSource || created.recipe_source || null,
+    createdAt: created.createdAt || created.created_at || new Date().toISOString(),
+  };
+}
+
+/**
+ * Actualiza un artículo de la lista de compras en la nube.
+ */
+export async function updateShoppingItemWithApi(
+  id: string,
+  updates: Partial<ShoppingItem>
+): Promise<ShoppingItem> {
+  const payload: Record<string, any> = {};
+  if (updates.name !== undefined) payload.name = updates.name;
+  if (updates.quantity !== undefined) payload.quantity = updates.quantity;
+  if (updates.unit !== undefined) payload.unit = updates.unit;
+  if (updates.category !== undefined) payload.category = updates.category;
+  if (updates.isBought !== undefined) payload.isBought = updates.isBought;
+  if (updates.recipeSource !== undefined) payload.recipeSource = updates.recipeSource;
+
+  const updated = await requestJson<any>(`${API_BASE_URL}/api/v1/shopping/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return {
+    id: updated.id,
+    name: updated.name,
+    quantity: updated.quantity !== undefined ? updated.quantity : null,
+    unit: updated.unit || 'units',
+    category: updated.category || 'other',
+    isBought: updated.isBought !== undefined ? updated.isBought : (updated.is_bought ?? false),
+    recipeSource: updated.recipeSource || updated.recipe_source || null,
+    createdAt: updated.createdAt || updated.created_at || new Date().toISOString(),
+  };
+}
+
+/**
+ * Elimina físicamente un artículo de la lista de compras en la nube.
+ */
+export async function deleteShoppingItemWithApi(id: string): Promise<boolean> {
+  await requestJson(`${API_BASE_URL}/api/v1/shopping/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  return true;
+}
+
+/**
+ * Elimina todos los artículos comprados de la base de datos en la nube.
+ */
+export async function deleteBoughtShoppingItemsWithApi(): Promise<boolean> {
+  await requestJson(`${API_BASE_URL}/api/v1/shopping/bought`, {
+    method: 'DELETE',
+  });
+  return true;
+}
+
+/**
+ * Agrega un lote de artículos a la lista de compras en la nube.
+ */
+export async function batchCreateShoppingItemsWithApi(
+  items: Partial<ShoppingItem>[]
+): Promise<ShoppingItem[]> {
+  const payload = {
+    items: items.map((it) => ({
+      id: it.id,
+      name: it.name,
+      quantity: it.quantity,
+      unit: it.unit || 'units',
+      category: it.category || 'other',
+      isBought: it.isBought ?? false,
+      recipeSource: it.recipeSource || null,
+    })),
+  };
+  const list = await requestJson<any[]>(`${API_BASE_URL}/api/v1/shopping/batch`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  if (!Array.isArray(list)) return [];
+  return list.map((c) => ({
+    id: c.id,
+    name: c.name,
+    quantity: c.quantity !== undefined ? c.quantity : null,
+    unit: c.unit || 'units',
+    category: c.category || 'other',
+    isBought: c.isBought !== undefined ? c.isBought : (c.is_bought ?? false),
+    recipeSource: c.recipeSource || c.recipe_source || null,
+    createdAt: c.createdAt || c.created_at || new Date().toISOString(),
+  }));
 }
 
 

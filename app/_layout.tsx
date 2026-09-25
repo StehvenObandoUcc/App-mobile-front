@@ -15,10 +15,9 @@ export default function Layout() {
     if (!isHydrated) return;
 
     const inLoginScreen = segments[0] === 'login';
-    const inHomeScreen = !segments[0] || segments[0] === 'index';
 
-    // Permitir acceso libre a Inicio (/); redirigir a login solo en rutas que requieren sesión
-    if (!isAuthenticated && !inLoginScreen && !inHomeScreen) {
+    // Punto de entrada natural: si no hay sesión activa ni modo invitado, dirigir a bienvenida/onboarding
+    if (!isAuthenticated && !inLoginScreen) {
       router.replace('/login');
     }
   }, [isAuthenticated, isHydrated, segments, router]);
@@ -66,7 +65,7 @@ export default function Layout() {
         />
         <Stack.Screen
           name="scan"
-          options={{ title: 'Escanear Alimentos', animation: 'slide_from_right' }}
+          options={{ headerShown: false, animation: 'slide_from_right' }}
         />
         <Stack.Screen
           name="scan-result"

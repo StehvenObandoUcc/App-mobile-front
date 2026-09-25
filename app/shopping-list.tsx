@@ -30,16 +30,9 @@ import {
 } from '../src/components';
 import { IngredientCategory, IngredientUnit, ShoppingItem } from '../src/types';
 import { Modal } from 'react-native';
-import { colors, radii, spacing, typography } from '../src/theme';
+import { colors, radii, spacing, typography, CATEGORY_LIST, getCategoryConfig } from '../src/theme';
 
-const CATEGORIES: { label: string; value: IngredientCategory; icon: any }[] = [
-  { label: 'Verduras', value: 'vegetable', icon: 'leaf-outline' },
-  { label: 'Frutas', value: 'fruit', icon: 'nutrition-outline' },
-  { label: 'Proteínas', value: 'protein', icon: 'fish-outline' },
-  { label: 'Lácteos', value: 'dairy', icon: 'water-outline' },
-  { label: 'Granos', value: 'grain', icon: 'cube-outline' },
-  { label: 'Otros', value: 'other', icon: 'basket-outline' },
-];
+const CATEGORIES = CATEGORY_LIST.map((c) => ({ label: c.label, value: c.key, icon: c.icon }));
 
 const UNITS: { label: string; value: IngredientUnit }[] = [
   { label: 'uds', value: 'units' },
@@ -273,14 +266,22 @@ export default function ShoppingListScreen() {
 
           <View style={{ flex: 1, marginHorizontal: spacing.md }}>
             <Text style={[styles.itemName, isBought && styles.itemNameBought]}>{item.name}</Text>
-            {item.recipeSource && (
-              <View style={styles.sourceBadge}>
-                <Ionicons name="restaurant-outline" size={11} color={colors.primaryDark} style={{ marginRight: 3 }} />
-                <Text style={styles.sourceText} numberOfLines={1}>
-                  Receta: {item.recipeSource}
-                </Text>
-              </View>
-            )}
+            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 3 }}>
+              {item.category && item.category !== 'other' && (
+                <View style={styles.catBadge}>
+                  <Ionicons name={getCategoryConfig(item.category).icon} size={11} color={colors.textSecondary} style={{ marginRight: 3 }} />
+                  <Text style={styles.catBadgeText}>{getCategoryConfig(item.category).label}</Text>
+                </View>
+              )}
+              {item.recipeSource && (
+                <View style={styles.sourceBadge}>
+                  <Ionicons name="restaurant-outline" size={11} color={colors.primaryDark} style={{ marginRight: 3 }} />
+                  <Text style={styles.sourceText} numberOfLines={1}>
+                    Receta: {item.recipeSource}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {item.quantity !== null && (
@@ -952,6 +953,22 @@ const styles = StyleSheet.create({
   itemNameBought: {
     textDecorationLine: 'line-through',
     color: colors.textMuted,
+  },
+  catBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceVariant,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radii.sm,
+    marginTop: 3,
+    alignSelf: 'flex-start',
+  },
+  catBadgeText: {
+    fontSize: typography.sizes.micro,
+    lineHeight: typography.lineHeights.micro,
+    fontWeight: typography.weights.semibold,
+    color: colors.textSecondary,
   },
   sourceBadge: {
     flexDirection: 'row',

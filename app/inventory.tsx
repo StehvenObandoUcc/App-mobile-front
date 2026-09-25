@@ -32,7 +32,7 @@ import {
   Chip,
 } from '../src/components';
 import { getExpirationStatus } from '../src/utils/expiration';
-import { colors, radii, spacing, typography } from '../src/theme';
+import { colors, radii, spacing, typography, CATEGORY_LIST } from '../src/theme';
 
 type CategoryFilter = 'all' | 'expiring' | IngredientCategory;
 
@@ -43,15 +43,7 @@ const CATEGORIES: {
 }[] = [
   { key: 'all', label: 'Todos' },
   { key: 'expiring', label: 'Por vencer / Vencidos', icon: 'time-outline' },
-  { key: 'vegetable', label: 'Verduras' },
-  { key: 'fruit', label: 'Frutas' },
-  { key: 'protein', label: 'Proteínas' },
-  { key: 'dairy', label: 'Lácteos' },
-  { key: 'grain', label: 'Granos' },
-  { key: 'legume', label: 'Legumbres' },
-  { key: 'sauce', label: 'Salsas' },
-  { key: 'snack', label: 'Snacks' },
-  { key: 'other', label: 'Otros' },
+  ...CATEGORY_LIST.map((c) => ({ key: c.key as CategoryFilter, label: c.label, icon: c.icon })),
 ];
 
 const UNITS: IngredientUnit[] = [
