@@ -59,7 +59,7 @@ export default function ShoppingListScreen() {
   const { items: inventoryItems } = useInventory();
 
   const [name, setName] = useState('');
-  const [quantity, setQuantity] = useState('');
+  const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState<IngredientUnit>('units');
   const [category, setCategory] = useState<IngredientCategory>('other');
   const [isAdding, setIsAdding] = useState(false);
@@ -165,7 +165,7 @@ export default function ShoppingListScreen() {
     try {
       await addItem(trimmed, parsedQty, unit, category);
       setName('');
-      setQuantity('');
+      setQuantity('1');
       setIsAdding(false);
     } catch {
       setDialogConfig({
@@ -439,19 +439,44 @@ export default function ShoppingListScreen() {
             placeholderTextColor={colors.textMuted}
             maxLength={60}
             style={styles.textInput}
-            autoFocus
           />
 
           <View style={styles.qtyRow}>
-            <TextInput
-              value={quantity}
-              onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
-              placeholder="Cant. (positiva)"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="numeric"
-              maxLength={8}
-              style={[styles.textInput, { flex: 1, marginRight: 10 }]}
-            />
+            <View style={[styles.stepperContainer, { flex: 1.1, marginRight: 10 }]}>
+              <Pressable
+                onPress={() => {
+                  const cur = parseFloat(quantity) || 1;
+                  const next = Math.max(1, Math.round((cur - 1) * 10) / 10);
+                  setQuantity(String(next));
+                }}
+                style={styles.stepperBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Reducir cantidad"
+              >
+                <Ionicons name="remove" size={18} color={colors.textPrimary} />
+              </Pressable>
+              <TextInput
+                value={quantity}
+                onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
+                placeholder="1"
+                keyboardType="numeric"
+                placeholderTextColor={colors.textMuted}
+                maxLength={8}
+                style={styles.stepperInput}
+              />
+              <Pressable
+                onPress={() => {
+                  const cur = parseFloat(quantity) || 0;
+                  const next = Math.round((cur + 1) * 10) / 10;
+                  setQuantity(String(next));
+                }}
+                style={styles.stepperBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Aumentar cantidad"
+              >
+                <Ionicons name="add" size={18} color={colors.textPrimary} />
+              </Pressable>
+            </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1.5 }}>
               <View style={styles.unitChipContainer}>
@@ -1021,5 +1046,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xs,
     lineHeight: 18,
+  },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 52,
+    backgroundColor: colors.surfaceVariant,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.buttons,
+    overflow: 'hidden',
+  },
+  stepperBtn: {
+    width: 38,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  stepperInput: {
+    flex: 1,
+    height: 50,
+    textAlign: 'center',
+    fontSize: typography.sizes.body,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    paddingHorizontal: 2,
   },
 });

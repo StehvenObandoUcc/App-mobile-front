@@ -30,12 +30,8 @@ function resolveApiBaseUrl(): string {
 
 export const API_BASE_URL = resolveApiBaseUrl();
 
-export class ApiError extends Error {
-  constructor(message: string, public status: number, public isNetworkError: boolean = false) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
+import { ApiError, executeDeleteWithPendingResolution, DeleteResolutionResult } from '../utils/delete-helpers';
+export { ApiError, executeDeleteWithPendingResolution, DeleteResolutionResult };
 
 export interface ApiScanResponse {
   scan_id: string;
@@ -91,12 +87,33 @@ async function requestJson<T = any>(url: string, options?: RequestInit): Promise
   }
 
   if (!response.ok) {
-    const errorJson = await response.json().catch(() => null);
-    const detail = errorJson?.detail || 'Error en la solicitud al servidor';
+    let detail = 'Error en la solicitud al servidor';
+    try {
+      const errorJson = await response.json();
+      if (errorJson?.detail) {
+        detail = errorJson.detail;
+      }
+    } catch {
+      // Cuerpo de error vacío o no JSON
+    }
     throw new ApiError(detail, response.status, false);
   }
 
-  return response.json();
+  // HTTP 204 No Content: éxito confirmado sin cuerpo
+  if (response.status === 204) {
+    return null as T;
+  }
+
+  const text = await response.text();
+  if (!text || !text.trim()) {
+    return null as T;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null as T;
+  }
 }
 
 /**

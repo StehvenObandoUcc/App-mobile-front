@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ingredient, Recipe, ShoppingItem, IngredientCategory } from '../types';
+import { Ingredient, Recipe, ShoppingItem, IngredientCategory, OutboxMutation } from '../types';
 import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
 
 export const DEFAULT_SHELF_LIFE_DAYS: Record<IngredientCategory, number> = {
@@ -18,6 +18,25 @@ const BASE_KEY_INVENTORY = '@food_ai_inventory_v1';
 const BASE_KEY_RECIPES = '@food_ai_recipes_v1';
 const BASE_KEY_DELETED_RECIPES = '@food_ai_deleted_recipes_v1';
 const BASE_KEY_SHOPPING_LIST = '@food_ai_shopping_list_v1';
+const BASE_KEY_PENDING_DELETED_SHOPPING = '@food_ai_pending_deleted_shopping_v1';
+const BASE_KEY_PENDING_DELETED_RECIPES = '@food_ai_pending_deleted_recipes_v1';
+const BASE_KEY_PENDING_DELETED_INVENTORY = '@food_ai_pending_deleted_inventory_v1';
+const BASE_KEY_OUTBOX = '@food_ai_outbox_v1';
+const BASE_KEY_TX_MOVE_BOUGHT = '@food_ai_tx_move_bought_v1';
+
+export interface MoveBoughtSnapshot {
+  version: 1;
+  timestamp: number;
+  status: 'committing';
+  boughtItemIds: string[];
+  newIngredients: Ingredient[];
+  updatedIngredients: {
+    id: string;
+    quantity: number | null;
+    expirationDate: string | null;
+    expirationSource: 'estimated';
+  }[];
+}
 
 /**
  * Genera la clave namespaced para el almacenamiento.
@@ -30,12 +49,87 @@ export function getStorageKey(baseKey: string, userId: string): string {
   return `${baseKey}_${userId.trim()}`;
 }
 
+/**
+ * Reconcilia y finaliza cualquier transacción interrumpida de moveBoughtToInventory tras un cierre forzoso.
+ */
+async function recoverPendingMoveBoughtTx(userId: string): Promise<void> {
+  const txKey = getStorageKey(BASE_KEY_TX_MOVE_BOUGHT, userId);
+  try {
+    const rawTx = await AsyncStorage.getItem(txKey);
+    if (!rawTx) return;
+
+    const tx: MoveBoughtSnapshot = JSON.parse(rawTx);
+    if (tx && tx.status === 'committing') {
+      const [savedInv, savedShop, savedPending] = await Promise.all([
+        AsyncStorage.getItem(getStorageKey(BASE_KEY_INVENTORY, userId)),
+        AsyncStorage.getItem(getStorageKey(BASE_KEY_SHOPPING_LIST, userId)),
+        AsyncStorage.getItem(getStorageKey(BASE_KEY_PENDING_DELETED_SHOPPING, userId)),
+      ]);
+
+      let inv: Ingredient[] = savedInv ? JSON.parse(savedInv) : [];
+      let shop: ShoppingItem[] = savedShop ? JSON.parse(savedShop) : [];
+      let pendingEntries: [string, number][] = savedPending ? JSON.parse(savedPending) : [];
+      const pendingMap = new Map(pendingEntries);
+
+      // 1. Asegurar que los boughtItemIds estén en pendingDeletedShopping
+      tx.boughtItemIds.forEach((id) => {
+        if (!pendingMap.has(id)) {
+          pendingMap.set(id, tx.timestamp);
+        }
+      });
+
+      // 2. Asegurar que los boughtItemIds estén fuera de shopping_list
+      const boughtSet = new Set(tx.boughtItemIds);
+      shop = shop.filter((item) => !boughtSet.has(item.id));
+
+      // 3. Reconciliar nuevos ingredientes sin duplicar por ID
+      const existingInvIds = new Set(inv.map((i) => i.id));
+      for (const newIng of tx.newIngredients) {
+        if (!existingInvIds.has(newIng.id)) {
+          inv.unshift(newIng);
+          existingInvIds.add(newIng.id);
+        }
+      }
+
+      // 4. Reconciliar actualizaciones de ingredientes
+      for (const up of tx.updatedIngredients) {
+        const item = inv.find((i) => i.id === up.id);
+        if (item) {
+          item.quantity = up.quantity;
+          item.expirationDate = up.expirationDate;
+          item.expirationSource = up.expirationSource;
+        }
+      }
+
+      // Persistir atómicamente la reconciliación y eliminar el snapshot
+      await AsyncStorage.multiSet([
+        [getStorageKey(BASE_KEY_INVENTORY, userId), JSON.stringify(inv)],
+        [getStorageKey(BASE_KEY_SHOPPING_LIST, userId), JSON.stringify(shop)],
+        [
+          getStorageKey(BASE_KEY_PENDING_DELETED_SHOPPING, userId),
+          JSON.stringify(Array.from(pendingMap.entries())),
+        ],
+      ]);
+      await AsyncStorage.removeItem(txKey);
+      console.warn(
+        `[LocalStorage] Transacción de moveBoughtToInventory recuperada exitosamente para usuario ${userId}.`
+      );
+    }
+  } catch (recErr) {
+    console.warn('[LocalStorage] Error en recuperación de transacción:', recErr);
+  }
+}
+
 // Estado en memoria por usuario activo
 let currentUserId: string | null = null;
 let memoryInventory: Ingredient[] = [];
 let memoryRecipes: Recipe[] = [];
 let memoryShoppingList: ShoppingItem[] = [];
 let deletedRecipeIds: Set<string> = new Set();
+let pendingDeletedShopping: Map<string, number> = new Map();
+let pendingDeletedRecipes: Map<string, number> = new Map();
+let pendingDeletedInventory: Map<string, number> = new Map();
+let memoryOutbox: OutboxMutation[] = [];
 
 type StorageListener = () => void;
 const listeners: Set<StorageListener> = new Set();
@@ -51,7 +145,15 @@ function ensureActiveUser(): string {
   return currentUserId;
 }
 
-type StoreKey = 'inventory' | 'recipes' | 'deleted_recipes' | 'shopping_list';
+type StoreKey =
+  | 'inventory'
+  | 'recipes'
+  | 'deleted_recipes'
+  | 'shopping_list'
+  | 'pending_deleted_shopping'
+  | 'pending_deleted_recipes'
+  | 'pending_deleted_inventory'
+  | 'outbox';
 const pendingStores = new Set<StoreKey>();
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -90,6 +192,34 @@ async function flushPendingSaves(): Promise<void> {
           JSON.stringify(memoryShoppingList)
         )
       );
+    } else if (store === 'pending_deleted_shopping') {
+      tasks.push(
+        AsyncStorage.setItem(
+          getStorageKey(BASE_KEY_PENDING_DELETED_SHOPPING, uid),
+          JSON.stringify(Array.from(pendingDeletedShopping.entries()))
+        )
+      );
+    } else if (store === 'pending_deleted_recipes') {
+      tasks.push(
+        AsyncStorage.setItem(
+          getStorageKey(BASE_KEY_PENDING_DELETED_RECIPES, uid),
+          JSON.stringify(Array.from(pendingDeletedRecipes.entries()))
+        )
+      );
+    } else if (store === 'pending_deleted_inventory') {
+      tasks.push(
+        AsyncStorage.setItem(
+          getStorageKey(BASE_KEY_PENDING_DELETED_INVENTORY, uid),
+          JSON.stringify(Array.from(pendingDeletedInventory.entries()))
+        )
+      );
+    } else if (store === 'outbox') {
+      tasks.push(
+        AsyncStorage.setItem(
+          getStorageKey(BASE_KEY_OUTBOX, uid),
+          JSON.stringify(memoryOutbox)
+        )
+      );
     }
   }
 
@@ -116,6 +246,10 @@ async function persistToDisk(): Promise<void> {
   pendingStores.add('recipes');
   pendingStores.add('deleted_recipes');
   pendingStores.add('shopping_list');
+  pendingStores.add('pending_deleted_shopping');
+  pendingStores.add('pending_deleted_recipes');
+  pendingStores.add('pending_deleted_inventory');
+  pendingStores.add('outbox');
   await flushPendingSaves();
 }
 
@@ -132,13 +266,18 @@ export const LocalStorage = {
     if (!userId) return;
     await flushPendingSaves();
     currentUserId = userId.trim();
+    await recoverPendingMoveBoughtTx(currentUserId);
 
     try {
-      const [savedInv, savedRec, savedDel, savedShop] = await Promise.all([
+      const [savedInv, savedRec, savedDel, savedShop, savedPendingShop, savedPendingRec, savedPendingInv, savedOutbox] = await Promise.all([
         AsyncStorage.getItem(getStorageKey(BASE_KEY_INVENTORY, currentUserId)),
         AsyncStorage.getItem(getStorageKey(BASE_KEY_RECIPES, currentUserId)),
         AsyncStorage.getItem(getStorageKey(BASE_KEY_DELETED_RECIPES, currentUserId)),
         AsyncStorage.getItem(getStorageKey(BASE_KEY_SHOPPING_LIST, currentUserId)),
+        AsyncStorage.getItem(getStorageKey(BASE_KEY_PENDING_DELETED_SHOPPING, currentUserId)),
+        AsyncStorage.getItem(getStorageKey(BASE_KEY_PENDING_DELETED_RECIPES, currentUserId)),
+        AsyncStorage.getItem(getStorageKey(BASE_KEY_PENDING_DELETED_INVENTORY, currentUserId)),
+        AsyncStorage.getItem(getStorageKey(BASE_KEY_OUTBOX, currentUserId)),
       ]);
 
       if (savedDel) {
@@ -152,22 +291,78 @@ export const LocalStorage = {
         deletedRecipeIds = new Set();
       }
 
+      if (savedPendingShop) {
+        try {
+          const parsed = JSON.parse(savedPendingShop);
+          pendingDeletedShopping = new Map(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          pendingDeletedShopping = new Map();
+        }
+      } else {
+        pendingDeletedShopping = new Map();
+      }
+
+      if (savedPendingRec) {
+        try {
+          const parsed = JSON.parse(savedPendingRec);
+          pendingDeletedRecipes = new Map(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          pendingDeletedRecipes = new Map();
+        }
+      } else {
+        pendingDeletedRecipes = new Map();
+      }
+
+      if (savedPendingInv) {
+        try {
+          const parsed = JSON.parse(savedPendingInv);
+          pendingDeletedInventory = new Map(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          pendingDeletedInventory = new Map();
+        }
+      } else {
+        pendingDeletedInventory = new Map();
+      }
+
+      if (savedOutbox) {
+        try {
+          const parsed = JSON.parse(savedOutbox);
+          memoryOutbox = Array.isArray(parsed)
+            ? parsed.map((m: OutboxMutation) =>
+                m.status === 'processing'
+                  ? { ...m, status: 'pending' as const, updatedAt: Date.now() }
+                  : m
+              )
+            : [];
+        } catch {
+          memoryOutbox = [];
+        }
+      } else {
+        memoryOutbox = [];
+      }
+
       const rawInv = savedInv ? JSON.parse(savedInv) : [];
       memoryInventory = Array.isArray(rawInv)
-        ? rawInv.map((item: any) => {
-            const { unit, quantity } = normalizeItemUnitAndQty(item?.unit, item?.quantity);
-            return { ...item, unit, quantity };
-          })
+        ? rawInv
+            .filter((item: any) => !pendingDeletedInventory.has(item?.id))
+            .map((item: any) => {
+              const { unit, quantity } = normalizeItemUnitAndQty(item?.unit, item?.quantity);
+              return { ...item, unit, quantity };
+            })
         : [];
       memoryRecipes = savedRec
-        ? (JSON.parse(savedRec) as Recipe[]).filter((r) => !deletedRecipeIds.has(r.id))
+        ? (JSON.parse(savedRec) as Recipe[]).filter(
+            (r) => !deletedRecipeIds.has(r.id) && !pendingDeletedRecipes.has(r.id)
+          )
         : [];
       const rawShop = savedShop ? JSON.parse(savedShop) : [];
       memoryShoppingList = Array.isArray(rawShop)
-        ? rawShop.map((item: any) => {
-            const { unit, quantity } = normalizeItemUnitAndQty(item?.unit, item?.quantity);
-            return { ...item, unit, quantity };
-          })
+        ? rawShop
+            .filter((item: any) => !pendingDeletedShopping.has(item?.id))
+            .map((item: any) => {
+              const { unit, quantity } = normalizeItemUnitAndQty(item?.unit, item?.quantity);
+              return { ...item, unit, quantity };
+            })
         : [];
 
       emitChange();
@@ -176,6 +371,10 @@ export const LocalStorage = {
       memoryInventory = [];
       memoryRecipes = [];
       memoryShoppingList = [];
+      pendingDeletedShopping = new Map();
+      pendingDeletedRecipes = new Map();
+      pendingDeletedInventory = new Map();
+      memoryOutbox = [];
       emitChange();
     }
   },
@@ -190,6 +389,10 @@ export const LocalStorage = {
     memoryRecipes = [];
     memoryShoppingList = [];
     deletedRecipeIds = new Set();
+    pendingDeletedShopping = new Map();
+    pendingDeletedRecipes = new Map();
+    pendingDeletedInventory = new Map();
+    memoryOutbox = [];
     emitChange();
   },
 
@@ -202,18 +405,22 @@ export const LocalStorage = {
     memoryRecipes = [];
     memoryShoppingList = [];
     deletedRecipeIds.clear();
+    pendingDeletedShopping.clear();
+    pendingDeletedRecipes.clear();
+    pendingDeletedInventory.clear();
+    memoryOutbox = [];
     emitChange();
     await persistToDisk();
   },
 
   // ─── Inventario ─────────────────────────────────────────────────────────────
   async getInventory(): Promise<Ingredient[]> {
-    return [...memoryInventory];
+    return memoryInventory.filter((item) => !pendingDeletedInventory.has(item.id));
   },
 
   async saveInventory(items: Ingredient[]): Promise<void> {
     ensureActiveUser();
-    memoryInventory = [...items];
+    memoryInventory = items.filter((item) => !pendingDeletedInventory.has(item.id));
     emitChange();
     schedulePersist('inventory');
   },
@@ -238,17 +445,21 @@ export const LocalStorage = {
 
   async deleteIngredient(id: string): Promise<void> {
     ensureActiveUser();
+    pendingDeletedInventory.set(id, Date.now());
     memoryInventory = memoryInventory.filter((item) => item.id !== id);
     emitChange();
     schedulePersist('inventory');
+    schedulePersist('pending_deleted_inventory');
   },
 
   async deleteIngredients(ids: string[]): Promise<void> {
     ensureActiveUser();
+    ids.forEach((id) => pendingDeletedInventory.set(id, Date.now()));
     const idSet = new Set(ids);
     memoryInventory = memoryInventory.filter((item) => !idSet.has(item.id));
     emitChange();
     schedulePersist('inventory');
+    schedulePersist('pending_deleted_inventory');
   },
 
   // ─── Recetas ────────────────────────────────────────────────────────────────
@@ -291,20 +502,26 @@ export const LocalStorage = {
   async deleteRecipe(id: string): Promise<void> {
     ensureActiveUser();
     deletedRecipeIds.add(id);
+    pendingDeletedRecipes.set(id, Date.now());
     memoryRecipes = memoryRecipes.filter((r) => r.id !== id);
     emitChange();
     schedulePersist('recipes');
     schedulePersist('deleted_recipes');
+    schedulePersist('pending_deleted_recipes');
   },
 
   async deleteRecipes(ids: string[]): Promise<void> {
     ensureActiveUser();
-    ids.forEach((id) => deletedRecipeIds.add(id));
+    ids.forEach((id) => {
+      deletedRecipeIds.add(id);
+      pendingDeletedRecipes.set(id, Date.now());
+    });
     const idSet = new Set(ids);
     memoryRecipes = memoryRecipes.filter((r) => !idSet.has(r.id));
     emitChange();
     schedulePersist('recipes');
     schedulePersist('deleted_recipes');
+    schedulePersist('pending_deleted_recipes');
   },
 
   async consumeIngredients(consumed: { name: string; quantity: number }[]): Promise<string[]> {
@@ -385,16 +602,21 @@ export const LocalStorage = {
 
   async deleteShoppingItem(id: string): Promise<void> {
     ensureActiveUser();
+    pendingDeletedShopping.set(id, Date.now());
     memoryShoppingList = memoryShoppingList.filter((item) => item.id !== id);
     emitChange();
     schedulePersist('shopping_list');
+    schedulePersist('pending_deleted_shopping');
   },
 
   async deleteBoughtItems(): Promise<void> {
     ensureActiveUser();
+    const bought = memoryShoppingList.filter((item) => item.isBought);
+    bought.forEach((item) => pendingDeletedShopping.set(item.id, Date.now()));
     memoryShoppingList = memoryShoppingList.filter((item) => !item.isBought);
     emitChange();
     schedulePersist('shopping_list');
+    schedulePersist('pending_deleted_shopping');
   },
 
   /**
@@ -406,13 +628,24 @@ export const LocalStorage = {
    */
   async moveBoughtToInventory(): Promise<number> {
     ensureActiveUser();
+    const uid = currentUserId!;
     const boughtItems = memoryShoppingList.filter((item) => item.isBought);
     if (boughtItems.length === 0) return 0;
 
     let movedCount = 0;
+    const newIngredients: Ingredient[] = [];
+    const updatedIngredients: {
+      id: string;
+      quantity: number | null;
+      expirationDate: string | null;
+      expirationSource: 'estimated';
+    }[] = [];
+
+    // Clonar lista actual para mutación inmutable
+    const nextInventory: Ingredient[] = memoryInventory.map((item) => ({ ...item }));
 
     for (const bought of boughtItems) {
-      const match = findSimilarItem(bought.name, memoryInventory);
+      const match = findSimilarItem(bought.name, nextInventory);
 
       const days = DEFAULT_SHELF_LIFE_DAYS[bought.category] || 14;
       const estimatedExp = new Date(Date.now() + days * 86400000)
@@ -439,6 +672,13 @@ export const LocalStorage = {
           existing.expirationDate = estimatedExp;
         }
         existing.expirationSource = 'estimated';
+
+        updatedIngredients.push({
+          id: existing.id,
+          quantity: existing.quantity,
+          expirationDate: existing.expirationDate,
+          expirationSource: 'estimated',
+        });
       } else {
         // Producto nuevo en inventario
         const newIngredient: Ingredient = {
@@ -453,18 +693,176 @@ export const LocalStorage = {
           confirmed: true,
           expirationSource: 'estimated',
         };
-        memoryInventory.unshift(newIngredient);
+        nextInventory.unshift(newIngredient);
+        newIngredients.push(newIngredient);
       }
       movedCount++;
     }
 
-    // Remover los artículos comprados de la lista de compras
-    memoryShoppingList = memoryShoppingList.filter((item) => !item.isBought);
+    const boughtItemIds = boughtItems.map((b) => b.id);
+    const nextShoppingList = memoryShoppingList.filter((item) => !item.isBought);
+    const nextPendingDeletedShopping = new Map(pendingDeletedShopping);
+    boughtItemIds.forEach((id) => nextPendingDeletedShopping.set(id, Date.now()));
+
+    const txKey = getStorageKey(BASE_KEY_TX_MOVE_BOUGHT, uid);
+    const tx: MoveBoughtSnapshot = {
+      version: 1,
+      timestamp: Date.now(),
+      status: 'committing',
+      boughtItemIds,
+      newIngredients,
+      updatedIngredients,
+    };
+
+    // 1. Snapshot previo de transacción para recuperación tras fallo/cierre
+    await AsyncStorage.setItem(txKey, JSON.stringify(tx));
+
+    // 2. Persistencia coordinada multiSet (transaccional a nivel de almacenamiento)
+    await AsyncStorage.multiSet([
+      [getStorageKey(BASE_KEY_INVENTORY, uid), JSON.stringify(nextInventory)],
+      [getStorageKey(BASE_KEY_SHOPPING_LIST, uid), JSON.stringify(nextShoppingList)],
+      [
+        getStorageKey(BASE_KEY_PENDING_DELETED_SHOPPING, uid),
+        JSON.stringify(Array.from(nextPendingDeletedShopping.entries())),
+      ],
+    ]);
+
+    // 3. Limpiar snapshot una vez confirmadas las escrituras
+    await AsyncStorage.removeItem(txKey);
+
+    // 4. Actualizar memoria y emitir cambios
+    memoryInventory = nextInventory;
+    memoryShoppingList = nextShoppingList;
+    pendingDeletedShopping = nextPendingDeletedShopping;
 
     emitChange();
-    schedulePersist('inventory');
-    schedulePersist('shopping_list');
     return movedCount;
+  },
+
+  // ─── Control de Eliminaciones Pendientes (Anti-Zombie) ──────────────────────
+  async addPendingDeletedShopping(id: string): Promise<void> {
+    ensureActiveUser();
+    pendingDeletedShopping.set(id, Date.now());
+    schedulePersist('pending_deleted_shopping');
+  },
+
+  getPendingDeletedShopping(): string[] {
+    return Array.from(pendingDeletedShopping.keys());
+  },
+
+  getPendingDeletedShoppingEntries(): [string, number][] {
+    return Array.from(pendingDeletedShopping.entries());
+  },
+
+  async removePendingDeletedShopping(id: string): Promise<void> {
+    ensureActiveUser();
+    if (pendingDeletedShopping.has(id)) {
+      pendingDeletedShopping.delete(id);
+      schedulePersist('pending_deleted_shopping');
+    }
+  },
+
+  async addPendingDeletedRecipe(id: string): Promise<void> {
+    ensureActiveUser();
+    pendingDeletedRecipes.set(id, Date.now());
+    schedulePersist('pending_deleted_recipes');
+  },
+
+  getPendingDeletedRecipes(): string[] {
+    return Array.from(pendingDeletedRecipes.keys());
+  },
+
+  getPendingDeletedRecipesEntries(): [string, number][] {
+    return Array.from(pendingDeletedRecipes.entries());
+  },
+
+  async removePendingDeletedRecipe(id: string): Promise<void> {
+    ensureActiveUser();
+    if (pendingDeletedRecipes.has(id)) {
+      pendingDeletedRecipes.delete(id);
+      schedulePersist('pending_deleted_recipes');
+    }
+  },
+
+  async addPendingDeletedInventory(id: string): Promise<void> {
+    ensureActiveUser();
+    pendingDeletedInventory.set(id, Date.now());
+    schedulePersist('pending_deleted_inventory');
+  },
+
+  getPendingDeletedInventory(): string[] {
+    return Array.from(pendingDeletedInventory.keys());
+  },
+
+  getPendingDeletedInventoryEntries(): [string, number][] {
+    return Array.from(pendingDeletedInventory.entries());
+  },
+
+  async removePendingDeletedInventory(id: string): Promise<void> {
+    ensureActiveUser();
+    if (pendingDeletedInventory.has(id)) {
+      pendingDeletedInventory.delete(id);
+      schedulePersist('pending_deleted_inventory');
+    }
+  },
+
+  // ─── Cola de Mutaciones Offline (Outbox Pattern) ───────────────────────────
+  getOutboxQueue(): OutboxMutation[] {
+    return [...memoryOutbox];
+  },
+
+  async enqueueOutboxMutation(mutation: OutboxMutation): Promise<void> {
+    ensureActiveUser();
+    if (mutation.userId !== currentUserId) {
+      throw new Error('Aislamiento de outbox violado: userId no coincide con la sesión activa');
+    }
+    memoryOutbox = [...memoryOutbox, mutation];
+    emitChange();
+    schedulePersist('outbox');
+  },
+
+  async updateOutboxMutation(
+    operationId: string,
+    updates: Partial<OutboxMutation>
+  ): Promise<void> {
+    ensureActiveUser();
+    memoryOutbox = memoryOutbox.map((m) =>
+      m.operationId === operationId
+        ? { ...m, ...updates, updatedAt: Date.now() }
+        : m
+    );
+    emitChange();
+    schedulePersist('outbox');
+  },
+
+  async removeOutboxMutation(operationId: string): Promise<void> {
+    ensureActiveUser();
+    memoryOutbox = memoryOutbox.filter((m) => m.operationId !== operationId);
+    emitChange();
+    schedulePersist('outbox');
+  },
+
+  async clearOutboxQueue(): Promise<void> {
+    ensureActiveUser();
+    memoryOutbox = [];
+    emitChange();
+    schedulePersist('outbox');
+  },
+
+  async recoverProcessingOutbox(): Promise<void> {
+    ensureActiveUser();
+    let hasChanges = false;
+    memoryOutbox = memoryOutbox.map((m) => {
+      if (m.status === 'processing') {
+        hasChanges = true;
+        return { ...m, status: 'pending' as const, updatedAt: Date.now() };
+      }
+      return m;
+    });
+    if (hasChanges) {
+      emitChange();
+      schedulePersist('outbox');
+    }
   },
 
   subscribe(listener: StorageListener): () => void {

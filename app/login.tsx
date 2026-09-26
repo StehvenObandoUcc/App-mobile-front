@@ -12,7 +12,7 @@ import {
   Image,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,7 +22,15 @@ import { colors, radii, spacing, typography, elevations } from '../src/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, isGuest, login, register, continueAsGuest, logout, status, error } = useAuth();
+  const { view } = useLocalSearchParams<{ view?: string }>();
+  const { user, isAuthenticated, login, register, logout, status, error } = useAuth();
+
+  // Si el usuario ya está autenticado y no entró expresamente a ver su perfil, redirigir a Inicio (/)
+  useEffect(() => {
+    if (isAuthenticated && view !== 'profile') {
+      router.replace('/');
+    }
+  }, [isAuthenticated, view]);
 
   // 'welcome' muestra el onboarding visual hero; 'form' muestra el formulario de login/registro
   const [screenView, setScreenView] = useState<'welcome' | 'form'>('welcome');
@@ -82,45 +90,6 @@ export default function LoginScreen() {
       duration: 220,
       useNativeDriver: true,
     }).start();
-  };
-
-  const handleContinueAsGuest = async () => {
-    try {
-      await continueAsGuest();
-      router.replace('/');
-    } catch (err: any) {
-      setDialogConfig({
-        visible: true,
-        title: 'Error de modo local',
-        message: err?.message || 'No se pudo iniciar el modo invitado.',
-        type: 'error',
-        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
-      });
-    }
-  };
-
-  const handleQuickDemoLogin = async () => {
-    try {
-      await login('demo@foodai.com', '123456');
-      setDialogConfig({
-        visible: true,
-        title: '¡Bienvenido Chef Demo!',
-        message: 'Has iniciado sesión con la cuenta de prueba oficial.',
-        type: 'success',
-        onConfirm: () => {
-          setDialogConfig((prev) => ({ ...prev, visible: false }));
-          router.replace('/');
-        },
-      });
-    } catch (err: any) {
-      setDialogConfig({
-        visible: true,
-        title: 'Error de conexión',
-        message: err?.message || 'No se pudo iniciar sesión demo.',
-        type: 'error',
-        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
-      });
-    }
   };
 
   const handleSubmit = async () => {
@@ -269,56 +238,6 @@ export default function LoginScreen() {
 
   // ─── Estado 1: Usuario ya autenticado ───────────────────────────────────────
   if (isAuthenticated && user) {
-    if (isGuest) {
-      return (
-        <AppScreen style={styles.screen}>
-          <ScrollView contentContainerStyle={styles.profileScrollContent} showsVerticalScrollIndicator={false}>
-            <View style={styles.guestCard}>
-              <View style={styles.guestIconBadge}>
-                <Ionicons name="person-circle-outline" size={64} color={colors.primary} />
-              </View>
-              <Text style={styles.guestTitle}>Modo Invitado Activo</Text>
-              <Text style={styles.guestSubtitle}>
-                Estás usando la app de manera local. Tus recetas y alimentos se guardan de forma privada en la memoria de este dispositivo.
-              </Text>
-              <View style={styles.guestPill}>
-                <Ionicons name="cloud-offline-outline" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
-                <Text style={styles.guestPillText}>Almacenamiento Local (Sin Nube)</Text>
-              </View>
-
-              <View style={{ width: '100%', marginTop: spacing.xl, gap: spacing.md }}>
-                <PrimaryButton
-                  title="Crear cuenta para sincronizar"
-                  iconName="cloud-upload-outline"
-                  onPress={async () => {
-                    await logout();
-                    setScreenView('form');
-                    setMode('register');
-                  }}
-                />
-                <SecondaryButton
-                  title="Iniciar sesión existente"
-                  iconName="log-in-outline"
-                  variant="outline"
-                  onPress={async () => {
-                    await logout();
-                    setScreenView('form');
-                    setMode('login');
-                  }}
-                />
-                <Pressable
-                  onPress={() => router.replace('/')}
-                  style={({ pressed }) => [styles.guestReturnBtn, pressed && { opacity: 0.7 }]}
-                >
-                  <Text style={styles.guestReturnText}>Volver a mi cocina</Text>
-                </Pressable>
-              </View>
-            </View>
-          </ScrollView>
-        </AppScreen>
-      );
-    }
-
     return (
       <AppScreen style={styles.screen}>
         <ScrollView
@@ -414,23 +333,6 @@ export default function LoginScreen() {
               iconName="log-in-outline"
               onPress={() => setScreenView('form')}
             />
-
-            <SecondaryButton
-              title="Continuar como invitado (Modo Local)"
-              iconName="person-outline"
-              variant="outline"
-              onPress={handleContinueAsGuest}
-            />
-
-            <Pressable
-              style={({ pressed }) => [styles.demoButton, pressed && { opacity: 0.8 }]}
-              onPress={handleQuickDemoLogin}
-              accessibilityRole="button"
-              accessibilityLabel="Entrar como Chef Demo"
-            >
-              <Ionicons name="flash-outline" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-              <Text style={styles.demoButtonText}>Acceso rápido con Chef Demo (1 toque)</Text>
-            </Pressable>
 
             {/* Aviso Legal Referencia */}
             <Text style={styles.legalDisclaimer}>
@@ -654,17 +556,6 @@ export default function LoginScreen() {
               isLoading={status === 'loading'}
               iconName={mode === 'login' ? 'log-in-outline' : 'person-add-outline'}
             />
-
-            <View style={{ height: spacing.lg }} />
-            <Pressable
-              onPress={handleContinueAsGuest}
-              style={({ pressed }) => [styles.guestButton, pressed && { opacity: 0.7 }]}
-              accessibilityRole="button"
-              accessibilityLabel="Explorar sin cuenta"
-            >
-              <Ionicons name="arrow-forward-outline" size={18} color={colors.textSecondary} style={{ marginRight: 6 }} />
-              <Text style={styles.guestButtonText}>Continuar como invitado (Modo Local)</Text>
-            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -763,21 +654,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     alignItems: 'center',
   },
-  demoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.circular,
-    backgroundColor: colors.surfaceVariant,
-    marginTop: spacing.xs,
-  },
-  demoButtonText: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.primary,
-    fontWeight: '700',
-  },
   legalDisclaimer: {
     fontSize: 11,
     color: colors.textMuted,
@@ -817,54 +693,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xxl,
     paddingBottom: spacing.section,
-  },
-  guestCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.containers,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xxl,
-    alignItems: 'center',
-    ...elevations.md,
-  },
-  guestIconBadge: {
-    marginBottom: spacing.md,
-  },
-  guestTitle: {
-    fontSize: typography.sizes.cardTitle,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  guestSubtitle: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    lineHeight: 20,
-  },
-  guestPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceVariant,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radii.circular,
-    marginTop: spacing.md,
-  },
-  guestPillText: {
-    fontSize: typography.sizes.label,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  guestReturnBtn: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  guestReturnText: {
-    fontSize: typography.sizes.bodySmall,
-    fontWeight: '700',
-    color: colors.textSecondary,
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -962,16 +790,5 @@ const styles = StyleSheet.create({
   cryptoNoticeText: {
     fontSize: typography.sizes.label,
     color: colors.textSecondary,
-  },
-  guestButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-  },
-  guestButtonText: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.primary,
-    fontWeight: '700',
   },
 });

@@ -525,9 +525,12 @@ export default function InventoryScreen() {
         />
       )}
 
-      {/* ── FAB Botón Flotante para Añadir Manual ── */}
+      {/* ── FAB Botón Flotante para Añadir Manual (BUG-02: Dinámico con insets.bottom) ── */}
       <Pressable
-        style={styles.fab}
+        style={[
+          styles.fab,
+          { bottom: Math.max(105, (insets.bottom || 0) + 84) },
+        ]}
         onPress={openAddModal}
         accessibilityRole="button"
         accessibilityLabel="Añadir alimento manualmente"
@@ -567,15 +570,41 @@ export default function InventoryScreen() {
               <View style={styles.row}>
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={styles.label}>Cantidad (positiva)</Text>
-                  <TextInput
-                    value={quantity}
-                    onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
-                    placeholder="1"
-                    keyboardType="numeric"
-                    placeholderTextColor={colors.textMuted}
-                    maxLength={8}
-                    style={styles.modalInput}
-                  />
+                  <View style={styles.stepperContainer}>
+                    <Pressable
+                      onPress={() => {
+                        const cur = parseFloat(quantity) || 1;
+                        const next = Math.max(1, Math.round((cur - 1) * 10) / 10);
+                        setQuantity(String(next));
+                      }}
+                      style={styles.stepperBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel="Reducir cantidad"
+                    >
+                      <Ionicons name="remove" size={18} color={colors.textPrimary} />
+                    </Pressable>
+                    <TextInput
+                      value={quantity}
+                      onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
+                      placeholder="1"
+                      keyboardType="numeric"
+                      placeholderTextColor={colors.textMuted}
+                      maxLength={8}
+                      style={styles.stepperInput}
+                    />
+                    <Pressable
+                      onPress={() => {
+                        const cur = parseFloat(quantity) || 0;
+                        const next = Math.round((cur + 1) * 10) / 10;
+                        setQuantity(String(next));
+                      }}
+                      style={styles.stepperBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel="Aumentar cantidad"
+                    >
+                      <Ionicons name="add" size={18} color={colors.textPrimary} />
+                    </Pressable>
+                  </View>
                 </View>
 
                 <View style={{ flex: 1 }}>
@@ -924,5 +953,31 @@ const styles = StyleSheet.create({
   },
   smallPillTextActive: {
     color: colors.textInverse,
+  },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 52,
+    backgroundColor: colors.surfaceVariant,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.buttons,
+    overflow: 'hidden',
+  },
+  stepperBtn: {
+    width: 44,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  stepperInput: {
+    flex: 1,
+    height: 50,
+    textAlign: 'center',
+    fontSize: typography.sizes.body,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    paddingHorizontal: 4,
   },
 });

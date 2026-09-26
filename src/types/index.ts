@@ -224,11 +224,33 @@ export type User = {
   id: string;
   email: string;
   name: string;
-  isGuest?: boolean;
 };
 
 export type AuthSession = {
   accessToken: string;
   expiresAt?: string;
   user: User;
+};
+
+// ─── Contratos de Sincronización Offline (Outbox Pattern) ────────────────────
+export type OutboxEntity = 'inventory' | 'shopping' | 'recipe';
+export type OutboxAction = 'create' | 'update' | 'delete';
+export type OutboxTransientStatus = 'pending' | 'processing' | 'blocked';
+export type OutboxTerminalStatus = 'failed' | 'conflict';
+export type OutboxStatus = OutboxTransientStatus | OutboxTerminalStatus;
+
+export type OutboxMutation<T = any> = {
+  operationId: string;
+  userId: string;
+  entity: OutboxEntity;
+  action: OutboxAction;
+  entityId: string;
+  payload: T;
+  createdAt: number;
+  updatedAt: number;
+  status: OutboxStatus;
+  attemptCount: number;
+  nextAttemptAt: number;
+  lastError?: string;
+  dependsOn?: string;
 };

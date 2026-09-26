@@ -9,31 +9,78 @@ import {
   deleteShoppingItemWithApi,
   deleteBoughtShoppingItemsWithApi,
   batchCreateShoppingItemsWithApi,
+  executeDeleteWithPendingResolution,
 } from '../services/api-client';
+import { AuthService } from '../services/auth-service';
 
 let memoryShoppingList: ShoppingItem[] | null = null;
+let isSyncingShopping = false;
 
 export function useShoppingList() {
   const [items, setItems] = useState<ShoppingItem[]>(memoryShoppingList || []);
   const [isLoading, setIsLoading] = useState(!memoryShoppingList);
 
   const loadItems = useCallback(async () => {
+    const startUserId = LocalStorage.getCurrentUserId();
+    if (!startUserId) {
+      setItems([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // 1. Carga inmediata desde almacenamiento local (0ms de latencia percibida)
+      // 1. Carga inmediata desde almacenamiento local namespaced
       const data = await LocalStorage.getShoppingList();
+      if (LocalStorage.getCurrentUserId() !== startUserId) return;
       memoryShoppingList = data;
       setItems(data);
 
-      // 2. Sincronización en segundo plano con base de datos en la nube (Supabase)
+      // 2. Sincronización en segundo plano con deduplicación y aislamiento de usuario
+      if (isSyncingShopping) return;
+      isSyncingShopping = true;
       try {
+        const pendingDeletedIds = LocalStorage.getPendingDeletedShopping();
+        if (pendingDeletedIds.length > 0) {
+          await Promise.allSettled(
+            pendingDeletedIds.map((delId) =>
+              executeDeleteWithPendingResolution(
+                delId,
+                deleteShoppingItemWithApi,
+                LocalStorage.removePendingDeletedShopping,
+                'Artículo de compra'
+              )
+            )
+          );
+        }
+
+        if (LocalStorage.getCurrentUserId() !== startUserId) return;
+
         const remote = await fetchShoppingListFromApi();
-        if (Array.isArray(remote) && remote.length > 0) {
-          memoryShoppingList = remote;
-          await LocalStorage.saveShoppingList(remote);
-          setItems(remote);
+        if (LocalStorage.getCurrentUserId() !== startUserId) return;
+
+        if (Array.isArray(remote)) {
+          const currentLocal = await LocalStorage.getShoppingList();
+          const activePendingDeleted = new Set(LocalStorage.getPendingDeletedShopping());
+
+          // Excluir cualquier ítem remoto que esté en el conjunto de eliminados pendientes
+          const cleanRemote = remote.filter((item) => !activePendingDeleted.has(item.id));
+          const remoteIdSet = new Set(cleanRemote.map((r) => r.id));
+
+          const unsyncedLocal = currentLocal.filter(
+            (localItem) => !remoteIdSet.has(localItem.id) && !activePendingDeleted.has(localItem.id)
+          );
+          const merged = [...unsyncedLocal, ...cleanRemote];
+
+          if (LocalStorage.getCurrentUserId() !== startUserId) return;
+
+          memoryShoppingList = merged;
+          await LocalStorage.saveShoppingList(merged);
+          setItems(merged);
         }
       } catch (remoteErr: any) {
         // En modo offline o si no hay red, conservamos datos locales sin romper la UI
+      } finally {
+        isSyncingShopping = false;
       }
     } catch {
       if (!memoryShoppingList) setItems([]);
@@ -44,13 +91,23 @@ export function useShoppingList() {
 
   useEffect(() => {
     loadItems();
-    const unsubscribe = LocalStorage.subscribe(() => {
+    const unsubscribeStorage = LocalStorage.subscribe(() => {
       LocalStorage.getShoppingList().then((data) => {
         memoryShoppingList = data;
         setItems(data);
       }).catch(() => {});
     });
-    return unsubscribe;
+
+    const unsubscribeAuth = AuthService.subscribe((session) => {
+      if (session?.accessToken && session?.user?.id) {
+        loadItems();
+      }
+    });
+
+    return () => {
+      unsubscribeStorage();
+      unsubscribeAuth();
+    };
   }, [loadItems]);
 
   const pendingItems = items.filter((item) => !item.isBought);
@@ -161,23 +218,52 @@ export function useShoppingList() {
   const deleteItem = async (id: string) => {
     await LocalStorage.deleteShoppingItem(id);
     await loadItems();
-    deleteShoppingItemWithApi(id).catch((err) =>
-      console.warn('[useShoppingList] Error eliminando artículo en la nube:', err?.message)
-    );
+    executeDeleteWithPendingResolution(
+      id,
+      deleteShoppingItemWithApi,
+      LocalStorage.removePendingDeletedShopping,
+      'Artículo de compra'
+    ).catch(() => {});
   };
 
   const clearBought = async () => {
+    const boughtIds = items.filter((i) => i.isBought).map((i) => i.id);
     await LocalStorage.deleteBoughtItems();
     await loadItems();
-    deleteBoughtShoppingItemsWithApi().catch((err) =>
-      console.warn('[useShoppingList] Error eliminando comprados en la nube:', err?.message)
-    );
+    deleteBoughtShoppingItemsWithApi()
+      .then(async () => {
+        await Promise.allSettled(
+          boughtIds.map((bid) => LocalStorage.removePendingDeletedShopping(bid))
+        );
+      })
+      .catch(async (err) => {
+        if (err?.status === 404) {
+          await Promise.allSettled(
+            boughtIds.map((bid) => LocalStorage.removePendingDeletedShopping(bid))
+          );
+        } else {
+          console.warn('[useShoppingList] Error eliminando comprados en la nube:', err?.message);
+        }
+      });
   };
 
   const moveBoughtToInventory = async (): Promise<number> => {
+    const boughtIds = items.filter((i) => i.isBought).map((i) => i.id);
     const moved = await LocalStorage.moveBoughtToInventory();
     await loadItems();
-    deleteBoughtShoppingItemsWithApi().catch(() => {});
+    deleteBoughtShoppingItemsWithApi()
+      .then(async () => {
+        await Promise.allSettled(
+          boughtIds.map((bid) => LocalStorage.removePendingDeletedShopping(bid))
+        );
+      })
+      .catch(async (err) => {
+        if (err?.status === 404) {
+          await Promise.allSettled(
+            boughtIds.map((bid) => LocalStorage.removePendingDeletedShopping(bid))
+          );
+        }
+      });
     return moved;
   };
 

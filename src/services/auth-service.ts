@@ -154,19 +154,6 @@ export class AuthService {
       notifyListeners();
       return session;
     } catch (err: any) {
-      // Fallback para demo offline local si el backend no está encendido
-      if (email.toLowerCase() === 'demo@foodai.com' && rawPassword === '123456') {
-        const demoSession: AuthSession = {
-          accessToken: 'local-demo-token-offline',
-          expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
-          user: { id: 'usr-demo-1', email: 'demo@foodai.com', name: 'Chef Demo' },
-        };
-        await saveSecureSession(demoSession);
-        currentSession = demoSession;
-        await LocalStorage.switchUser(demoSession.user.id);
-        notifyListeners();
-        return demoSession;
-      }
       const isNetwork =
         (err instanceof TypeError && String(err.message).toLowerCase().includes('network')) ||
         String(err?.message || '').toLowerCase().includes('network request failed');
@@ -222,28 +209,6 @@ export class AuthService {
       }
       throw err;
     }
-  }
-
-  /**
-   * Inicia sesión en modo invitado explícito (almacenamiento 100% local, sin cuenta en la nube).
-   */
-  static async continueAsGuest(): Promise<AuthSession> {
-    const guestSession: AuthSession = {
-      accessToken: 'guest-local-session-token',
-      expiresAt: new Date(Date.now() + 365 * 86400000).toISOString(),
-      user: {
-        id: 'guest',
-        email: 'invitado@foodai.local',
-        name: 'Invitado',
-        isGuest: true,
-      },
-    };
-
-    await saveSecureSession(guestSession);
-    currentSession = guestSession;
-    await LocalStorage.switchUser(guestSession.user.id);
-    notifyListeners();
-    return guestSession;
   }
 
   /**

@@ -7,7 +7,9 @@ import {
   saveRecipeWithApi,
   deleteRecipeWithApi,
   batchDeleteRecipesWithApi,
+  executeDeleteWithPendingResolution,
 } from './api-client';
+import { AuthService } from './auth-service';
 import { getFriendlyErrorMessage } from '../utils/error-messages';
 
 export interface RecipeService {
@@ -29,20 +31,58 @@ export interface RecipeService {
   ): Promise<Recipe[]>;
 }
 
+let isSyncingRecipes = false;
+
 export const mockRecipeService: RecipeService = {
   async getRecipes(): Promise<Recipe[]> {
     const local = await LocalStorage.getRecipes();
 
-    // Sincronización en segundo plano con la base de datos (Supabase)
-    fetchSavedRecipesFromApi()
-      .then(async (remote) => {
+    const syncCloud = async () => {
+      const startUserId = LocalStorage.getCurrentUserId();
+      if (!startUserId) return;
+
+      if (isSyncingRecipes) return;
+      isSyncingRecipes = true;
+
+      try {
+        // 1. Resolver eliminaciones pendientes (HTTP 200/404 limpian pending, 401/403/5xx/red conservan)
+        const pendingRecipeDeletes = LocalStorage.getPendingDeletedRecipes();
+        if (pendingRecipeDeletes.length > 0) {
+          await Promise.allSettled(
+            pendingRecipeDeletes.map((delId) =>
+              executeDeleteWithPendingResolution(
+                delId,
+                deleteRecipeWithApi,
+                LocalStorage.removePendingDeletedRecipe,
+                'Receta'
+              )
+            )
+          );
+        }
+
+        if (LocalStorage.getCurrentUserId() !== startUserId) return;
+
+        // 2. Sincronizar recetas guardadas desde la nube (excluyendo cualquier pendiente activa)
+        const remote = await fetchSavedRecipesFromApi();
+        if (LocalStorage.getCurrentUserId() !== startUserId) return;
+
         if (Array.isArray(remote) && remote.length > 0) {
+          const activePendingDeletes = new Set(LocalStorage.getPendingDeletedRecipes());
           for (const r of remote) {
-            await LocalStorage.saveRecipe(r);
+            if (LocalStorage.getCurrentUserId() !== startUserId) return;
+            if (!activePendingDeletes.has(r.id)) {
+              await LocalStorage.saveRecipe(r);
+            }
           }
         }
-      })
-      .catch(() => {});
+      } catch {
+        // En offline o error de red se conservan los datos locales
+      } finally {
+        isSyncingRecipes = false;
+      }
+    };
+
+    syncCloud().catch(() => {});
 
     return local;
   },
@@ -94,15 +134,25 @@ export const mockRecipeService: RecipeService = {
 
   async deleteRecipe(id: string): Promise<void> {
     await LocalStorage.deleteRecipe(id);
-    deleteRecipeWithApi(id).catch((err) =>
-      console.warn('[RecipeService] Error eliminando receta de la nube:', err?.message)
-    );
+    executeDeleteWithPendingResolution(
+      id,
+      deleteRecipeWithApi,
+      LocalStorage.removePendingDeletedRecipe,
+      'Receta'
+    ).catch(() => {});
   },
 
   async deleteRecipes(ids: string[]): Promise<void> {
     await LocalStorage.deleteRecipes(ids);
-    batchDeleteRecipesWithApi(ids).catch((err) =>
-      console.warn('[RecipeService] Error eliminando lote de recetas de la nube:', err?.message)
+    await Promise.allSettled(
+      ids.map((id) =>
+        executeDeleteWithPendingResolution(
+          id,
+          deleteRecipeWithApi,
+          LocalStorage.removePendingDeletedRecipe,
+          'Receta'
+        )
+      )
     );
   },
 
@@ -153,3 +203,10 @@ export const mockRecipeService: RecipeService = {
     }
   },
 };
+
+// Reanudar sincronización de recetas pendientes automáticamente cuando se renueva la sesión o se autentica
+AuthService.subscribe((session) => {
+  if (session?.accessToken && session?.user?.id) {
+    mockRecipeService.getRecipes().catch(() => {});
+  }
+});

@@ -6,6 +6,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from './PrimaryButton';
@@ -100,6 +101,29 @@ export function M3DatePickerModal({
     }
   };
 
+  // Interceptor de gestos horizontales: permite pasar meses con swipe sin propagar el evento al tab/stack padre (BUG-03)
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+          return (
+            Math.abs(gestureState.dx) > 20 &&
+            Math.abs(gestureState.dx) > Math.abs(gestureState.dy)
+          );
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx < -30) {
+            handleNextMonth();
+          } else if (gestureState.dx > 30) {
+            handlePrevMonth();
+          }
+        },
+        onPanResponderTerminationRequest: () => false,
+      }),
+    [currentMonth, currentYear]
+  );
+
   const calendarDays = useMemo(() => {
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
@@ -190,85 +214,88 @@ export function M3DatePickerModal({
             ))}
           </ScrollView>
 
-          <View style={styles.monthNav}>
-            <Pressable
-              onPress={handlePrevMonth}
-              hitSlop={10}
-              style={styles.navArrow}
-              accessibilityRole="button"
-              accessibilityLabel="Mes anterior"
-            >
-              <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
-            </Pressable>
+          {/* Contenedor del calendario con aislamiento de gestos táctiles */}
+          <View {...panResponder.panHandlers}>
+            <View style={styles.monthNav}>
+              <Pressable
+                onPress={handlePrevMonth}
+                hitSlop={10}
+                style={styles.navArrow}
+                accessibilityRole="button"
+                accessibilityLabel="Mes anterior"
+              >
+                <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+              </Pressable>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text style={styles.monthTitle}>
-                {MONTH_NAMES[currentMonth]} {currentYear}
-              </Text>
-              {(currentMonth !== new Date().getMonth() || currentYear !== new Date().getFullYear()) && (
-                <Pressable
-                  onPress={handleGoToToday}
-                  style={styles.todayPill}
-                  accessibilityRole="button"
-                  accessibilityLabel="Volver al mes actual"
-                >
-                  <Text style={styles.todayPillText}>Hoy</Text>
-                </Pressable>
-              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Text style={styles.monthTitle}>
+                  {MONTH_NAMES[currentMonth]} {currentYear}
+                </Text>
+                {(currentMonth !== new Date().getMonth() || currentYear !== new Date().getFullYear()) && (
+                  <Pressable
+                    onPress={handleGoToToday}
+                    style={styles.todayPill}
+                    accessibilityRole="button"
+                    accessibilityLabel="Volver al mes actual"
+                  >
+                    <Text style={styles.todayPillText}>Hoy</Text>
+                  </Pressable>
+                )}
+              </View>
+
+              <Pressable
+                onPress={handleNextMonth}
+                hitSlop={10}
+                style={styles.navArrow}
+                accessibilityRole="button"
+                accessibilityLabel="Mes siguiente"
+              >
+                <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
+              </Pressable>
             </View>
 
-            <Pressable
-              onPress={handleNextMonth}
-              hitSlop={10}
-              style={styles.navArrow}
-              accessibilityRole="button"
-              accessibilityLabel="Mes siguiente"
-            >
-              <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
-            </Pressable>
-          </View>
+            <View style={styles.dayLabelsRow}>
+              {DAY_LABELS.map((d, i) => (
+                <Text key={i} style={styles.dayLabelText}>
+                  {d}
+                </Text>
+              ))}
+            </View>
 
-          <View style={styles.dayLabelsRow}>
-            {DAY_LABELS.map((d, i) => (
-              <Text key={i} style={styles.dayLabelText}>
-                {d}
-              </Text>
-            ))}
-          </View>
+            <View style={styles.grid}>
+              {calendarDays.map((cell, index) => {
+                if (!cell) {
+                  return <View key={index} style={styles.dayCell} />;
+                }
 
-          <View style={styles.grid}>
-            {calendarDays.map((cell, index) => {
-              if (!cell) {
-                return <View key={index} style={styles.dayCell} />;
-              }
+                const isSelected = cell.dateStr === selectedDateStr;
+                const isToday = cell.dateStr === todayStr;
 
-              const isSelected = cell.dateStr === selectedDateStr;
-              const isToday = cell.dateStr === todayStr;
-
-              return (
-                <Pressable
-                  key={index}
-                  style={[
-                    styles.dayCell,
-                    isSelected && styles.dayCellSelected,
-                    isToday && !isSelected && styles.dayCellToday,
-                  ]}
-                  onPress={() => setSelectedDateStr(cell.dateStr)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${cell.day} de ${MONTH_NAMES[currentMonth]}`}
-                >
-                  <Text
+                return (
+                  <Pressable
+                    key={index}
                     style={[
-                      styles.dayText,
-                      isSelected && styles.dayTextSelected,
-                      isToday && !isSelected && styles.dayTextToday,
+                      styles.dayCell,
+                      isSelected && styles.dayCellSelected,
+                      isToday && !isSelected && styles.dayCellToday,
                     ]}
+                    onPress={() => setSelectedDateStr(cell.dateStr)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${cell.day} de ${MONTH_NAMES[currentMonth]}`}
                   >
-                    {cell.day}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    <Text
+                      style={[
+                        styles.dayText,
+                        isSelected && styles.dayTextSelected,
+                        isToday && !isSelected && styles.dayTextToday,
+                      ]}
+                    >
+                      {cell.day}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           <View style={styles.footerRow}>
