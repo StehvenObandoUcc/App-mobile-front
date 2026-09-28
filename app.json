@@ -52,7 +52,14 @@
           "photosPermission": "Food AI necesita acceso a tus fotos para personalizar tu foto de perfil."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#B3432A"
+        }
+      ]
     ],
     "extra": {
       "router": {},
