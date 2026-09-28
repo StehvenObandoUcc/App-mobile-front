@@ -254,3 +254,6 @@ export type OutboxMutation<T = any> = {
   lastError?: string;
   dependsOn?: string;
 };
+
+// ─── Estado visible de la sincronización (OfflineBanner / useOutboxStatus) ────
+export type OutboxBannerState = 'hidden' | 'offline' | 'authBlocked' | 'attention' | 'synced';

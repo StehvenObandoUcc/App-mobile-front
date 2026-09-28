@@ -14,3 +14,4 @@ export * from './M3Dialog';
 export * from './M3DatePickerModal';
 export * from './Chip';
 export * from './ProfileCard';
+export * from './OfflineBanner';
