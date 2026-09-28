@@ -5,6 +5,10 @@ import {
   updateInventoryItemWithApi,
   deleteInventoryItemWithApi,
   fetchInventoryFromApi,
+  createShoppingItemWithApi,
+  updateShoppingItemWithApi,
+  deleteShoppingItemWithApi,
+  fetchShoppingListFromApi,
 } from './api-client';
 import { AuthService } from './auth-service';
 
@@ -88,14 +92,78 @@ async function dispatchMutation(mutation: OutboxMutation): Promise<DispatchResul
       }
     }
 
-    // Entidad no implementada en Fase B1
-    return { isFatal: true, error: `Entidad ${entity} no soportada en Fase B1` };
+    if (entity === 'shopping') {
+      if (action === 'create') {
+        try {
+          await createShoppingItemWithApi(payload);
+          return { success: true };
+        } catch (createErr: any) {
+          const errMsg = String(createErr?.message || '').toLowerCase();
+          const isDuplicate =
+            errMsg.includes('already exists') ||
+            errMsg.includes('duplicate') ||
+            errMsg.includes('unique') ||
+            createErr?.status === 409;
+
+          if (isDuplicate) {
+            // Verificar si el recurso ya fue insertado previamente con datos idénticos (200 o timeout en respuesta previa)
+            try {
+              const currentShop = await fetchShoppingListFromApi();
+              if (Array.isArray(currentShop) && currentShop.some((item) => item.id === entityId)) {
+                return { success: true }; // Éxito idempotente
+              }
+            } catch {
+              // Si no se puede verificar, re-lanzar error original
+            }
+          }
+          throw createErr;
+        }
+      }
+
+      if (action === 'update') {
+        try {
+          await updateShoppingItemWithApi(entityId, payload);
+          return { success: true };
+        } catch (updateErr: any) {
+          if (updateErr?.status === 404) {
+            // 404 en UPDATE: conflicto por eliminación remota
+            return {
+              isConflict: true,
+              status: 404,
+              error: 'HTTP 404: El artículo de compras no existe en el servidor. Posible conflicto de eliminación remota.',
+            };
+          }
+          throw updateErr;
+        }
+      }
+
+      if (action === 'delete') {
+        try {
+          await deleteShoppingItemWithApi(entityId);
+        } catch (delErr: any) {
+          if (delErr?.status === 404) {
+            // 404 en DELETE: idempotente, ya no existe en el servidor
+          } else {
+            throw delErr;
+          }
+        }
+        await LocalStorage.removePendingDeletedShopping(entityId).catch(() => {});
+        return { success: true };
+      }
+    }
+
+    // Entidad no implementada
+    return { isFatal: true, error: `Entidad ${entity} no soportada en el despachador Outbox` };
   } catch (err: any) {
     const status = err?.status ?? 0;
     const errMsg = err?.message || 'Error de red o servidor';
 
     if (status === 401 || status === 403) {
       return { isAuth: true, status, error: `Fallo de autorización (${status}). Sesión suspendida.` };
+    }
+
+    if (status === 409) {
+      return { isConflict: true, status, error: `Conflicto HTTP 409: ${errMsg}` };
     }
 
     if (status === 400 || status === 422) {
@@ -230,22 +298,30 @@ export async function flushOutbox(): Promise<{ processed: number; remaining: num
 // Suscripción automática a renovación de sesión para desbloquear mutaciones suspendidas por 401/403
 AuthService.subscribe((session) => {
   if (session?.accessToken && session?.user?.id) {
-    const queue = LocalStorage.getOutboxQueue();
-    const blockedAuthMutations = queue.filter(
-      (m) => m.status === 'blocked' && (m.lastError?.includes('401') || m.lastError?.includes('403') || m.lastError?.includes('autorización'))
-    );
+    const activeUserId = LocalStorage.getCurrentUserId();
+    if (activeUserId && session.user.id === activeUserId) {
+      const queue = LocalStorage.getOutboxQueue();
+      const blockedAuthMutations = queue.filter(
+        (m) =>
+          m.status === 'blocked' &&
+          m.userId === activeUserId &&
+          (m.lastError?.includes('401') ||
+            m.lastError?.includes('403') ||
+            m.lastError?.includes('autorización'))
+      );
 
-    if (blockedAuthMutations.length > 0) {
-      Promise.all(
-        blockedAuthMutations.map((m) =>
-          LocalStorage.updateOutboxMutation(m.operationId, {
-            status: 'pending',
-            nextAttemptAt: Date.now(),
-          })
-        )
-      ).then(() => {
-        flushOutbox().catch(() => {});
-      });
+      if (blockedAuthMutations.length > 0) {
+        Promise.all(
+          blockedAuthMutations.map((m) =>
+            LocalStorage.updateOutboxMutation(m.operationId, {
+              status: 'pending',
+              nextAttemptAt: Date.now(),
+            })
+          )
+        ).then(() => {
+          flushOutbox().catch(() => {});
+        });
+      }
     }
   }
 });

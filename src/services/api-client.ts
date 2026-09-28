@@ -117,19 +117,6 @@ async function requestJson<T = any>(url: string, options?: RequestInit): Promise
 }
 
 /**
- * Verifica si el backend está disponible.
- */
-export async function checkBackendHealth(): Promise<boolean> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/health`);
-    return response.ok;
-  } catch (error) {
-    console.warn('[API] Backend no disponible en:', API_BASE_URL, error);
-    return false;
-  }
-}
-
-/**
  * Envía una imagen al endpoint /api/v1/scan de FastAPI.
  * Usa JSON con base64 para máxima confiabilidad y compatibilidad universal en Android/iOS.
  */
@@ -194,13 +181,6 @@ export async function scanImageWithApi(
       body: formData,
     });
   }
-}
-
-/**
- * Consulta sugerencias de recetas al backend de FastAPI si está disponible.
- */
-export async function fetchRecipesFromApi(): Promise<any[]> {
-  return requestJson<any[]>(`${API_BASE_URL}/api/v1/recipes`);
 }
 
 /**
@@ -354,16 +334,6 @@ export async function deleteInventoryItemWithApi(id: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Elimina un lote de alimentos de la base de datos a través de la API.
- */
-export async function batchDeleteInventoryItemsWithApi(ids: string[]): Promise<boolean> {
-  await requestJson(`${API_BASE_URL}/api/v1/inventory/batch-delete`, {
-    method: 'POST',
-    body: JSON.stringify({ ids }),
-  });
-  return true;
-}
 
 // ─── Recetas Persistentes (Supabase / Cloud API) ──────────────────────────────
 
@@ -543,50 +513,5 @@ export async function deleteShoppingItemWithApi(id: string): Promise<boolean> {
   });
   return true;
 }
-
-/**
- * Elimina todos los artículos comprados de la base de datos en la nube.
- */
-export async function deleteBoughtShoppingItemsWithApi(): Promise<boolean> {
-  await requestJson(`${API_BASE_URL}/api/v1/shopping/bought`, {
-    method: 'DELETE',
-  });
-  return true;
-}
-
-/**
- * Agrega un lote de artículos a la lista de compras en la nube.
- */
-export async function batchCreateShoppingItemsWithApi(
-  items: Partial<ShoppingItem>[]
-): Promise<ShoppingItem[]> {
-  const payload = {
-    items: items.map((it) => ({
-      id: it.id,
-      name: it.name,
-      quantity: it.quantity,
-      unit: it.unit || 'units',
-      category: it.category || 'other',
-      isBought: it.isBought ?? false,
-      recipeSource: it.recipeSource || null,
-    })),
-  };
-  const list = await requestJson<any[]>(`${API_BASE_URL}/api/v1/shopping/batch`, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-  if (!Array.isArray(list)) return [];
-  return list.map((c) => ({
-    id: c.id,
-    name: c.name,
-    quantity: c.quantity !== undefined ? c.quantity : null,
-    unit: c.unit || 'units',
-    category: c.category || 'other',
-    isBought: c.isBought !== undefined ? c.isBought : (c.is_bought ?? false),
-    recipeSource: c.recipeSource || c.recipe_source || null,
-    createdAt: c.createdAt || c.created_at || new Date().toISOString(),
-  }));
-}
-
 
 

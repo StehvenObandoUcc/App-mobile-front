@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { useAuth } from '../src/hooks/useAuth';
 import { AppBottomNav } from '../src/components';
 import { colors, typography, spacing, radii } from '../src/theme';
+import { primeAppPermissionsOnce } from '../src/utils/permissions';
 
 export default function Layout() {
   const { isAuthenticated, isHydrated } = useAuth();
@@ -21,6 +22,14 @@ export default function Layout() {
       router.replace('/login');
     }
   }, [isAuthenticated, isHydrated, segments, router]);
+
+  // Buena práctica: solicitar los permisos necesarios (cámara, galería) una sola vez al
+  // arrancar la app con sesión activa, en vez de sorprender al usuario a mitad de una tarea.
+  useEffect(() => {
+    if (isHydrated && isAuthenticated) {
+      primeAppPermissionsOnce();
+    }
+  }, [isHydrated, isAuthenticated]);
 
   // Pantalla de carga para arranque en frío (evita parpadeos de login antes de verificar SecureStore)
   if (!isHydrated) {

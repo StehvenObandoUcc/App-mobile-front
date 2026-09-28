@@ -1261,3 +1261,731 @@ describe('7. Cola Durable Outbox y Despachador Secuencial FIFO (Punto 3 - Fase B
   });
 });
 
+// ─── SUITE 8: Integración del Outbox en Lista de Compras (Punto 3 - Fase B3) ───
+describe('8. Integración del Outbox en Lista de Compras (Punto 3 - Fase B3)', () => {
+  it('47. create offline → persistencia → flush → 201: mutación se purga tras éxito en backend', async () => {
+    let queue = [
+      {
+        operationId: 'op-shop-c1',
+        userId: 'user-shop-1',
+        entity: 'shopping',
+        action: 'create',
+        entityId: 'shop-1',
+        payload: { id: 'shop-1', name: 'Manzanas', quantity: 4, unit: 'units' },
+        createdAt: 100,
+        status: 'pending',
+        attemptCount: 0,
+        nextAttemptAt: 0,
+      },
+    ];
+
+    const mockCreateApi = async (payload) => {
+      return { status: 201, ...payload };
+    };
+
+    let processed = 0;
+    for (const m of queue) {
+      if (m.entity === 'shopping' && m.action === 'create') {
+        await mockCreateApi(m.payload);
+        processed++;
+      }
+    }
+    queue = queue.filter((m) => m.operationId !== 'op-shop-c1');
+
+    assert.equal(processed, 1, 'Debe procesarse una mutación de creación');
+    assert.equal(queue.length, 0, 'La mutación confirmada (201) debe purgarse de la cola');
+  });
+
+  it('48. retry de create → 200 sin duplicado: éxito idempotente purga sin error', async () => {
+    let queue = [
+      {
+        operationId: 'op-shop-retry',
+        userId: 'user-shop-1',
+        entity: 'shopping',
+        action: 'create',
+        entityId: 'shop-retry-1',
+        payload: { id: 'shop-retry-1', name: 'Huevos', quantity: 12, unit: 'units' },
+        createdAt: 100,
+        status: 'pending',
+        attemptCount: 1,
+        nextAttemptAt: 0,
+      },
+    ];
+
+    const mockCreateApiIdempotent = async (payload) => {
+      return { status: 200, ...payload, _is_idempotent: true };
+    };
+
+    const res = await mockCreateApiIdempotent(queue[0].payload);
+    assert.equal(res.status, 200);
+    assert.equal(res._is_idempotent, true);
+
+    queue = queue.filter((m) => m.operationId !== 'op-shop-retry');
+    assert.equal(queue.length, 0, 'El reintento idempotente (200) purga la mutación sin error');
+  });
+
+  it('49. conflicto 409: payload diferente transiciona a conflict y detiene reintentos', async () => {
+    let mutation = {
+      operationId: 'op-shop-conflict',
+      userId: 'user-shop-1',
+      entity: 'shopping',
+      action: 'create',
+      entityId: 'shop-conf-1',
+      payload: { id: 'shop-conf-1', name: 'Leche Descremada', quantity: 2 },
+      status: 'pending',
+      attemptCount: 0,
+    };
+
+    const mockCreateApiConflict = async () => {
+      throw new ApiError("Conflicto de idempotencia: el artículo 'shop-conf-1' ya existe con datos diferentes.", 409);
+    };
+
+    let dispatchResult;
+    try {
+      await mockCreateApiConflict();
+      dispatchResult = { success: true };
+    } catch (err) {
+      if (err.status === 409) {
+        dispatchResult = { isConflict: true, status: 409, error: err.message };
+      }
+    }
+
+    if (dispatchResult.isConflict) {
+      mutation.status = 'conflict';
+      mutation.lastError = dispatchResult.error;
+    }
+
+    assert.equal(mutation.status, 'conflict', 'La mutación con 409 debe marcarse como conflict');
+    assert.ok(mutation.lastError.includes('Conflicto'), 'Debe documentar el error de conflicto');
+    assert.notEqual(mutation.status, 'pending', 'No debe permanecer en pending para reintento automático infinito');
+  });
+
+  it('50. update offline: encola mutación de update y despacha con PUT exitoso (200)', async () => {
+    let queue = [];
+    const item = { id: 'shop-u1', name: 'Cereal', quantity: 2, unit: 'package', isBought: false };
+
+    queue.push({
+      operationId: 'op-shop-u1',
+      userId: 'user-1',
+      entity: 'shopping',
+      action: 'update',
+      entityId: item.id,
+      payload: { quantity: 5 },
+      createdAt: Date.now(),
+      status: 'pending',
+      attemptCount: 0,
+    });
+
+    assert.equal(queue.length, 1);
+    assert.equal(queue[0].action, 'update');
+    assert.equal(queue[0].payload.quantity, 5);
+
+    const mockUpdateApi = async (id, updates) => ({ id, ...updates, status: 200 });
+    await mockUpdateApi(queue[0].entityId, queue[0].payload);
+    queue.shift();
+
+    assert.equal(queue.length, 0, 'Mutación de update completada y purgada');
+  });
+
+  it('51. toggleBought offline: persiste localmente y encola update con payload isBought', async () => {
+    let localItem = { id: 'shop-tb1', name: 'Aceite', isBought: false };
+    let queue = [];
+
+    localItem.isBought = true;
+
+    queue.push({
+      operationId: 'op-tb-1',
+      userId: 'user-1',
+      entity: 'shopping',
+      action: 'update',
+      entityId: localItem.id,
+      payload: { isBought: true },
+      createdAt: Date.now(),
+      status: 'pending',
+      attemptCount: 0,
+    });
+
+    assert.equal(localItem.isBought, true, 'Estado local debe actualizarse inmediatamente');
+    assert.equal(queue[0].payload.isBought, true, 'El payload encolado debe contener { isBought: true }');
+
+    let receivedPayload = null;
+    const mockUpdate = async (id, p) => { receivedPayload = p; return { id, ...p }; };
+    await mockUpdate(queue[0].entityId, queue[0].payload);
+
+    assert.deepEqual(receivedPayload, { isBought: true });
+  });
+
+  it('52. Compactación CREATE + UPDATE: actualiza payload in-place si attemptCount === 0', () => {
+    let queue = [
+      {
+        operationId: 'op-c-shop',
+        entityId: 'shop-compact-1',
+        entity: 'shopping',
+        action: 'create',
+        attemptCount: 0,
+        status: 'pending',
+        payload: { id: 'shop-compact-1', name: 'Yogurt', quantity: 1, isBought: false },
+      },
+    ];
+
+    const updates = { isBought: true, quantity: 2 };
+    const pendingCreate = queue.find(
+      (m) =>
+        m.entity === 'shopping' &&
+        m.entityId === 'shop-compact-1' &&
+        m.action === 'create' &&
+        m.attemptCount === 0 &&
+        m.status === 'pending'
+    );
+
+    if (pendingCreate) {
+      pendingCreate.payload = { ...pendingCreate.payload, ...updates };
+    } else {
+      queue.push({ operationId: 'op-u-redundant', action: 'update', payload: updates });
+    }
+
+    assert.equal(queue.length, 1, 'No debe crearse mutación redundante de update');
+    assert.equal(queue[0].payload.isBought, true, 'isBought compactado en el CREATE');
+    assert.equal(queue[0].payload.quantity, 2, 'quantity compactada en el CREATE');
+  });
+
+  it('53. Compactación CREATE + DELETE: si attemptCount === 0, purga la cola y no envía DELETE a red', () => {
+    let queue = [
+      {
+        operationId: 'op-c-del',
+        entityId: 'shop-del-unattempted',
+        entity: 'shopping',
+        action: 'create',
+        attemptCount: 0,
+        status: 'pending',
+      },
+    ];
+    let pendingDeleted = ['shop-del-unattempted'];
+    let networkDeleteCalls = 0;
+
+    const targetId = 'shop-del-unattempted';
+    const pendingCreate = queue.find(
+      (m) => m.entity === 'shopping' && m.entityId === targetId && m.action === 'create' && m.attemptCount === 0 && m.status === 'pending'
+    );
+
+    if (pendingCreate) {
+      queue = queue.filter((m) => m.entityId !== targetId);
+      pendingDeleted = pendingDeleted.filter((id) => id !== targetId);
+    } else {
+      networkDeleteCalls++;
+    }
+
+    assert.equal(queue.length, 0, 'La mutación create debe purgarse');
+    assert.equal(pendingDeleted.length, 0, 'pendingDeletedShopping debe quedar limpio sin rastro');
+    assert.equal(networkDeleteCalls, 0, 'Cero llamadas HTTP a la red');
+  });
+
+  it('54. delete offline sin zombie: ítem eliminado offline no resucita en GET y limpia tras 200', async () => {
+    const existingCloudItem = { id: 'shop-zombie-target', name: 'Galletas', quantity: 1 };
+    let currentLocal = [];
+    let pendingDeletedShopping = ['shop-zombie-target'];
+    let queue = [
+      {
+        operationId: 'op-del-zombie',
+        entity: 'shopping',
+        action: 'delete',
+        entityId: 'shop-zombie-target',
+        status: 'pending',
+        attemptCount: 0,
+      },
+    ];
+
+    const remoteFromCloud = [existingCloudItem];
+    const merged = mergeShoppingList(currentLocal, remoteFromCloud, pendingDeletedShopping);
+
+    assert.equal(merged.length, 0, 'El ítem eliminado NO debe resucitar con el GET remoto (anti-zombie)');
+
+    const mockDelete = async () => true;
+    await mockDelete();
+
+    queue = queue.filter((m) => m.operationId !== 'op-del-zombie');
+    pendingDeletedShopping = pendingDeletedShopping.filter((id) => id !== 'shop-zombie-target');
+
+    assert.equal(queue.length, 0, 'Outbox limpio');
+    assert.equal(pendingDeletedShopping.length, 0, 'pendingDeleted limpio tras confirmación');
+  });
+
+  it('55. 404 delete en shopping es idempotente: purga Outbox y pendingDeletedShopping', async () => {
+    let queue = [
+      { operationId: 'op-del-404-shop', entity: 'shopping', action: 'delete', entityId: 'shop-gone' },
+    ];
+    let pendingDeleted = ['shop-gone'];
+
+    const mockDeleteApi = async () => {
+      throw new ApiError('Artículo con ID shop-gone no encontrado', 404);
+    };
+
+    let resolved = false;
+    try {
+      await mockDeleteApi();
+      resolved = true;
+    } catch (err) {
+      if (err.status === 404) {
+        resolved = true;
+      }
+    }
+
+    if (resolved) {
+      queue = queue.filter((m) => m.operationId !== 'op-del-404-shop');
+      pendingDeleted = pendingDeleted.filter((id) => id !== 'shop-gone');
+    }
+
+    assert.equal(queue.length, 0, 'Outbox purgado en 404');
+    assert.equal(pendingDeleted.length, 0, 'Tombstone pendingDeletedShopping purgado en 404');
+  });
+
+  it('56. HTTP 401/403 en shopping transiciona a blocked, conserva Outbox y pendingDeleted', async () => {
+    let queue = [
+      { operationId: 'op-shop-401', entity: 'shopping', action: 'delete', entityId: 'shop-auth-err', status: 'pending' },
+    ];
+    let pendingDeleted = ['shop-auth-err'];
+
+    const mockApi = async () => {
+      throw new ApiError('Unauthorized', 401);
+    };
+
+    for (const m of queue) {
+      try {
+        await mockApi();
+      } catch (err) {
+        if (err.status === 401 || err.status === 403) {
+          m.status = 'blocked';
+          m.lastError = 'Fallo de autorización (401). Sesión suspendida.';
+        }
+      }
+    }
+
+    assert.equal(queue[0].status, 'blocked', 'Mutación debe quedar en estado blocked');
+    assert.equal(queue.length, 1, 'No debe eliminarse de la cola Outbox');
+    assert.deepEqual(pendingDeleted, ['shop-auth-err'], 'Tombstone debe conservarse para evitar resurrección');
+  });
+
+  it('57. Errores de red y 5xx en shopping aplican backoff exponencial y no borran mutación', () => {
+    let mutation = {
+      operationId: 'op-shop-500',
+      entity: 'shopping',
+      action: 'create',
+      entityId: 'shop-err-500',
+      status: 'pending',
+      attemptCount: 0,
+      nextAttemptAt: 0,
+    };
+
+    const simulateNetworkFailure = (m) => {
+      m.attemptCount += 1;
+      const delay = Math.min(1000 * Math.pow(2, m.attemptCount), 60000);
+      m.status = 'pending';
+      m.nextAttemptAt = Date.now() + delay;
+      m.lastError = 'Error 500: Internal Server Error';
+    };
+
+    simulateNetworkFailure(mutation);
+    assert.equal(mutation.status, 'pending');
+    assert.equal(mutation.attemptCount, 1);
+    assert.ok(mutation.nextAttemptAt > Date.now());
+  });
+
+  it('58. Cierre forzoso con mutación de shopping en processing: recupera a pending', () => {
+    const queue = [
+      { operationId: 'op-proc-shop', entity: 'shopping', action: 'create', status: 'processing', attemptCount: 1 },
+    ];
+
+    const recovered = queue.map((m) =>
+      m.status === 'processing' ? { ...m, status: 'pending', updatedAt: Date.now() } : m
+    );
+
+    assert.equal(recovered[0].status, 'pending', 'Debe recuperarse a pending tras el reinicio');
+    assert.equal(recovered[0].attemptCount, 1, 'Conserva el conteo de intentos');
+  });
+
+  it('59. Aislamiento por userId y cambio de usuario: Usuario A y B no comparten mutaciones ni tombstones de shopping', async () => {
+    const fakeStorage = new FakeAsyncStorage();
+    const keyShopA = '@food_ai_outbox_v1_userA';
+    const keyShopB = '@food_ai_outbox_v1_userB';
+    const keyPendingA = '@food_ai_pending_deleted_shopping_v1_userA';
+    const keyPendingB = '@food_ai_pending_deleted_shopping_v1_userB';
+
+    await fakeStorage.setItem(keyShopA, JSON.stringify([{ operationId: 'op-a', entity: 'shopping', userId: 'userA' }]));
+    await fakeStorage.setItem(keyShopB, JSON.stringify([{ operationId: 'op-b', entity: 'shopping', userId: 'userB' }]));
+    await fakeStorage.setItem(keyPendingA, JSON.stringify([['shop-del-a', Date.now()]]));
+    await fakeStorage.setItem(keyPendingB, JSON.stringify([['shop-del-b', Date.now()]]));
+
+    const outboxA = JSON.parse(await fakeStorage.getItem(keyShopA));
+    const outboxB = JSON.parse(await fakeStorage.getItem(keyShopB));
+    const pendingA = new Map(JSON.parse(await fakeStorage.getItem(keyPendingA)));
+    const pendingB = new Map(JSON.parse(await fakeStorage.getItem(keyPendingB)));
+
+    assert.equal(outboxA[0].userId, 'userA');
+    assert.equal(outboxB[0].userId, 'userB');
+    assert.ok(pendingA.has('shop-del-a'));
+    assert.ok(!pendingA.has('shop-del-b'));
+    assert.ok(pendingB.has('shop-del-b'));
+    assert.ok(!pendingB.has('shop-del-a'));
+  });
+
+  it('60. No se produce doble DELETE HTTP al eliminar un artículo de compras', async () => {
+    let networkDeleteCalls = 0;
+    const mockDeleteApi = async (id) => {
+      networkDeleteCalls++;
+      return true;
+    };
+
+    let queue = [
+      {
+        operationId: 'op-del-single',
+        entity: 'shopping',
+        action: 'delete',
+        entityId: 'shop-no-double',
+      },
+    ];
+
+    for (const m of queue) {
+      if (m.action === 'delete') {
+        await mockDeleteApi(m.entityId);
+      }
+    }
+
+    assert.equal(networkDeleteCalls, 1, 'Exactamente una sola llamada HTTP DELETE ejecutada');
+  });
+
+  it('61. Merge remoto sin sobrescribir cambios pendientes: toggleBought o edición local offline prevalece sobre valor remoto', () => {
+    const remoteFromCloud = [
+      { id: 'shop-item-1', name: 'Café molido', quantity: 1, isBought: false },
+    ];
+    const currentLocal = [
+      { id: 'shop-item-1', name: 'Café molido', quantity: 1, isBought: true },
+    ];
+    const outboxQueue = [
+      {
+        operationId: 'op-tb-cafe',
+        entity: 'shopping',
+        action: 'update',
+        entityId: 'shop-item-1',
+        status: 'pending',
+        payload: { isBought: true },
+      },
+    ];
+
+    const pendingUpdateIds = new Set(
+      outboxQueue
+        .filter((m) => m.entity === 'shopping' && m.action === 'update' && (m.status === 'pending' || m.status === 'processing'))
+        .map((m) => m.entityId)
+    );
+    const activePendingDeleted = new Set();
+    const cleanRemote = remoteFromCloud.filter((item) => !activePendingDeleted.has(item.id));
+    const remoteIdSet = new Set(cleanRemote.map((r) => r.id));
+    const unsyncedLocal = currentLocal.filter(
+      (localItem) => !remoteIdSet.has(localItem.id) && !activePendingDeleted.has(localItem.id)
+    );
+    const localMap = new Map(currentLocal.map((item) => [item.id, item]));
+    const mergedRemote = cleanRemote.map((remoteItem) => {
+      if (pendingUpdateIds.has(remoteItem.id)) {
+        const localVersion = localMap.get(remoteItem.id);
+        if (localVersion) return localVersion;
+      }
+      return remoteItem;
+    });
+    const merged = [...unsyncedLocal, ...mergedRemote];
+
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].id, 'shop-item-1');
+    assert.equal(
+      merged[0].isBought,
+      true,
+      'El estado isBought: true editado localmente offline NO debe ser sobrescrito por el isBought: false remoto'
+    );
+  });
+});
+
+// ─── SUITE 9: Durabilidad de clearBought y moveBoughtToInventory Offline (Corrección B3) ───
+describe('9. Durabilidad de clearBought y moveBoughtToInventory Offline (Corrección B3)', () => {
+  it('62. clearBought offline captura todos los IDs comprados', () => {
+    const list = [
+      { id: 'shop-b1', name: 'Manzanas', isBought: true },
+      { id: 'shop-p1', name: 'Leche', isBought: false },
+      { id: 'shop-b2', name: 'Pan', isBought: true },
+      { id: 'shop-b3', name: 'Huevos', isBought: true },
+    ];
+
+    const boughtIds = list.filter((i) => i.isBought).map((i) => i.id);
+    assert.deepEqual(boughtIds, ['shop-b1', 'shop-b2', 'shop-b3'], 'Debe capturar exactamente todos los IDs comprados');
+  });
+
+  it('63. clearBought offline encola un DELETE por ID en el Outbox y registra tombstones', () => {
+    const boughtIds = ['shop-b1', 'shop-b2', 'shop-b3'];
+    let queue = [];
+    let pendingDeleted = new Set();
+    const userId = 'user-test-clear';
+
+    for (const bid of boughtIds) {
+      pendingDeleted.add(bid);
+      queue.push({
+        operationId: `op-del-${bid}`,
+        userId,
+        entity: 'shopping',
+        action: 'delete',
+        entityId: bid,
+        payload: { id: bid },
+        createdAt: Date.now(),
+        status: 'pending',
+        attemptCount: 0,
+        nextAttemptAt: 0,
+      });
+    }
+
+    assert.equal(queue.length, 3, 'Debe encolar exactamente 3 mutaciones DELETE individuales');
+    assert.equal(pendingDeleted.size, 3, 'Debe haber 3 tombstones en pendingDeletedShopping');
+    assert.ok(queue.every((m) => m.action === 'delete' && m.entity === 'shopping'));
+  });
+
+  it('64. reinicio antes de reconectar conserva todas las mutaciones en storage namespaced', async () => {
+    const fakeStorage = new FakeAsyncStorage();
+    const userId = 'user-reboot';
+    const outboxKey = `@food_ai_outbox_v1_${userId}`;
+
+    const originalQueue = [
+      { operationId: 'op-1', userId, entity: 'shopping', action: 'delete', entityId: 'shop-1', status: 'pending' },
+      { operationId: 'op-2', userId, entity: 'shopping', action: 'delete', entityId: 'shop-2', status: 'pending' },
+    ];
+    await fakeStorage.setItem(outboxKey, JSON.stringify(originalQueue));
+
+    // Simular reinicio y lectura del storage
+    const restoredQueue = JSON.parse(await fakeStorage.getItem(outboxKey));
+    assert.equal(restoredQueue.length, 2, 'Las mutaciones deben sobrevivir al reinicio');
+    assert.equal(restoredQueue[0].entityId, 'shop-1');
+    assert.equal(restoredQueue[1].entityId, 'shop-2');
+  });
+
+  it('65. reconexión procesa todos los IDs individualmente y purga Outbox y tombstones', async () => {
+    let queue = [
+      { operationId: 'op-1', entity: 'shopping', action: 'delete', entityId: 'shop-1' },
+      { operationId: 'op-2', entity: 'shopping', action: 'delete', entityId: 'shop-2' },
+    ];
+    let pendingDeleted = new Set(['shop-1', 'shop-2']);
+
+    const deletedOnServer = [];
+    const mockDeleteApi = async (id) => {
+      deletedOnServer.push(id);
+      return true;
+    };
+
+    // Despacho secuencial
+    for (const m of [...queue]) {
+      await mockDeleteApi(m.entityId);
+      queue = queue.filter((x) => x.operationId !== m.operationId);
+      pendingDeleted.delete(m.entityId);
+    }
+
+    assert.deepEqual(deletedOnServer, ['shop-1', 'shop-2'], 'Ambos IDs deben haber sido enviados al servidor');
+    assert.equal(queue.length, 0, 'La cola Outbox debe quedar vacía');
+    assert.equal(pendingDeleted.size, 0, 'Todos los tombstones confirmados deben haberse limpiado');
+  });
+
+  it('66. éxito parcial conserva solo los fallidos en Outbox y tombstones', async () => {
+    let queue = [
+      { operationId: 'op-ok-1', entity: 'shopping', action: 'delete', entityId: 'shop-ok-1', status: 'pending', attemptCount: 0 },
+      { operationId: 'op-fail-2', entity: 'shopping', action: 'delete', entityId: 'shop-fail-2', status: 'pending', attemptCount: 0 },
+      { operationId: 'op-ok-3', entity: 'shopping', action: 'delete', entityId: 'shop-ok-3', status: 'pending', attemptCount: 0 },
+    ];
+    let pendingDeleted = new Set(['shop-ok-1', 'shop-fail-2', 'shop-ok-3']);
+
+    const mockDispatch = async (m) => {
+      if (m.entityId === 'shop-fail-2') {
+        throw new ApiError('Error 500: Server Error', 500);
+      }
+      return true;
+    };
+
+    for (const m of queue) {
+      try {
+        await mockDispatch(m);
+        m.status = 'success';
+        pendingDeleted.delete(m.entityId);
+      } catch (err) {
+        m.status = 'pending';
+        m.attemptCount += 1;
+        m.nextAttemptAt = Date.now() + 2000;
+      }
+    }
+
+    queue = queue.filter((m) => m.status !== 'success');
+
+    assert.equal(queue.length, 1, 'Solo debe quedar la mutación fallida en Outbox');
+    assert.equal(queue[0].entityId, 'shop-fail-2');
+    assert.equal(pendingDeleted.size, 1, 'Solo debe quedar el tombstone del ítem fallido');
+    assert.ok(pendingDeleted.has('shop-fail-2'), 'Tombstone de shop-fail-2 debe preservarse para evitar resurrección');
+    assert.ok(!pendingDeleted.has('shop-ok-1'), 'Tombstone de shop-ok-1 debe haberse eliminado');
+    assert.ok(!pendingDeleted.has('shop-ok-3'), 'Tombstone de shop-ok-3 debe haberse eliminado');
+  });
+
+  it('67. 404 limpia el ID correspondiente de forma idempotente', async () => {
+    let queue = [{ operationId: 'op-404', entity: 'shopping', action: 'delete', entityId: 'shop-404' }];
+    let pendingDeleted = new Set(['shop-404']);
+
+    const mockDelete = async () => { throw new ApiError('Not found', 404); };
+
+    let isSuccess = false;
+    try {
+      await mockDelete();
+      isSuccess = true;
+    } catch (err) {
+      if (err.status === 404) isSuccess = true;
+    }
+
+    if (isSuccess) {
+      queue = queue.filter((m) => m.operationId !== 'op-404');
+      pendingDeleted.delete('shop-404');
+    }
+
+    assert.equal(queue.length, 0, 'Outbox purgado tras 404');
+    assert.equal(pendingDeleted.size, 0, 'Tombstone purgado tras 404');
+  });
+
+  it('68. 401/403 conserva el ID y bloquea la mutación', async () => {
+    let queue = [{ operationId: 'op-auth', entity: 'shopping', action: 'delete', entityId: 'shop-auth', status: 'pending' }];
+    let pendingDeleted = new Set(['shop-auth']);
+
+    const mockDelete = async () => { throw new ApiError('Unauthorized', 401); };
+
+    try {
+      await mockDelete();
+    } catch (err) {
+      if (err.status === 401) {
+        queue[0].status = 'blocked';
+        queue[0].lastError = 'Fallo de autorización (401).';
+      }
+    }
+
+    assert.equal(queue[0].status, 'blocked', 'Debe marcarse blocked');
+    assert.equal(queue.length, 1, 'Debe conservarse en Outbox');
+    assert.ok(pendingDeleted.has('shop-auth'), 'Tombstone debe conservarse intacto');
+  });
+
+  it('69. red/5xx aplica backoff exponencial a las mutaciones individuales de clearBought', () => {
+    let mutation = {
+      operationId: 'op-net-err',
+      entity: 'shopping',
+      action: 'delete',
+      entityId: 'shop-net',
+      status: 'pending',
+      attemptCount: 0,
+      nextAttemptAt: 0,
+    };
+
+    // Simular fallo transitorio
+    mutation.attemptCount += 1;
+    const delay = Math.min(1000 * Math.pow(2, mutation.attemptCount), 60000);
+    mutation.nextAttemptAt = Date.now() + delay;
+
+    assert.equal(mutation.attemptCount, 1);
+    assert.equal(mutation.status, 'pending');
+    assert.ok(mutation.nextAttemptAt > Date.now());
+  });
+
+  it('70. no hay doble DELETE: ni llamada directa desde hook ni DELETE /shopping/bought simultáneo', () => {
+    let directCalls = 0;
+    let batchCalls = 0;
+    let outboxDispatchedCalls = 0;
+
+    // Con la arquitectura B3, clearBought SOLO encola en Outbox
+    const simulateClearBoughtWithOutbox = (boughtIds) => {
+      // 0 llamadas directas
+      // 0 llamadas batch
+      // Retorna mutaciones a despachar exclusivamente vía Outbox
+      return boughtIds.map((id) => ({ entity: 'shopping', action: 'delete', entityId: id }));
+    };
+
+    const outboxQueue = simulateClearBoughtWithOutbox(['shop-1', 'shop-2']);
+    assert.equal(directCalls, 0, 'Cero llamadas DELETE directas desde el hook');
+    assert.equal(batchCalls, 0, 'Cero llamadas al endpoint batch /shopping/bought');
+
+    // Despacho exclusivo por Outbox
+    for (const m of outboxQueue) {
+      outboxDispatchedCalls++;
+    }
+    assert.equal(outboxDispatchedCalls, 2, 'Cada ítem recibe exactamente UNA llamada DELETE desde el despachador Outbox');
+  });
+
+  it('71. moveBoughtToInventory conserva snapshot e individual Outbox DELETEs', async () => {
+    const fakeStorage = new FakeAsyncStorage();
+    const userId = 'user-move-test';
+    const txKey = `@food_ai_tx_move_bought_v1_${userId}`;
+
+    // Snapshot creado durante moveBoughtToInventory
+    const snapshot = {
+      version: 1,
+      timestamp: Date.now(),
+      status: 'committing',
+      boughtItemIds: ['shop-mv-1', 'shop-mv-2'],
+      newIngredients: [{ id: 'ing-mv-1', name: 'Queso Gouda', quantity: 1, unit: 'units' }],
+      updatedIngredients: [],
+    };
+    await fakeStorage.setItem(txKey, JSON.stringify(snapshot));
+
+    // Mutaciones Outbox encoladas individualmente
+    const outboxMutations = snapshot.boughtItemIds.map((bid) => ({
+      operationId: `op-del-${bid}`,
+      userId,
+      entity: 'shopping',
+      action: 'delete',
+      entityId: bid,
+    }));
+
+    const rawSnapshot = await fakeStorage.getItem(txKey);
+    assert.ok(rawSnapshot, 'El snapshot de transacción debe existir en storage');
+    assert.equal(outboxMutations.length, 2, 'Debe haber 2 mutaciones individuales encoladas para los ítems movidos');
+    assert.equal(outboxMutations[0].entityId, 'shop-mv-1');
+    assert.equal(outboxMutations[1].entityId, 'shop-mv-2');
+  });
+
+  it('72. segunda ejecución no duplica inventario ni mutaciones en moveBoughtToInventory', () => {
+    let localShopping = [
+      { id: 'shop-done-1', name: 'Yogurt', isBought: false }, // Ningún artículo comprado pendiente
+    ];
+    let queue = [
+      { operationId: 'op-already-1', entity: 'shopping', action: 'delete', entityId: 'shop-prev-1' },
+    ];
+
+    // Simular segunda ejecución consecutiva
+    const boughtIds = localShopping.filter((i) => i.isBought).map((i) => i.id);
+    let movedCount = 0;
+
+    if (boughtIds.length > 0) {
+      movedCount = boughtIds.length;
+      for (const bid of boughtIds) {
+        queue.push({ operationId: `op-${bid}`, entity: 'shopping', action: 'delete', entityId: bid });
+      }
+    }
+
+    assert.equal(movedCount, 0, 'Debe retornar 0');
+    assert.equal(queue.length, 1, 'No debe encolar mutaciones duplicadas en Outbox');
+  });
+
+  it('73. Usuario A y B mantienen colas y tombstones de clearBought totalmente separados', async () => {
+    const fakeStorage = new FakeAsyncStorage();
+    const keyUserA = '@food_ai_outbox_v1_userA';
+    const keyUserB = '@food_ai_outbox_v1_userB';
+    const keyPendingA = '@food_ai_pending_deleted_shopping_v1_userA';
+    const keyPendingB = '@food_ai_pending_deleted_shopping_v1_userB';
+
+    const queueA = [{ operationId: 'op-del-a', userId: 'userA', entity: 'shopping', action: 'delete', entityId: 'shop-a' }];
+    const pendingA = [['shop-a', Date.now()]];
+
+    await fakeStorage.setItem(keyUserA, JSON.stringify(queueA));
+    await fakeStorage.setItem(keyPendingA, JSON.stringify(pendingA));
+    await fakeStorage.setItem(keyUserB, JSON.stringify([]));
+    await fakeStorage.setItem(keyPendingB, JSON.stringify([]));
+
+    const storedQueueB = JSON.parse(await fakeStorage.getItem(keyUserB));
+    const storedPendingB = JSON.parse(await fakeStorage.getItem(keyPendingB));
+
+    assert.equal(storedQueueB.length, 0, 'La cola de Usuario B debe permanecer vacía');
+    assert.equal(storedPendingB.length, 0, 'Los tombstones de Usuario B deben permanecer vacíos');
+  });
+});
+

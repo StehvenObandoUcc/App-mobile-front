@@ -1,11 +1,5 @@
 export type ErrorContext = 'scan' | 'recipes';
 
-export interface AppError {
-  message?: string;
-  status?: number;
-  isNetworkError?: boolean;
-}
-
 /**
  * Traduce errores de red y respuestas HTTP del backend a mensajes
  * estandarizados y amigables para el usuario (BUG-05).

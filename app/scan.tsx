@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,20 +27,38 @@ export default function ScanScreen() {
   const router = useRouter();
   const cameraRef = useRef<CameraView>(null);
   const [facing, setFacing] = useState<CameraType>('back');
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
   const [testPhotoCount, setTestPhotoCount] = useState<number>(0);
   const { status, error, analyzeImage } = useScan();
+  const autoRequestedRef = useRef(false);
 
-  // Resetear la vista previa congelada y sincronizar cuota de fotos de prueba al enfocar
+  // Resetear la vista previa congelada, sincronizar cuota de fotos y RE-consultar el permiso
+  // de cámara al enfocar: si el usuario lo concedió manualmente desde Ajustes (flujo "Abrir
+  // ajustes" cuando canAskAgain es false), el estado de useCameraPermissions no se refresca
+  // solo al volver a primer plano, y la pantalla quedaría congelada en "permiso necesario".
   useFocusEffect(
     useCallback(() => {
       setCapturedPhotoUri(null);
       setIsCapturing(false);
+      autoRequestedRef.current = false;
       getTestPhotoCount().then(setTestPhotoCount);
-    }, [])
+      if (!permission?.granted) {
+        getPermission().catch(() => {});
+      }
+    }, [permission?.granted, getPermission])
   );
+
+  // Permisos ya se piden al arrancar la app (primeAppPermissionsOnce en _layout.tsx). Si el
+  // usuario los negó entonces, al intentar usar la cámara aquí se "reactiva" la solicitud
+  // automáticamente en lugar de dejarlo solo con un botón que debe descubrir por su cuenta.
+  useEffect(() => {
+    if (permission && !permission.granted && permission.canAskAgain && !autoRequestedRef.current) {
+      autoRequestedRef.current = true;
+      requestPermission().catch(() => {});
+    }
+  }, [permission, requestPermission]);
 
   const isAnalyzing = isCapturing || status === 'loading';
 

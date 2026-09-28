@@ -1,20 +1,57 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShoppingItem, RecipeIngredient, IngredientUnit, IngredientCategory } from '../types';
+import { ShoppingItem, RecipeIngredient, IngredientUnit, IngredientCategory, OutboxMutation } from '../types';
 import { LocalStorage } from '../storage/local-storage';
 import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
 import {
   fetchShoppingListFromApi,
-  createShoppingItemWithApi,
-  updateShoppingItemWithApi,
-  deleteShoppingItemWithApi,
-  deleteBoughtShoppingItemsWithApi,
-  batchCreateShoppingItemsWithApi,
-  executeDeleteWithPendingResolution,
 } from '../services/api-client';
 import { AuthService } from '../services/auth-service';
+import { generateOperationId } from '../utils/uuid';
+import { flushOutbox } from '../services/outbox-dispatcher';
 
 let memoryShoppingList: ShoppingItem[] | null = null;
 let isSyncingShopping = false;
+
+/**
+ * Compacta un UPDATE en un CREATE previo no enviado (attemptCount === 0),
+ * o encola una mutación durable de tipo 'update' en el Outbox.
+ */
+async function queueOrCompactShoppingUpdate(
+  id: string,
+  updates: Partial<ShoppingItem>,
+  userId: string
+): Promise<void> {
+  const queue = LocalStorage.getOutboxQueue();
+  const pendingCreate = queue.find(
+    (m) =>
+      m.entity === 'shopping' &&
+      m.entityId === id &&
+      m.action === 'create' &&
+      m.attemptCount === 0 &&
+      m.status === 'pending'
+  );
+
+  if (pendingCreate) {
+    await LocalStorage.updateOutboxMutation(pendingCreate.operationId, {
+      payload: { ...pendingCreate.payload, ...updates },
+    });
+  } else {
+    const mutation: OutboxMutation<Partial<ShoppingItem>> = {
+      operationId: generateOperationId(),
+      userId,
+      entity: 'shopping',
+      action: 'update',
+      entityId: id,
+      payload: updates,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      status: 'pending',
+      attemptCount: 0,
+      nextAttemptAt: 0,
+    };
+    await LocalStorage.enqueueOutboxMutation(mutation);
+  }
+}
 
 export function useShoppingList() {
   const [items, setItems] = useState<ShoppingItem[]>(memoryShoppingList || []);
@@ -35,41 +72,51 @@ export function useShoppingList() {
       memoryShoppingList = data;
       setItems(data);
 
+      // Disparar procesamiento de la cola Outbox secuencial FIFO en segundo plano
+      flushOutbox().catch(() => {});
+
       // 2. Sincronización en segundo plano con deduplicación y aislamiento de usuario
       if (isSyncingShopping) return;
       isSyncingShopping = true;
       try {
-        const pendingDeletedIds = LocalStorage.getPendingDeletedShopping();
-        if (pendingDeletedIds.length > 0) {
-          await Promise.allSettled(
-            pendingDeletedIds.map((delId) =>
-              executeDeleteWithPendingResolution(
-                delId,
-                deleteShoppingItemWithApi,
-                LocalStorage.removePendingDeletedShopping,
-                'Artículo de compra'
-              )
-            )
-          );
-        }
-
-        if (LocalStorage.getCurrentUserId() !== startUserId) return;
-
         const remote = await fetchShoppingListFromApi();
         if (LocalStorage.getCurrentUserId() !== startUserId) return;
 
         if (Array.isArray(remote)) {
           const currentLocal = await LocalStorage.getShoppingList();
           const activePendingDeleted = new Set(LocalStorage.getPendingDeletedShopping());
+          const outboxQueue = LocalStorage.getOutboxQueue();
+          const pendingUpdateIds = new Set(
+            outboxQueue
+              .filter(
+                (m) =>
+                  m.entity === 'shopping' &&
+                  m.action === 'update' &&
+                  (m.status === 'pending' || m.status === 'processing')
+              )
+              .map((m) => m.entityId)
+          );
 
-          // Excluir cualquier ítem remoto que esté en el conjunto de eliminados pendientes
+          // Excluir cualquier ítem remoto que esté en el conjunto de eliminados pendientes (anti-zombies)
           const cleanRemote = remote.filter((item) => !activePendingDeleted.has(item.id));
           const remoteIdSet = new Set(cleanRemote.map((r) => r.id));
 
+          // Preservar elementos locales creados offline que aún no han sido sincronizados al servidor
           const unsyncedLocal = currentLocal.filter(
             (localItem) => !remoteIdSet.has(localItem.id) && !activePendingDeleted.has(localItem.id)
           );
-          const merged = [...unsyncedLocal, ...cleanRemote];
+
+          // Proteger ediciones locales pendientes (incluyendo toggleBought) frente a GET remoto
+          const localMap = new Map(currentLocal.map((item) => [item.id, item]));
+          const mergedRemote = cleanRemote.map((remoteItem) => {
+            if (pendingUpdateIds.has(remoteItem.id)) {
+              const localVersion = localMap.get(remoteItem.id);
+              if (localVersion) return localVersion;
+            }
+            return remoteItem;
+          });
+
+          const merged = [...unsyncedLocal, ...mergedRemote];
 
           if (LocalStorage.getCurrentUserId() !== startUserId) return;
 
@@ -114,7 +161,7 @@ export function useShoppingList() {
   const boughtItems = items.filter((item) => item.isBought);
 
   /**
-   * Agrega un nuevo ítem a la lista de compras y lo sincroniza con la nube.
+   * Agrega un nuevo ítem a la lista de compras mediante mutación Outbox durable.
    */
   const addItem = async (
     name: string,
@@ -123,6 +170,9 @@ export function useShoppingList() {
     category: IngredientCategory = 'other',
     recipeSource: string | null = null
   ): Promise<ShoppingItem> => {
+    const startUserId = LocalStorage.getCurrentUserId();
+    if (!startUserId) throw new Error('No hay usuario autenticado');
+
     const { unit: cleanUnit, quantity: cleanQty } = normalizeItemUnitAndQty(unit, quantity);
     const newItem: ShoppingItem = {
       id: `shop-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -137,25 +187,54 @@ export function useShoppingList() {
     await LocalStorage.addShoppingItem(newItem);
     await loadItems();
 
-    // Sincronización en segundo plano
-    createShoppingItemWithApi(newItem).catch((err) =>
-      console.warn('[useShoppingList] Error sincronizando artículo con la nube:', err?.message)
-    );
+    // Encolar mutación durable de creación en Outbox (reemplaza llamada HTTP directa)
+    const mutation: OutboxMutation<ShoppingItem> = {
+      operationId: generateOperationId(),
+      userId: startUserId,
+      entity: 'shopping',
+      action: 'create',
+      entityId: newItem.id,
+      payload: newItem,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      status: 'pending',
+      attemptCount: 0,
+      nextAttemptAt: 0,
+    };
+    await LocalStorage.enqueueOutboxMutation(mutation);
+
+    flushOutbox().catch(() => {});
 
     return newItem;
   };
 
   /**
-   * Procesa la adición inteligente de ingredientes faltantes desde una receta y los persiste en la nube.
+   * Actualiza un ítem de la lista de compras mediante Outbox durable.
+   */
+  const updateItem = async (item: ShoppingItem) => {
+    const startUserId = LocalStorage.getCurrentUserId();
+    if (!startUserId) throw new Error('No hay usuario autenticado');
+
+    await LocalStorage.updateShoppingItem(item);
+    await loadItems();
+
+    await queueOrCompactShoppingUpdate(item.id, item, startUserId);
+    flushOutbox().catch(() => {});
+  };
+
+  /**
+   * Procesa la adición inteligente de ingredientes faltantes desde una receta y los encola en el Outbox.
    */
   const addFromRecipe = async (
     missingIngredients: RecipeIngredient[],
     recipeTitle: string
   ): Promise<{ addedCount: number; mergedCount: number }> => {
+    const startUserId = LocalStorage.getCurrentUserId();
+    if (!startUserId) throw new Error('No hay usuario autenticado');
+
     let currentList = await LocalStorage.getShoppingList();
     let addedCount = 0;
     let mergedCount = 0;
-    const newItemsToSync: ShoppingItem[] = [];
 
     for (const missing of missingIngredients) {
       const { unit: cleanUnit, quantity: cleanQty } = normalizeItemUnitAndQty(missing.unit, missing.quantity);
@@ -172,7 +251,8 @@ export function useShoppingList() {
         }
         target.unit = cleanUnit;
         await LocalStorage.updateShoppingItem(target);
-        updateShoppingItemWithApi(target.id, target).catch(() => {});
+
+        await queueOrCompactShoppingUpdate(target.id, target, startUserId);
         mergedCount++;
       } else {
         // Coincidencia inexistente: crear ítem separado
@@ -188,83 +268,163 @@ export function useShoppingList() {
         };
         currentList = [newItem, ...currentList];
         await LocalStorage.addShoppingItem(newItem);
-        newItemsToSync.push(newItem);
+
+        const mutation: OutboxMutation<ShoppingItem> = {
+          operationId: generateOperationId(),
+          userId: startUserId,
+          entity: 'shopping',
+          action: 'create',
+          entityId: newItem.id,
+          payload: newItem,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          status: 'pending',
+          attemptCount: 0,
+          nextAttemptAt: 0,
+        };
+        await LocalStorage.enqueueOutboxMutation(mutation);
         addedCount++;
       }
     }
 
-    if (newItemsToSync.length > 0) {
-      batchCreateShoppingItemsWithApi(newItemsToSync).catch((err) =>
-        console.warn('[useShoppingList] Error sincronizando lote de faltantes con la nube:', err?.message)
-      );
-    }
-
     await loadItems();
+    flushOutbox().catch(() => {});
     return { addedCount, mergedCount };
   };
 
   const toggleBought = async (id: string) => {
+    const startUserId = LocalStorage.getCurrentUserId();
+    if (!startUserId) throw new Error('No hay usuario autenticado');
+
     const item = items.find((i) => i.id === id);
+    if (!item) return;
+
+    const nextBought = !item.isBought;
     await LocalStorage.toggleBoughtItem(id);
     await loadItems();
 
-    if (item) {
-      updateShoppingItemWithApi(id, { isBought: !item.isBought }).catch((err) =>
-        console.warn('[useShoppingList] Error sincronizando estado comprado en la nube:', err?.message)
-      );
+    await queueOrCompactShoppingUpdate(id, { isBought: nextBought }, startUserId);
+    flushOutbox().catch(() => {});
+  };
+
+/**
+ * Encola una mutación DELETE en el Outbox para un ID o compacta si era un CREATE no intentado.
+ */
+async function queueOrCompactShoppingDelete(id: string, userId: string): Promise<void> {
+  const queue = LocalStorage.getOutboxQueue();
+  const pendingCreate = queue.find(
+    (m) =>
+      m.entity === 'shopping' &&
+      m.entityId === id &&
+      m.action === 'create' &&
+      m.attemptCount === 0 &&
+      m.status === 'pending'
+  );
+
+  if (pendingCreate) {
+    for (const m of queue) {
+      if (m.entity === 'shopping' && m.entityId === id) {
+        await LocalStorage.removeOutboxMutation(m.operationId);
+      }
+    }
+    await LocalStorage.removePendingDeletedShopping(id).catch(() => {});
+  } else {
+    // Si ya existe un DELETE pendiente en cola para este ID, no duplicarlo
+    const alreadyQueued = queue.some(
+      (m) =>
+        m.entity === 'shopping' &&
+        m.entityId === id &&
+        m.action === 'delete' &&
+        (m.status === 'pending' || m.status === 'processing')
+    );
+    if (!alreadyQueued) {
+      const mutation: OutboxMutation<{ id: string }> = {
+        operationId: generateOperationId(),
+        userId,
+        entity: 'shopping',
+        action: 'delete',
+        entityId: id,
+        payload: { id },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        status: 'pending',
+        attemptCount: 0,
+        nextAttemptAt: 0,
+      };
+      await LocalStorage.enqueueOutboxMutation(mutation);
+    }
+  }
+}
+
+  const deleteItem = async (id: string) => {
+    const startUserId = LocalStorage.getCurrentUserId();
+    if (!startUserId) throw new Error('No hay usuario autenticado');
+
+    try {
+      // Optimista: elimina en local y marca en pendingDeletedShopping (tombstone)
+      await LocalStorage.deleteShoppingItem(id);
+      await loadItems();
+
+      await queueOrCompactShoppingDelete(id, startUserId);
+      flushOutbox().catch(() => {});
+    } catch (err: any) {
+      console.warn('[useShoppingList] Error eliminando artículo de compras:', err?.message);
+      throw err;
     }
   };
 
-  const deleteItem = async (id: string) => {
-    await LocalStorage.deleteShoppingItem(id);
-    await loadItems();
-    executeDeleteWithPendingResolution(
-      id,
-      deleteShoppingItemWithApi,
-      LocalStorage.removePendingDeletedShopping,
-      'Artículo de compra'
-    ).catch(() => {});
-  };
-
   const clearBought = async () => {
-    const boughtIds = items.filter((i) => i.isBought).map((i) => i.id);
-    await LocalStorage.deleteBoughtItems();
-    await loadItems();
-    deleteBoughtShoppingItemsWithApi()
-      .then(async () => {
-        await Promise.allSettled(
-          boughtIds.map((bid) => LocalStorage.removePendingDeletedShopping(bid))
-        );
-      })
-      .catch(async (err) => {
-        if (err?.status === 404) {
-          await Promise.allSettled(
-            boughtIds.map((bid) => LocalStorage.removePendingDeletedShopping(bid))
-          );
-        } else {
-          console.warn('[useShoppingList] Error eliminando comprados en la nube:', err?.message);
-        }
-      });
+    const startUserId = LocalStorage.getCurrentUserId();
+    if (!startUserId) throw new Error('No hay usuario autenticado');
+
+    try {
+      const currentList = await LocalStorage.getShoppingList();
+      const boughtIds = currentList.filter((i) => i.isBought).map((i) => i.id);
+      if (boughtIds.length === 0) return;
+
+      // 1. Actualización local optimista y tombstones
+      await LocalStorage.deleteBoughtItems();
+      await loadItems();
+
+      // 2. Encolar mutación DELETE individual por cada ID en el Outbox
+      for (const bid of boughtIds) {
+        await queueOrCompactShoppingDelete(bid, startUserId);
+      }
+
+      // 3. Despacho único en segundo plano
+      flushOutbox().catch(() => {});
+    } catch (err: any) {
+      console.warn('[useShoppingList] Error en clearBought:', err?.message);
+      throw err;
+    }
   };
 
   const moveBoughtToInventory = async (): Promise<number> => {
-    const boughtIds = items.filter((i) => i.isBought).map((i) => i.id);
-    const moved = await LocalStorage.moveBoughtToInventory();
-    await loadItems();
-    deleteBoughtShoppingItemsWithApi()
-      .then(async () => {
-        await Promise.allSettled(
-          boughtIds.map((bid) => LocalStorage.removePendingDeletedShopping(bid))
-        );
-      })
-      .catch(async (err) => {
-        if (err?.status === 404) {
-          await Promise.allSettled(
-            boughtIds.map((bid) => LocalStorage.removePendingDeletedShopping(bid))
-          );
-        }
-      });
-    return moved;
+    const startUserId = LocalStorage.getCurrentUserId();
+    if (!startUserId) throw new Error('No hay usuario autenticado');
+
+    try {
+      const currentList = await LocalStorage.getShoppingList();
+      const boughtIds = currentList.filter((i) => i.isBought).map((i) => i.id);
+      if (boughtIds.length === 0) return 0;
+
+      // 1. Transferencia atómica local compras -> inventario (preserva snapshot e idempotencia)
+      const moved = await LocalStorage.moveBoughtToInventory();
+      await loadItems();
+
+      // 2. Encolar mutación DELETE individual por cada artículo de compras transferido
+      for (const bid of boughtIds) {
+        await queueOrCompactShoppingDelete(bid, startUserId);
+      }
+
+      // 3. Despacho único en segundo plano
+      flushOutbox().catch(() => {});
+
+      return moved;
+    } catch (err: any) {
+      console.warn('[useShoppingList] Error en moveBoughtToInventory:', err?.message);
+      throw err;
+    }
   };
 
   return {
@@ -273,6 +433,7 @@ export function useShoppingList() {
     boughtItems,
     isLoading,
     addItem,
+    updateItem,
     addFromRecipe,
     toggleBought,
     deleteItem,

@@ -87,37 +87,6 @@ export function getValidTimesForDifficulty(difficulty: RecipeDifficulty): number
 }
 
 /**
- * Verifica si una combinación de tiempo y dificultad es válida.
- */
-export function isTimeValidForDifficulty(
-  timeMinutes: number,
-  difficulty: RecipeDifficulty
-): { isValid: boolean; reason?: string } {
-  const allowedTimes = getValidTimesForDifficulty(difficulty);
-
-  if (!allowedTimes.includes(timeMinutes)) {
-    if (difficulty === 'easy' && timeMinutes > 30) {
-      return {
-        isValid: false,
-        reason: 'Las recetas fáciles no deberían tomar más de 30 minutos. Elige 15, 20 o 30 min.',
-      };
-    }
-    if (difficulty === 'hard' && timeMinutes < 30) {
-      return {
-        isValid: false,
-        reason: 'Las recetas complejas requieren al menos 30 a 45 minutos de preparación.',
-      };
-    }
-    return {
-      isValid: false,
-      reason: `Para dificultad ${difficulty === 'easy' ? 'Fácil' : difficulty === 'medium' ? 'Media' : 'Difícil'}, selecciona un tiempo adecuado.`,
-    };
-  }
-
-  return { isValid: true };
-}
-
-/**
  * Clasificación y validación de coherencia gastronómica cuando se seleccionan ingredientes para el Chef IA.
  * Permite y valida casos de 1 solo ingrediente asegurando que sea coherente ("pero no está mal aún").
  */
