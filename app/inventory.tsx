@@ -360,15 +360,7 @@ export default function InventoryScreen() {
               : `${items.length} alimento${items.length === 1 ? '' : 's'} guardado${items.length === 1 ? '' : 's'}`}
           </Text>
         </View>
-        <Pressable
-          onPress={() => router.push('/scan')}
-          style={({ pressed }) => [styles.scanHeaderBtn, pressed && styles.scanHeaderBtnPressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Escanear con cámara"
-          accessibilityHint="Abre la cámara para detectar alimentos automáticamente"
-        >
-          <Ionicons name="camera-outline" size={20} color={colors.primary} />
-        </Pressable>
+        {/* Escaneo con IA: solo desde el FAB central de la barra inferior (decisión de diseño, Etapa 2) */}
       </View>
 
       {/* ── Buscador ── */}
@@ -738,20 +730,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.bodySmall,
     color: colors.textSecondary,
     marginTop: 2,
-  },
-  scanHeaderBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.circular,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scanHeaderBtnPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.94 }],
   },
   searchSection: {
     paddingHorizontal: spacing.lg,
