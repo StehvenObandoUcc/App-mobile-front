@@ -17,7 +17,9 @@ import {
   StaggerView,
   getBottomContentPadding,
   ActionSheetModal,
+  OfflineBanner,
 } from '../src/components';
+import { useOutboxStatus } from '../src/hooks/useOutboxStatus';
 import { useAuth } from '../src/hooks/useAuth';
 import { useShoppingList } from '../src/hooks/useShoppingList';
 import { colors, radii, spacing, typography, elevations } from '../src/theme';
@@ -84,6 +86,9 @@ export default function HomeScreen() {
       : `Chef ${user.name.split(' ')[0]}`
     : 'Mi Cocina';
 
+  // Aviso Offline-First: refleja la cola Outbox (cambios pendientes de sincronizar)
+  const outbox = useOutboxStatus();
+
   return (
     <AppScreen
       scrollable
@@ -131,20 +136,28 @@ export default function HomeScreen() {
                 styles.avatarButton,
                 pressed && styles.cardPressed,
               ]}
-              onPress={() => router.push('/inventory')}
+              onPress={() => router.push('/settings')}
               accessibilityRole="button"
-              accessibilityLabel="Ver despensa"
+              accessibilityLabel="Configuración"
             >
-              <Ionicons name="basket-outline" size={20} color={colors.primary} />
-              {ingredientCount > 0 && (
-                <View style={styles.badgeCount}>
-                  <Text style={styles.badgeCountText}>{ingredientCount}</Text>
-                </View>
-              )}
+              <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
             </Pressable>
           </View>
         </View>
       </StaggerView>
+
+      {/* ── 1b. Aviso de sincronización (sin conexión / sesión / atención / sincronizado) ── */}
+      {outbox.state !== 'hidden' && (
+        <View style={{ marginBottom: spacing.lg }}>
+          <OfflineBanner
+            state={outbox.state}
+            pendingCount={outbox.pendingCount}
+            stuckCount={outbox.stuckCount}
+            isRetrying={outbox.isRetrying}
+            onRetry={outbox.retryNow}
+          />
+        </View>
+      )}
 
       {/* ── 2. Acción Principal: Escanear Alimentos (Hero Editorial Card) ── */}
       <StaggerView index={1}>
@@ -474,23 +487,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderWidth: 1.5,
     borderColor: colors.surface,
-  },
-  badgeCount: {
-    position: 'absolute',
-    top: -3,
-    right: -3,
-    backgroundColor: colors.primary,
-    minWidth: 18,
-    height: 18,
-    borderRadius: radii.chips,
-    paddingHorizontal: spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeCountText: {
-    color: colors.textInverse,
-    fontSize: typography.sizes.micro,
-    fontWeight: '700',
   },
   heroActionCard: {
     flexDirection: 'row',

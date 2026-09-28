@@ -5,12 +5,28 @@ import { useAuth } from '../src/hooks/useAuth';
 import { AppBottomNav } from '../src/components';
 import { colors, typography, spacing, radii } from '../src/theme';
 import { primeAppPermissionsOnce } from '../src/utils/permissions';
+import { useExpiryReminderSync } from '../src/hooks/useExpiryReminderSync';
+import {
+  configureNotifications,
+  requestNotificationPermissionOnce,
+  syncExpiryReminders,
+} from '../src/services/expiry-notifications';
+
+// Avisos de vencimiento: mostrar la notificación también con la app abierta.
+configureNotifications();
+// Fuente de marca Outfit (Despensa Tonal): cuando existan los 4 TTF en assets/fonts/,
+// descomentar esta línea y la llamada `useBrandFonts()` de abajo. Ver src/hooks/useBrandFonts.ts.
+// import { useBrandFonts } from '../src/hooks/useBrandFonts';
 
 export default function Layout() {
   const { isAuthenticated, isHydrated } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const pathname = usePathname();
+  // const brandFontsReady = useBrandFonts(); // y sumar `|| !brandFontsReady` al splash de abajo
+
+  // Mantiene programados los avisos de vencimiento (y los quita al cerrar sesión).
+  useExpiryReminderSync(isHydrated && isAuthenticated, pathname);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -27,7 +43,13 @@ export default function Layout() {
   // arrancar la app con sesión activa, en vez de sorprender al usuario a mitad de una tarea.
   useEffect(() => {
     if (isHydrated && isAuthenticated) {
-      primeAppPermissionsOnce();
+      // En secuencia para no mostrar varios diálogos del sistema a la vez.
+      primeAppPermissionsOnce()
+        .then(() => requestNotificationPermissionOnce())
+        .then((granted) => {
+          if (granted) syncExpiryReminders();
+        })
+        .catch(() => {});
     }
   }, [isHydrated, isAuthenticated]);
 
@@ -44,7 +66,7 @@ export default function Layout() {
     );
   }
 
-  const hideBottomNavOn = ['/login', '/scan', '/scan-result', '/recipe-detail'];
+  const hideBottomNavOn = ['/login', '/scan', '/scan-result', '/recipe-detail', '/settings'];
   const showBottomNav = !hideBottomNavOn.includes(pathname);
 
   return (
@@ -59,6 +81,7 @@ export default function Layout() {
         }}
       >
         <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="settings" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen
           name="inventory"
