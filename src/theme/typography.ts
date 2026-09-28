@@ -1,41 +1,56 @@
 /**
- * Warm Material Editorial Typography Tokens
+ * Despensa Tonal — Typography Tokens (rediseño M3 · Etapa 2)
  *
- * Jerarquía tipográfica editorial con pesos y alturas de línea
- * totalmente compatibles con Android y accesibles según WCAG.
+ * Se conservan todas las claves de Warm Material Editorial; cambian algunos valores
+ * y se añaden alias M3 (displayNumber, weights.light, letterSpacing, families).
+ * Fuente de marca: Outfit (OFL). Carga: src/hooks/useBrandFonts.ts ·
+ * uso en componentes: fontFamilyFor() de src/utils/brand-font.ts.
  */
 
 export const typography = {
+  families: {
+    light: 'Outfit-Light',
+    regular: 'Outfit-Regular',
+    medium: 'Outfit-Medium',
+    semibold: 'Outfit-SemiBold',
+  },
   sizes: {
-    screenTitle: 30, // 28–32: Título de pantalla principal
-    headline: 24, // 24: Títulos destacados de bienvenida, escaneo y modales
-    sectionTitle: 21, // 20–22: Título de sección editorial
-    cardTitle: 17, // 16–18: Título de tarjetas e ingredientes
-    body: 15, // 15–16: Cuerpo de texto y párrafos
-    bodySmall: 14, // 14: Texto secundario de formularios
-    metadata: 13, // 12–13: Metadatos, tiempos y dificultad
-    label: 12, // 11–12: Chips, badges y etiquetas funcionales
-    caption: 11, // 11: Notas al pie y microtextos auxiliares
-    micro: 10, // 9–10: Badges de conteo y microetiquetas numéricas
+    displayNumber: 44, // NUEVO: cifras grandes (días, métricas del Inicio)
+    screenTitle: 32, // 30 → 32 · M3 displaySmall (peso 300 + énfasis 600)
+    headline: 24, // M3 headlineSmall
+    sectionTitle: 20, // 21 → 20 · M3 titleLarge
+    cardTitle: 17, // M3 titleMedium
+    body: 16, // 15 → 16 · M3 bodyLarge
+    bodySmall: 14, // M3 bodyMedium
+    metadata: 13, // M3 labelLarge
+    label: 12, // M3 labelMedium (+0.6 de tracking)
+    caption: 12, // 11 → 12 · M3 bodySmall
+    micro: 11, // 10 → 11 · M3 labelSmall (solo badges numéricos)
   },
   weights: {
+    light: '300' as const, // NUEVO: titulares con contraste de peso
     regular: '400' as const,
     medium: '500' as const,
     semibold: '600' as const,
     bold: '700' as const,
-    heavy: '800' as const,
+    heavy: '800' as const, // compatibilidad; evitar en el nuevo estilo
   },
   lineHeights: {
-    screenTitle: 36,
-    headline: 30,
+    displayNumber: 48,
+    screenTitle: 40,
+    headline: 32,
     sectionTitle: 28,
     cardTitle: 24,
-    body: 22,
+    body: 24,
     bodySmall: 20,
     metadata: 18,
     label: 16,
-    caption: 14,
-    micro: 12,
+    caption: 16,
+    micro: 14,
+  },
+  letterSpacing: {
+    label: 0.6,
+    overline: 1.2,
   },
 } as const;
 

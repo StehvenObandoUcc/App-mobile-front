@@ -1,8 +1,8 @@
 /**
- * Warm Material Editorial Elevation Tokens
+ * Despensa Tonal — Elevation Tokens (rediseño M3 · Etapa 2)
  *
- * Tonal Elevation y Sombras Neutras para Android / iOS.
- * Evita esquinas agresivas y sombras con halos artificiales de colores.
+ * Plano y tonal: las tarjetas no llevan sombra (blanco sobre avena).
+ * Solo lo que flota (nav, FAB, hojas, diálogos) se eleva, con sombra de tinta cálida.
  */
 
 import { colors } from './colors';
@@ -15,26 +15,36 @@ export const elevations = {
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 0 },
   },
+  // level0/1 · tarjetas: planas (el borde outlineVariant se aplica en el componente si hace falta)
   sm: {
-    elevation: 1,
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
+    elevation: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
   },
   md: {
     elevation: 2,
     shadowColor: colors.textPrimary,
     shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
   },
+  // level2 · lo que flota: nav, FAB
   lg: {
-    elevation: 4,
+    elevation: 8,
     shadowColor: colors.textPrimary,
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  // level3 · diálogos y hojas inferiores
+  xl: {
+    elevation: 12,
+    shadowColor: colors.textPrimary,
+    shadowOpacity: 0.18,
+    shadowRadius: 32,
+    shadowOffset: { width: 0, height: 16 },
   },
 } as const;
 

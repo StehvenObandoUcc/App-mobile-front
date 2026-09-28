@@ -6,7 +6,7 @@ import { elevations } from './elevations';
 import { CATEGORY_CONFIG, CATEGORY_LIST, getCategoryConfig, type CategoryMeta } from './categories';
 import type { Theme } from './types';
 
-// ─── Warm Material Editorial Theme ───────────────────────────────────────────
+// ─── Despensa Tonal Theme (evolución de Warm Material Editorial) ──────────────
 export const theme: Theme = {
   colors,
   typography,

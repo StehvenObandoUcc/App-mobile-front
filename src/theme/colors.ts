@@ -1,131 +1,145 @@
 /**
- * Warm Material Editorial Color Tokens
+ * Despensa Tonal — Color Tokens (rediseño M3 · Etapa 2)
  *
- * Combina Material 3 (tonal surfaces) con calidez editorial gastronómica.
- * Todos los contrastes de texto normal (11–13sp) cumplen WCAG AA (>= 4.5:1).
+ * Evolución de "Warm Material Editorial":
+ *  - `m3`: roles de color Material 3 completos (fuente de verdad).
+ *  - Las claves heredadas (background, primary, textPrimary, functional, categories…)
+ *    conservan el MISMO nombre y forma, ahora apuntando a los roles M3,
+ *    para que las 8 pantallas y los 16 componentes compilen sin cambios.
+ *
+ * Contrastes medidos (WCAG 2.1) anotados en cada par. Texto >= 4.5:1, UI >= 3:1.
+ * Respaldo de la paleta anterior: .design-backup/etapa2-2026-09-28/theme/colors.ts
  */
 
+const m3 = {
+  // ─── Primary · Tomate (escaneo, Chef IA, estado activo, enlaces) ─────────
+  primary: '#B3432A', // blanco encima 5.60:1 · sobre surface 5.11:1
+  onPrimary: '#FFFFFF',
+  primaryContainer: '#FFDBCD', // durazno
+  onPrimaryContainer: '#5A1A09', // 10.25:1 (no usar `primary` como texto aquí: 4.33)
+  primaryPressed: '#8F3220', // blanco encima 7.94:1
+
+  // ─── Secondary · Salvia (despensa, frescura, éxito) ──────────────────────
+  secondary: '#4A6741', // blanco encima 6.35:1
+  onSecondary: '#FFFFFF',
+  secondaryContainer: '#DCEBD3',
+  onSecondaryContainer: '#1F4A1A', // 8.22:1
+  secondaryPressed: '#3F5C37', // 7.51:1
+
+  // ─── Tertiary · Frambuesa IA (coincidencia, Chef IA, pasos generados) ────
+  tertiary: '#9C3D52', // blanco encima 6.56:1 · sobre surface 5.99:1
+  onTertiary: '#FFFFFF',
+  tertiaryContainer: '#F6D5DD', // rosa frío: distinto del pastel de «Proteínas»
+  onTertiaryContainer: '#5C1A2E', // 9.43:1
+  tertiaryPressed: '#7E2F42', // blanco encima 8.85:1
+
+  // ─── Error · Chile ───────────────────────────────────────────────────────
+  error: '#B3261E', // blanco encima 6.54:1 · sobre errorContainer 5.14:1
+  onError: '#FFFFFF',
+  errorContainer: '#F9DEDC',
+  onErrorContainer: '#410E0B', // 12.77:1
+
+  // ─── Superficies «avena» ─────────────────────────────────────────────────
+  surface: '#F8F4EF', // fondo de pantalla
+  surfaceContainerLowest: '#FFFFFF', // tarjetas
+  surfaceContainerLow: '#F3EEE8', // campos
+  surfaceContainer: '#EDE7E0', // chips inactivos, skeleton
+  surfaceContainerHigh: '#E7E0D8', // brillo skeleton, deshabilitado
+  surfaceContainerHighest: '#E0D8CF', // pistas de medidores
+  onSurface: '#211B18', // 15.53:1 sobre surface
+  onSurfaceVariant: '#5A4F48', // 7.25:1
+  outline: '#857970', // 3.86:1 — bordes de campos y chips (UI >= 3:1)
+  outlineVariant: '#DDD3CA', // decorativo: divisores
+
+  // ─── Cacao (inverse): café rojizo de la familia del tomate, no negro ──────
+  inverseSurface: '#4A2A21', // CTA principal y barra de navegación · blanco 12.77:1
+  inverseOnSurface: '#F7EFE8', // 11.23:1
+  inversePrimary: '#FFB59E', // 7.51:1 sobre cacao
+  scrim: 'rgba(33, 27, 24, 0.48)',
+} as const;
+
+/** Colores extendidos (M3 "custom colors") propios de la marca. */
+const extended = {
+  accent: '#E86B45', // FAB sobre cacao (4.03:1 vs barra) con icono cacao (4.03:1)
+  onAccent: '#2A2320',
+  navIconIdle: '#D9C3B8', // 7.57:1 sobre cacao
+  textMuted: '#6F635B', // 5.31:1 sobre surface · 5.04:1 sobre surfaceContainerLow
+  inkPressed: '#5E382C', // blanco encima 10.11:1
+} as const;
+
 export const colors = {
-  // ─── Superficies y Fondos ──────────────────────────────────────────────────
-  background: '#FFF9F2',        // Crema cálido general
-  surface: '#FFFFFF',           // Blanco puro para tarjetas prioritarias
-  surfaceVariant: '#F8EDE2',    // Tono arena suave para agrupaciones y contenedores
-  surfaceSubtle: '#FBF4ED',     // Tono intermedio muy suave para fondos secundarios
+  m3,
+  ...extended,
 
-  // ─── Marca y Acciones Principales ──────────────────────────────────────────
-  primary: '#B94E35',           // Terracota cálido (acción principal)
-  primaryDark: '#863626',       // Terracota profundo (estados presionados, títulos)
-  primaryContainer: '#FBE9E2',  // Durazno / Contenedor contextual primario
+  // ═══ Alias heredados (misma API que Warm Material Editorial) ═══════════════
+  background: m3.surface,
+  surface: m3.surfaceContainerLowest,
+  surfaceVariant: m3.surfaceContainerLow,
+  surfaceSubtle: m3.surfaceContainer,
 
-  // ─── Acentos Secundarios ───────────────────────────────────────────────────
-  secondary: '#E58A45',         // Naranja cálido / Melocotón tostado
-  secondaryDark: '#B26223',     // Tono tostado profundo
-  secondaryContainer: '#FFF1E3',// Crema durazno suave para sugerencias
+  primary: m3.primary,
+  primaryDark: m3.primaryPressed,
+  primaryContainer: m3.primaryContainer,
+  onPrimaryContainer: m3.onPrimaryContainer,
 
-  // ─── Textos de Alto Contraste ──────────────────────────────────────────────
-  textPrimary: '#2B211D',       // Café carbón (WCAG AAA 15.0:1)
-  textSecondary: '#66534A',     // Café medio terroso (WCAG AA 6.9:1)
-  textMuted: '#96857C',         // Tono café claro para placeholders y notas auxiliares
-  textInverse: '#FFFFFF',       // Blanco puro sobre fondos oscuros/primarios
+  secondary: m3.secondary,
+  secondaryDark: m3.secondaryPressed,
+  secondaryContainer: m3.secondaryContainer,
+  onSecondaryContainer: m3.onSecondaryContainer,
 
-  // ─── Bordes y Líneas Divisorias ────────────────────────────────────────────
-  border: '#EBDDD2',            // Borde sutil cálido
-  borderStrong: '#D6C4B6',      // Borde enfático para inputs activos o separadores
-  scrim: 'rgba(0, 0, 0, 0.45)', // Oscurecimiento estándar de fondo para modales
+  tertiary: m3.tertiary,
+  tertiaryContainer: m3.tertiaryContainer,
+  onTertiaryContainer: m3.onTertiaryContainer,
 
-  // ─── Estados Funcionales (Caducidad y Notificaciones) ──────────────────────
+  ink: m3.inverseSurface, // PrimaryButton tone="ink"
+  onInk: '#FFFFFF',
+
+  textPrimary: m3.onSurface,
+  textSecondary: m3.onSurfaceVariant,
+  textInverse: '#FFFFFF',
+
+  border: m3.outlineVariant,
+  borderStrong: m3.outline,
+  scrim: m3.scrim,
+
+  // ─── Estados de caducidad (mismas claves) ────────────────────────────────
   functional: {
-    fresh: {
-      background: '#EAF4ED',
-      border: '#C2DFCB',
-      text: '#28613C',          // 6.5:1 sobre background
-    },
-    expiringSoon: {
-      background: '#FFF2D7',
-      border: '#F8DC9E',
-      text: '#8A5A00',          // 5.3:1 sobre background
-    },
-    expired: {
-      background: '#FBE5E3',
-      border: '#F4BCB8',
-      text: '#A93632',          // 5.3:1 sobre background
-    },
-    unknown: {
-      background: '#F1ECE7',
-      border: '#DED6CE',
-      text: '#665B54',
-    },
+    fresh: { background: '#DCEBD3', border: '#B9D4AC', text: '#1F4A1A' }, // 8.22:1
+    expiringSoon: { background: '#F8E7B0', border: '#E9CF7A', text: '#5C4300' }, // 7.55:1
+    expired: { background: '#F9DEDC', border: '#F0B8B3', text: '#8C1D18' }, // 7.17:1
+    unknown: { background: '#EDE7E0', border: '#DDD3CA', text: '#4E4540' }, // 7.61:1
   },
 
-  // ─── Categorías de Alimentos ───────────────────────────────────────────────
+  // ─── Familias de despensa (mismas 9 claves; accent se conserva donde existía) ─
   categories: {
-    vegetable: {
-      text: '#28613C',          // 6.5:1 sobre fondo
-      background: '#EAF4ED',
-    },
-    fruit: {
-      text: '#B5481F',          // 4.8:1 sobre fondo (WCAG AA >= 4.5:1)
-      background: '#FDF0EA',
-      accent: '#C85A32',
-    },
-    protein: {
-      text: '#A93632',          // 5.3:1 sobre fondo
-      background: '#FBE5E3',
-    },
-    dairy: {
-      text: '#2A5A78',          // 6.6:1 sobre fondo
-      background: '#EBF2F7',
-    },
-    grain: {
-      text: '#94580C',          // 5.4:1 sobre fondo
-      background: '#FEF6E9',
-    },
-    legume: {
-      text: '#6B4D8A',          // 6.1:1 sobre fondo
-      background: '#F5EFFB',
-    },
-    sauce: {
-      text: '#A8422A',          // 5.1:1 sobre fondo (WCAG AA >= 4.5:1)
-      background: '#FBE9E2',
-      accent: '#B94E35',
-    },
-    snack: {
-      text: '#9A4F20',          // 5.4:1 sobre fondo (WCAG AA >= 4.5:1)
-      background: '#FFF1E3',
-      accent: '#E58A45',
-    },
-    other: {
-      text: '#66534A',          // 6.3:1 sobre fondo
-      background: '#F8EDE2',
-    },
+    vegetable: { text: '#1F4A1A', background: '#DCEBD3' }, // 8.22:1
+    fruit: { text: '#5A1A09', background: '#FFDBCD', accent: '#B3432A' }, // 10.25:1
+    protein: { text: '#5B1B17', background: '#F8D8D3' }, // 9.76:1
+    dairy: { text: '#0D3B35', background: '#CFEBE4' }, // 9.83:1
+    grain: { text: '#473500', background: '#F7E4A6' }, // 9.34:1
+    legume: { text: '#45235A', background: '#EBDCF2' }, // 9.78:1
+    sauce: { text: '#4D2616', background: '#EFD9CB', accent: '#B3432A' }, // 9.63:1
+    snack: { text: '#4F2E00', background: '#FBE0B8', accent: '#E86B45' }, // 9.55:1
+    other: { text: '#4E4540', background: '#EDE7E0' }, // 7.61:1
   },
 
-  // ─── Dificultad de Recetas ─────────────────────────────────────────────────
+  // ─── Dificultad (+ `segment`: color del medidor segmentado, UI >= 3:1) ────
   difficulty: {
-    easy: {
-      text: '#28613C',
-      background: '#EAF4ED',
-    },
-    medium: {
-      text: '#8A5A00',
-      background: '#FFF2D7',
-    },
-    hard: {
-      text: '#A93632',
-      background: '#FBE5E3',
-    },
+    easy: { text: '#1F4A1A', background: '#DCEBD3', segment: '#4A6741', level: 1 },
+    medium: { text: '#5C4300', background: '#F8E7B0', segment: '#8A6500', level: 2 },
+    hard: { text: '#8C1D18', background: '#F9DEDC', segment: '#B3261E', level: 3 },
   },
 
   // ─── Estados de Error ─────────────────────────────────────────────────────
   error: {
-    text: '#A93632',
-    background: '#FBE5E3',
+    text: m3.error,
+    background: m3.errorContainer,
   },
 
   // ─── Placeholders y Skeleton ──────────────────────────────────────────────
   skeleton: {
-    background: '#F3E9DF',
-    highlight: '#E8DDD3',
+    background: m3.surfaceContainer,
+    highlight: m3.surfaceContainerHigh,
   },
 } as const;
 

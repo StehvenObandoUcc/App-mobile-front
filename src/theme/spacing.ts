@@ -18,8 +18,14 @@ export const spacing = {
 
   // ─── Directrices Táctiles y Accesibilidad ──────────────────────────────────
   touchTargetMin: 48, // Touch target mínimo de 48dp para Android
-  buttonHeight: 48,   // Altura estándar de botones interactivos
-  inputHeight: 48,    // Altura estándar de campos de entrada
+  buttonHeight: 52,   // 48 → 52: alinea el token con la altura real de los botones
+  inputHeight: 52,    // 48 → 52: campos de entrada
+
+  // ─── Alias semánticos (Despensa Tonal · Etapa 2) ────────────────────────────
+  screenGutter: 20,   // Margen lateral de pantalla
+  cardPadding: 20,    // Relleno interno de tarjetas
+  sectionGap: 32,     // Separación entre secciones
+  tileGap: 12,        // Separación entre FeatureTiles
 } as const;
 
 export type ThemeSpacing = typeof spacing;
