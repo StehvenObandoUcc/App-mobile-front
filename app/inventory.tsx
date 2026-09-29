@@ -27,7 +27,7 @@ import {
   NAV_BOTTOM_OFFSET,
   M3DatePickerModal,
   Chip,
-  Text,
+  AppText,
   ScreenHeader,
   M3Dialog,
   IngredientFormSheet,
@@ -433,9 +433,9 @@ export default function InventoryScreen() {
           {/* ── Barra de conteo + Seleccionar ── */}
           {status === 'success' && filteredItems.length > 0 && (
             <View style={styles.countRow}>
-              <Text style={styles.countRowText}>
+              <AppText variant="metadata" weight="semibold" color={colors.textSecondary}>
                 {`${filteredItems.length} ${filteredItems.length === 1 ? 'alimento' : 'alimentos'} · por vencimiento`}
-              </Text>
+              </AppText>
               <Pressable
                 onPress={handleEnterSelectMode}
                 style={styles.selectEntryBtn}
@@ -443,7 +443,7 @@ export default function InventoryScreen() {
                 accessibilityLabel="Activar modo de selección"
               >
                 <Ionicons name="checkmark-circle-outline" size={18} color={colors.textPrimary} />
-                <Text style={styles.selectEntryBtnText}>Seleccionar</Text>
+                <AppText variant="metadata" weight="semibold">Seleccionar</AppText>
               </Pressable>
             </View>
           )}
