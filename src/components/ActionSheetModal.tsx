@@ -1,18 +1,23 @@
 import React, { useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-  Animated,
-  Easing,
-  StyleSheet as RNStyleSheet,
-} from 'react-native';
+import { View, StyleSheet, Modal, Pressable, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, typography, spacing, radii } from '../theme';
+import { AppText } from './AppText';
+import { DialogTitle } from './DialogTitle';
+import { PrimaryButton } from './PrimaryButton';
+import { SecondaryButton } from './SecondaryButton';
+import { M3Dialog } from './M3Dialog';
+import { colors, spacing, radii, elevations } from '../theme';
 
+/**
+ * ActionSheetModal — Organismos.dc.html
+ * Hoja inferior radio 32 con asa. Cabecera opcional con icono pastel (p. ej. el alimento).
+ * - action_sheet: filas de 56 dp (icono 22 + texto 16); las destructivas van al final, en rojo,
+ *   separadas por un filete.
+ * - confirmation: se muestra como la tarjeta centrada de M3Dialog (icono de basura en rojo si es
+ *   destructiva, título 300 + 600, descripción, «Cancelar» + confirmar en rojo o cacao).
+ * Misma API que antes; `headerIconName`/`headerTone` son opcionales.
+ */
 export interface ActionSheetOption {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -26,13 +31,16 @@ export interface ActionSheetModalProps {
   title: string;
   description?: string;
   variant?: 'action_sheet' | 'confirmation';
-  // Props para variante action_sheet
   actions?: ActionSheetOption[];
-  // Props para variante confirmation
   confirmText?: string;
   confirmDestructive?: boolean;
   onConfirm?: () => void;
   cancelText?: string;
+  /** Icono pastel a la izquierda del título (filas de acciones de un alimento, etc.). */
+  headerIconName?: keyof typeof Ionicons.glyphMap;
+  headerTone?: { background: string; text: string };
+  /** Parte del título en seminegrita en la confirmación («¿Eliminar **3 alimentos?**»). */
+  titleEmphasis?: string;
 }
 
 export function ActionSheetModal({
@@ -46,147 +54,134 @@ export function ActionSheetModal({
   confirmDestructive = false,
   onConfirm,
   cancelText = 'Cancelar',
+  headerIconName,
+  headerTone,
+  titleEmphasis,
 }: ActionSheetModalProps) {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(400)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
-
-  // Controla el estado de montaje para evitar animaciones en el primer render oculto
   const [isMounted, setIsMounted] = React.useState(false);
 
   useEffect(() => {
     if (visible) {
       setIsMounted(true);
-      // Pequeño defer para que el modal esté en el DOM antes de animar
       requestAnimationFrame(() => {
         Animated.parallel([
-          Animated.spring(slideAnim, {
-            toValue: 0,
-            tension: 80,
-            friction: 12,
-            useNativeDriver: true,
-          }),
-          Animated.timing(backdropOpacity, {
-            toValue: 1,
-            duration: 220,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
+          Animated.spring(slideAnim, { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
+          Animated.timing(backdropOpacity, { toValue: 1, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: true }),
         ]).start();
       });
     } else {
       Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 400,
-          duration: 200,
-          easing: Easing.in(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
+        Animated.timing(slideAnim, { toValue: 400, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+        Animated.timing(backdropOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start(() => setIsMounted(false));
     }
   }, [visible]);
 
+  const normal = actions.filter((a) => !a.isDestructive);
+
+  if (variant === 'confirmation') {
+    return (
+      <M3Dialog
+        visible={visible}
+        type={confirmDestructive ? 'error' : 'info'}
+        iconName={confirmDestructive ? 'trash-outline' : undefined}
+        title={title}
+        titleEmphasis={titleEmphasis}
+        message={description ?? ''}
+        cancelText={cancelText}
+        onCancel={onClose}
+        confirmText={confirmText}
+        confirmTone={confirmDestructive ? 'danger' : 'ink'}
+        onConfirm={() => {
+          onClose();
+          onConfirm?.();
+        }}
+      />
+    );
+  }
+
+  const destructive = actions.filter((a) => a.isDestructive);
+
+  const renderRow = (action: ActionSheetOption, key: string) => {
+    const fg = action.isDestructive ? colors.error.text : colors.textPrimary;
+    return (
+      <Pressable
+        key={key}
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        onPress={() => {
+          onClose();
+          action.onPress();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={action.label}
+      >
+        <Ionicons name={action.icon} size={22} color={fg} />
+        <AppText variant="body" weight={action.isDestructive ? 'semibold' : 'regular'} color={fg}>
+          {action.label}
+        </AppText>
+      </Pressable>
+    );
+  };
+
   return (
-    <Modal
-      visible={isMounted}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
-    >
+    <Modal visible={isMounted} transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.overlay, { opacity: backdropOpacity }]}>
-        {/* Tap fuera para cerrar */}
-        <Pressable
-          style={RNStyleSheet.absoluteFill}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar ventana emergente"
-        />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar" />
 
         <Animated.View
-          style={[
-            styles.sheet,
-            {
-              transform: [{ translateY: slideAnim }],
-              paddingBottom: Math.max(insets.bottom + 12, 28),
-            },
-          ]}
+          style={[styles.sheet, { transform: [{ translateY: slideAnim }], paddingBottom: Math.max(insets.bottom + 12, 24) }]}
+          accessibilityViewIsModal
         >
-          {/* Tirador visual */}
           <View style={styles.handle} />
 
-          {/* Cabecera */}
-          <Text style={styles.title} numberOfLines={2}>
-            {title}
-          </Text>
-          {description ? (
-            <Text style={styles.description}>{description}</Text>
-          ) : null}
-
-          {/* Contenido según variante */}
           {variant === 'action_sheet' ? (
-            <View style={styles.actionsList}>
-              {actions.map((action, idx) => (
-                <Pressable
-                  key={idx}
-                  style={({ pressed }) => [styles.actionRow, pressed && styles.actionRowPressed]}
+            <>
+              <View style={styles.header}>
+                {headerIconName && (
+                  <View style={[styles.headerIcon, { backgroundColor: headerTone?.background ?? colors.surfaceVariant }]}>
+                    <Ionicons name={headerIconName} size={22} color={headerTone?.text ?? colors.textPrimary} />
+                  </View>
+                )}
+                <View style={styles.headerTexts}>
+                  <AppText variant="cardTitle" numberOfLines={2}>
+                    {title}
+                  </AppText>
+                  {!!description && (
+                    <AppText variant="metadata" color={colors.textSecondary} numberOfLines={2}>
+                      {description}
+                    </AppText>
+                  )}
+                </View>
+              </View>
+              {normal.map((a, i) => renderRow(a, `n${i}`))}
+              {destructive.length > 0 && normal.length > 0 && <View style={styles.divider} />}
+              {destructive.map((a, i) => renderRow(a, `d${i}`))}
+            </>
+          ) : (
+            <View style={styles.confirm}>
+              <DialogTitle title={title} />
+              {!!description && (
+                <AppText variant="body" color={colors.textSecondary} style={styles.description}>
+                  {description}
+                </AppText>
+              )}
+              <View style={styles.confirmActions}>
+                <SecondaryButton title={cancelText} variant="outline" onPress={onClose} style={styles.confirmBtn} />
+                <PrimaryButton
+                  title={confirmText}
+                  tone={confirmDestructive ? 'danger' : 'ink'}
                   onPress={() => {
                     onClose();
-                    action.onPress();
+                    onConfirm?.();
                   }}
-                  accessibilityRole="button"
-                  accessibilityLabel={action.label}
-                >
-                  <Ionicons
-                    name={action.icon}
-                    size={20}
-                    color={action.isDestructive ? colors.error.text : colors.primary}
-                    style={styles.actionIcon}
-                  />
-                  <Text
-                    style={[
-                      styles.actionLabel,
-                      action.isDestructive && styles.destructiveLabel,
-                    ]}
-                  >
-                    {action.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.confirmationActions}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.confirmBtn,
-                  confirmDestructive && styles.confirmBtnDestructive,
-                  pressed && styles.confirmBtnPressed,
-                ]}
-                onPress={() => {
-                  onClose();
-                  onConfirm?.();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={confirmText}
-              >
-                <Text style={styles.confirmBtnText}>{confirmText}</Text>
-              </Pressable>
+                  style={styles.confirmBtn}
+                />
+              </View>
             </View>
           )}
-
-          {/* Botón Cancelar siempre presente */}
-          <Pressable
-            style={({ pressed }) => [styles.cancelBtn, pressed && styles.cancelBtnPressed]}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel={cancelText}
-          >
-            <Text style={styles.cancelBtnText}>{cancelText}</Text>
-          </Pressable>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -201,104 +196,73 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.floatingNav,
-    borderTopRightRadius: radii.floatingNav,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: 36,
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
+    borderTopLeftRadius: radii.containers,
+    borderTopRightRadius: radii.containers,
+    paddingTop: 10,
+    paddingHorizontal: spacing.lg,
+    ...elevations.xl,
   },
   handle: {
+    alignSelf: 'center',
     width: 36,
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.borderStrong,
-    alignSelf: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: 14,
   },
-  title: {
-    fontSize: typography.sizes.cardTitle,
-    fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  description: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.sm,
-    lineHeight: 20,
-  },
-  actionsList: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  actionRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    gap: 12,
+    paddingHorizontal: spacing.sm,
+    paddingBottom: 14,
+    marginBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.m3.surfaceContainer,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTexts: {
+    flex: 1,
+    gap: 2,
+  },
+  row: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.fields,
+  },
+  rowPressed: {
+    backgroundColor: colors.surfaceVariant,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.m3.surfaceContainer,
+    marginVertical: 4,
+  },
+  confirm: {
     gap: spacing.md,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.xs,
   },
-  actionRowPressed: {
-    opacity: 0.7,
+  description: {
+    fontSize: 15,
+    lineHeight: 22,
   },
-  actionIcon: {
-    marginRight: 2,
-  },
-  actionLabel: {
-    fontSize: typography.sizes.body,
-    fontWeight: typography.weights.semibold,
-    color: colors.textPrimary,
-  },
-  destructiveLabel: {
-    color: colors.error.text,
-  },
-  confirmationActions: {
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
   },
   confirmBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.circular,
-    minHeight: 52,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmBtnDestructive: {
-    backgroundColor: colors.error.text,
-  },
-  confirmBtnPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  confirmBtnText: {
-    color: colors.textInverse,
-    fontSize: typography.sizes.body,
-    fontWeight: typography.weights.bold,
-  },
-  cancelBtn: {
-    backgroundColor: colors.surfaceVariant,
-    borderRadius: radii.circular,
-    minHeight: 52,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.sm,
-  },
-  cancelBtnPressed: {
-    opacity: 0.75,
-  },
-  cancelBtnText: {
-    color: colors.textSecondary,
-    fontSize: typography.sizes.body,
-    fontWeight: typography.weights.bold,
+    flex: 1,
+    paddingHorizontal: spacing.md,
   },
 });

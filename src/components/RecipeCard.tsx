@@ -1,9 +1,19 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Pressable, Animated, Easing, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recipe } from '../types';
-import { colors, radii, spacing, typography, elevations } from '../theme';
+import { AppText } from './AppText';
+import { colors, radii, spacing } from '../theme';
+import { recipeBanner, DIFFICULTY_LABELS, missingLabel as missingText } from '../utils/recipe-visuals';
 
+/**
+ * RecipeCard — Organismos.dc.html
+ * Franja superior de 150 dp: foto si hay `imageUri`; si no, pastel + plato blanco con icono.
+ * Coincidencia en frambuesa (dato de la IA). Botones 48 dp: «⋯» (más opciones → onDelete) y guardar.
+ * Cuerpo: título 20/600, descripción, meta (tiempo · dificultad segmentada · porciones)
+ * y progreso de ingredientes segmentado «Tienes 7 de 8 · Falta 1».
+ * Seleccionado: anillo cacao 2 dp + check circular en la esquina.
+ */
 export type RecipeCardProps = {
   recipe: Recipe;
   onPress: () => void;
@@ -13,12 +23,6 @@ export type RecipeCardProps = {
   isSelectMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
-};
-
-const DIFFICULTY_LABELS: Record<Recipe['difficulty'], string> = {
-  easy: 'Fácil',
-  medium: 'Media',
-  hard: 'Difícil',
 };
 
 export function RecipeCard({
@@ -33,8 +37,10 @@ export function RecipeCard({
 }: RecipeCardProps) {
   const diff = colors.difficulty[recipe.difficulty] || colors.difficulty.easy;
   const diffLabel = DIFFICULTY_LABELS[recipe.difficulty] || DIFFICULTY_LABELS.easy;
-  const totalIngredients = recipe.availableIngredients.length + recipe.missingIngredients.length;
-  const availableCount = recipe.availableIngredients.length;
+  const available = recipe.availableIngredients.length;
+  const total = available + recipe.missingIngredients.length;
+  const missing = recipe.missingIngredients.length;
+  const banner = recipeBanner(recipe.id);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -45,42 +51,20 @@ export function RecipeCard({
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 280,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 280,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 280, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
-
     return () => {
       if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
     };
   }, []);
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.97,
-      tension: 300,
-      friction: 20,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(scaleAnim, { toValue: 0.97, tension: 300, friction: 20, useNativeDriver: true }).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      tension: 200,
-      friction: 14,
-      useNativeDriver: true,
-    }).start();
-
+    Animated.spring(scaleAnim, { toValue: 1, tension: 200, friction: 14, useNativeDriver: true }).start();
     if (isLongPressActive.current) {
       longPressTimeout.current = setTimeout(() => {
         isLongPressActive.current = false;
@@ -93,8 +77,7 @@ export function RecipeCard({
     onLongPress?.();
   };
 
-  const handleSavePress = (e: any) => {
-    e?.stopPropagation?.();
+  const handleSavePress = () => {
     Animated.sequence([
       Animated.timing(heartScale, { toValue: 1.4, duration: 80, useNativeDriver: true }),
       Animated.spring(heartScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
@@ -104,267 +87,331 @@ export function RecipeCard({
 
   const handleCardPress = () => {
     if (isLongPressActive.current) return;
-    if (isSelectMode) {
-      onToggleSelect?.();
-    } else {
-      onPress();
-    }
+    if (isSelectMode) onToggleSelect?.();
+    else onPress();
   };
 
+  const missingLabel = missingText(missing);
+  const segmented = total > 0 && total <= 12;
+
   return (
-    <Animated.View
-      style={{
-        opacity: fadeAnim,
-        transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
-      }}
-    >
+    <Animated.View style={[styles.wrapper, { opacity: fadeAnim, transform: [{ scale: scaleAnim }, { translateY: slideAnim }] }]}>
       <Pressable
         onPress={handleCardPress}
         onLongPress={isSelectMode ? undefined : handleLongPress}
         delayLongPress={350}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={[
-          styles.card,
-          isSelected && styles.cardSelected,
-        ]}
+        style={styles.card}
         accessibilityRole="button"
-        accessibilityLabel={`Receta ${recipe.title}, coincidencia ${recipe.matchScore}%, dificultad ${diffLabel}`}
+        accessibilityState={isSelectMode ? { selected: isSelected } : undefined}
+        accessibilityLabel={`Receta ${recipe.title}, ${recipe.matchScore}% con tu despensa, dificultad ${diffLabel}, ${missingLabel}`}
       >
-        {/* Cabecera: Checkbox / Badge de coincidencia y Botón Guardar */}
-        <View style={styles.topRow}>
+        {/* ── Franja superior ── */}
+        <View style={[styles.banner, { backgroundColor: banner.bg }]}>
+          {recipe.imageUri ? (
+            <Image source={{ uri: recipe.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          ) : (
+            <>
+              <View style={styles.bannerHalo} />
+              <View style={styles.plate}>
+                <Ionicons name="restaurant-outline" size={40} color={banner.fg} />
+              </View>
+            </>
+          )}
+
           {isSelectMode ? (
             <Pressable
               onPress={onToggleSelect}
-              hitSlop={10}
-              style={[styles.checkbox, isSelected && styles.checkboxActive]}
+              style={styles.checkboxHit}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isSelected }}
               accessibilityLabel={`Seleccionar receta ${recipe.title}`}
             >
-              <Ionicons
-                name={isSelected ? 'checkmark' : 'ellipse-outline'}
-                size={16}
-                color={isSelected ? colors.textInverse : colors.textMuted}
-              />
+              <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
+                {isSelected && <Ionicons name="checkmark" size={16} color={colors.onInk} />}
+              </View>
             </Pressable>
           ) : (
             <View style={styles.matchBadge}>
-              <Ionicons name="sparkles" size={13} color={colors.textInverse} style={{ marginRight: spacing.xs }} />
-              <Text style={styles.matchText}>{recipe.matchScore}% Match</Text>
+              <Ionicons name="sparkles" size={14} color={colors.onTertiaryContainer} />
+              <AppText variant="metadata" weight="semibold" color={colors.onTertiaryContainer}>
+                {`${recipe.matchScore} % con tu despensa`}
+              </AppText>
             </View>
           )}
 
-          <View style={styles.topActionsRow}>
-            {onSave && (
-              <Pressable
-                onPress={handleSavePress}
-                hitSlop={8}
-                style={styles.saveButton}
-                accessibilityRole="button"
-                accessibilityLabel={recipe.isSaved ? 'Quitar de guardadas' : 'Guardar receta'}
-              >
-                <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                  <Ionicons
-                    name={recipe.isSaved ? 'heart' : 'heart-outline'}
-                    size={20}
-                    color={recipe.isSaved ? colors.primary : colors.textSecondary}
+          {!isSelectMode && (
+            <View style={styles.bannerActions}>
+              {onDelete && (
+                <Pressable
+                  onPress={onDelete}
+                  style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Más opciones de la receta ${recipe.title}`}
+                >
+                  <Ionicons name="ellipsis-horizontal" size={20} color={colors.textPrimary} />
+                </Pressable>
+              )}
+              {onSave && (
+                <Pressable
+                  onPress={handleSavePress}
+                  style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: recipe.isSaved }}
+                  accessibilityLabel={recipe.isSaved ? 'Quitar de guardadas' : 'Guardar receta'}
+                >
+                  <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+                    <Ionicons
+                      name={recipe.isSaved ? 'heart' : 'heart-outline'}
+                      size={22}
+                      color={colors.onPrimaryContainer}
+                    />
+                  </Animated.View>
+                </Pressable>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* ── Cuerpo ── */}
+        <View style={styles.body}>
+          <AppText variant="sectionTitle" numberOfLines={2} style={styles.title}>
+            {recipe.title}
+          </AppText>
+          {!!recipe.description && !isSelectMode && (
+            <AppText variant="bodySmall" color={colors.textSecondary} numberOfLines={2}>
+              {recipe.description}
+            </AppText>
+          )}
+
+          <View style={styles.metaRow}>
+            {recipe.prepTimeMinutes !== null && (
+              <View style={styles.metaItem}>
+                <Ionicons name="time-outline" size={16} color={colors.textPrimary} />
+                <AppText variant="metadata">{`${recipe.prepTimeMinutes} min`}</AppText>
+              </View>
+            )}
+            <View style={styles.metaItem}>
+              <View style={styles.diffSegments}>
+                {[1, 2, 3].map((lvl) => (
+                  <View
+                    key={lvl}
+                    style={[
+                      styles.diffSegment,
+                      { backgroundColor: lvl <= diff.level ? diff.segment : colors.m3.surfaceContainerHighest },
+                    ]}
                   />
-                </Animated.View>
-              </Pressable>
-            )}
-
-            {!isSelectMode && onDelete && (
-              <Pressable
-                onPress={(e) => {
-                  e?.stopPropagation?.();
-                  onDelete();
-                }}
-                hitSlop={8}
-                style={styles.deleteButton}
-                accessibilityRole="button"
-                accessibilityLabel={`Eliminar receta ${recipe.title}`}
-              >
-                <Ionicons
-                  name="trash-outline"
-                  size={18}
-                  color={colors.error.text}
-                />
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        {/* Título y descripción */}
-        <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
-          {recipe.title}
-        </Text>
-        <Text style={styles.description} numberOfLines={2} ellipsizeMode="tail">
-          {recipe.description}
-        </Text>
-
-        {/* Metadatos: Tiempo, Dificultad, Porciones */}
-        <View style={styles.metaRow}>
-          {recipe.prepTimeMinutes !== null && (
-            <View style={styles.metaPill}>
-              <Ionicons name="time-outline" size={14} color={colors.textSecondary} style={{ marginRight: spacing.xs }} />
-              <Text style={styles.metaText}>{recipe.prepTimeMinutes} min</Text>
+                ))}
+              </View>
+              <AppText variant="metadata" color={diff.text}>
+                {diffLabel}
+              </AppText>
             </View>
-          )}
-
-          <View style={[styles.metaPill, { backgroundColor: diff.background }]}>
-            <Ionicons name="speedometer-outline" size={14} color={diff.text} style={{ marginRight: spacing.xs }} />
-            <Text style={[styles.metaText, { color: diff.text }]}>{diffLabel}</Text>
+            {recipe.servings !== null && !isSelectMode && (
+              <View style={styles.metaItem}>
+                <Ionicons name="people-outline" size={16} color={colors.textPrimary} />
+                <AppText variant="metadata">{`${recipe.servings} porc.`}</AppText>
+              </View>
+            )}
+            {isSelectMode && missing > 0 && (
+              <AppText variant="metadata" weight="semibold" color={colors.functional.expired.text}>
+                {missingLabel}
+              </AppText>
+            )}
           </View>
 
-          {recipe.servings !== null && (
-            <View style={styles.metaPill}>
-              <Ionicons name="people-outline" size={14} color={colors.textSecondary} style={{ marginRight: spacing.xs }} />
-              <Text style={styles.metaText}>{recipe.servings} porc.</Text>
+          {!isSelectMode && total > 0 && (
+            <View style={styles.progress}>
+              <View style={styles.progressHead}>
+                <AppText variant="metadata" weight="semibold">{`Tienes ${available} de ${total} ingredientes`}</AppText>
+                <AppText
+                  variant="metadata"
+                  weight="semibold"
+                  color={missing === 0 ? colors.functional.fresh.text : colors.functional.expired.text}
+                >
+                  {missingLabel}
+                </AppText>
+              </View>
+              {segmented ? (
+                <View style={styles.segments}>
+                  {Array.from({ length: total }).map((_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.segment,
+                        { backgroundColor: i < available ? colors.secondary : colors.m3.surfaceContainerHighest },
+                      ]}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <View style={[styles.segment, styles.trackFull]}>
+                  <View style={[styles.trackFill, { width: `${Math.round((available / total) * 100)}%` }]} />
+                </View>
+              )}
             </View>
           )}
         </View>
 
-        {/* Barra de progreso de ingredientes en inventario */}
-        <View style={styles.footer}>
-          <View style={styles.inventoryInfo}>
-            <Ionicons
-              name={recipe.missingIngredients.length === 0 ? 'checkmark-circle' : 'restaurant-outline'}
-              size={15}
-              color={recipe.missingIngredients.length === 0 ? colors.functional.fresh.text : colors.secondary}
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.inventoryText}>
-              {availableCount} de {totalIngredients} ingredientes en tu cocina
-            </Text>
-          </View>
-          <Ionicons
-            name={isSelectMode ? (isSelected ? 'checkmark-circle' : 'ellipse-outline') : 'chevron-forward'}
-            size={18}
-            color={isSelected ? colors.primary : colors.textSecondary}
-          />
-        </View>
+        {isSelected && <View pointerEvents="none" style={styles.selectedRing} />}
       </Pressable>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    marginBottom: spacing.md,
+  },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.containers,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...elevations.sm,
+    borderRadius: radii.tiles,
+    overflow: 'hidden',
   },
-  cardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryContainer,
+  banner: {
+    height: 150,
+    overflow: 'hidden',
   },
-  checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: radii.buttons,
-    backgroundColor: colors.surfaceVariant,
+  bannerHalo: {
+    position: 'absolute',
+    right: -20,
+    bottom: -44,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: colors.surface,
+    opacity: 0.55,
+  },
+  plate: {
+    position: 'absolute',
+    right: 26,
+    bottom: -8,
+    width: 124,
+    height: 124,
+    borderRadius: 62,
+    backgroundColor: colors.surface,
+    borderWidth: 10,
+    borderColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  checkboxActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
   },
   matchBadge: {
+    position: 'absolute',
+    left: 14,
+    top: 14,
+    height: 32,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 5,
-    borderRadius: radii.circular,
+    gap: 6,
+    paddingLeft: 8,
+    paddingRight: 12,
+    borderRadius: radii.pill,
+    backgroundColor: colors.tertiaryContainer,
   },
-  matchText: {
-    color: colors.textInverse,
-    fontSize: typography.sizes.label,
-    fontWeight: typography.weights.bold,
-  },
-  topActionsRow: {
+  bannerActions: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+    gap: 6,
   },
-  saveButton: {
-    width: 38,
-    height: 38,
+  roundBtn: {
+    width: spacing.touchTargetMin,
+    height: spacing.touchTargetMin,
     borderRadius: radii.circular,
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deleteButton: {
-    width: 38,
-    height: 38,
-    borderRadius: radii.circular,
+  roundBtnPressed: {
     backgroundColor: colors.surfaceVariant,
+  },
+  checkboxHit: {
+    position: 'absolute',
+    left: 6,
+    top: 6,
+    width: spacing.touchTargetMin,
+    height: spacing.touchTargetMin,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  checkbox: {
+    width: 26,
+    height: 26,
+    borderRadius: radii.circular,
+    borderWidth: 2,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxActive: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  body: {
+    paddingTop: 18,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    gap: 10,
   },
   title: {
-    fontSize: typography.sizes.cardTitle,
-    fontWeight: typography.weights.heavy,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-    lineHeight: 22,
-  },
-  description: {
-    fontSize: typography.sizes.metadata,
-    color: colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: spacing.md,
+    lineHeight: 26,
   },
   metaRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+    alignItems: 'center',
     flexWrap: 'wrap',
+    gap: 14,
   },
-  metaPill: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceVariant,
-    paddingHorizontal: 10,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.circular,
+    gap: 5,
   },
-  metaText: {
-    fontSize: typography.sizes.label,
-    color: colors.textSecondary,
-    fontWeight: typography.weights.semibold,
-  },
-  footer: {
+  diffSegments: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 10,
+    gap: 3,
+  },
+  diffSegment: {
+    width: 14,
+    height: 8,
+    borderRadius: 4,
+  },
+  progress: {
+    gap: 6,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: colors.m3.surfaceContainer,
   },
-  inventoryInfo: {
+  progressHead: {
     flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  inventoryText: {
-    fontSize: typography.sizes.label,
-    color: colors.textSecondary,
-    fontWeight: typography.weights.semibold,
+  segments: {
+    flexDirection: 'row',
+    gap: 3,
+  },
+  segment: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+  },
+  trackFull: {
+    backgroundColor: colors.m3.surfaceContainerHighest,
+    overflow: 'hidden',
+  },
+  trackFill: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.secondary,
+  },
+  selectedRing: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: radii.tiles,
+    borderWidth: 2,
+    borderColor: colors.ink,
   },
 });

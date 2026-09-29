@@ -1,9 +1,11 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, PanResponder, Animated, Easing } from 'react-native';
+import React, { useRef, useEffect, useSyncExternalStore } from 'react';
+import { View, StyleSheet, Pressable, PanResponder, Animated, Easing } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShoppingList } from '../hooks/useShoppingList';
+import { CountBadge } from './CountBadge';
+import { isBottomNavHidden, subscribeBottomNav } from '../utils/nav-visibility';
 import { colors, typography, spacing, radii, elevations } from '../theme';
 import {
   MAIN_TABS,
@@ -11,7 +13,8 @@ import {
   getSwipeTransition,
 } from '../utils/tabSwipeState';
 
-export const NAV_HEIGHT = 64;
+import { Text } from './Text';
+export const NAV_HEIGHT = 72; // Organismos.dc.html: barra flotante de 72 dp
 export const NAV_BOTTOM_OFFSET = 12;
 
 export const getBottomContentPadding = (bottomInset: number) =>
@@ -174,229 +177,168 @@ export function AppBottomNav() {
     })
   ).current;
 
+  const navHidden = useSyncExternalStore(subscribeBottomNav, isBottomNavHidden, isBottomNavHidden);
   const bottomInset = Math.max(insets.bottom, 0);
   const bottomPosition = bottomInset + NAV_BOTTOM_OFFSET;
 
-  return (
-    <View
-      style={[
-        styles.bottomNavWrapper,
-        {
-          bottom: bottomPosition,
-        },
-      ]}
-      {...navPanResponder.panHandlers}
+  const tabs: {
+    index: number;
+    label: string;
+    a11y: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    iconActive: keyof typeof Ionicons.glyphMap;
+    active: boolean;
+    badge?: number;
+  }[] = [
+    { index: 0, label: 'Inicio', a11y: 'Inicio', icon: 'home-outline', iconActive: 'home', active: isHome },
+    { index: 1, label: 'Despensa', a11y: 'Despensa', icon: 'basket-outline', iconActive: 'basket', active: isInventory },
+    { index: 2, label: 'Recetas', a11y: 'Recetas', icon: 'restaurant-outline', iconActive: 'restaurant', active: isRecipes },
+    {
+      index: 3,
+      label: 'Compras',
+      a11y: pendingItems.length > 0 ? `Compras, ${pendingItems.length} pendientes` : 'Compras',
+      icon: 'cart-outline',
+      iconActive: 'cart',
+      active: isShopping,
+      badge: pendingItems.length,
+    },
+  ];
+
+  const renderTab = (t: (typeof tabs)[number]) => (
+    <Pressable
+      key={t.label}
+      style={({ pressed }) => [styles.navItem, pressed && styles.pressed]}
+      onPress={() => navigateToTab(t.index)}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: t.active }}
+      accessibilityLabel={t.a11y}
     >
+      {t.active ? (
+        // Pestaña activa: píldora durazno con icono + etiqueta (Organismos.dc.html)
+        <Animated.View style={[styles.activePill, { transform: [{ scale: pillScale }], opacity: pillOpacity }]}>
+          <Ionicons name={t.iconActive} size={22} color={colors.ink} />
+          <Text style={styles.activeLabel} numberOfLines={1}>
+            {t.label}
+          </Text>
+        </Animated.View>
+      ) : (
+        <View style={styles.idleIcon}>
+          <Ionicons name={t.icon} size={22} color={colors.navIconIdle} />
+          {t.badge !== undefined && t.badge > 0 && (
+            <View style={styles.badge} pointerEvents="none">
+              <CountBadge count={t.badge} />
+            </View>
+          )}
+        </View>
+      )}
+    </Pressable>
+  );
+
+  // Oculta mientras una pantalla muestra su propia barra flotante (modo selección).
+  if (navHidden) return null;
+
+  return (
+    <View style={[styles.bottomNavWrapper, { bottom: bottomPosition }]} {...navPanResponder.panHandlers}>
       <Animated.View
         style={[
           styles.bottomNavContainer,
-          {
-            transform: [
-              { translateX: navDragX },
-              { rotate: navDragTilt },
-              { scale: navDragScale },
-            ],
-          },
+          { transform: [{ translateX: navDragX }, { rotate: navDragTilt }, { scale: navDragScale }] },
         ]}
       >
-        {/* 1. Inicio */}
-        <Pressable
-          style={({ pressed }) => [styles.navItem, pressed && styles.cardPressed]}
-          onPress={() => navigateToTab(0)}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: isHome }}
-          accessibilityLabel="Inicio"
-        >
-          {isHome ? (
-            <Animated.View
-              style={[
-                styles.navActivePill,
-                { transform: [{ scale: pillScale }], opacity: pillOpacity },
-              ]}
-            >
-              <Ionicons name="home" size={20} color={colors.primary} />
-            </Animated.View>
-          ) : (
-            <Ionicons name="home-outline" size={22} color={colors.textSecondary} />
-          )}
-          <Text style={isHome ? styles.navLabelActive : styles.navLabel}>Inicio</Text>
-        </Pressable>
+        {renderTab(tabs[0])}
+        {renderTab(tabs[1])}
 
-        {/* 2. Despensa */}
+        {/* FAB central de escaneo: squircle tomate con icono cacao */}
         <Pressable
-          style={({ pressed }) => [styles.navItem, pressed && styles.cardPressed]}
-          onPress={() => navigateToTab(1)}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: isInventory }}
-          accessibilityLabel="Despensa"
-        >
-          {isInventory ? (
-            <Animated.View
-              style={[
-                styles.navActivePill,
-                { transform: [{ scale: pillScale }], opacity: pillOpacity },
-              ]}
-            >
-              <Ionicons name="basket" size={20} color={colors.primary} />
-            </Animated.View>
-          ) : (
-            <Ionicons name="basket-outline" size={22} color={colors.textSecondary} />
-          )}
-          <Text style={isInventory ? styles.navLabelActive : styles.navLabel}>Despensa</Text>
-        </Pressable>
-
-        {/* 3. Escanear Alimentos (FAB Central) */}
-        <Pressable
-          style={({ pressed }) => [styles.navFabItem, pressed && styles.cardPressed]}
+          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
           onPress={() => router.push('/scan')}
           accessibilityRole="button"
           accessibilityLabel="Escanear alimentos con la cámara"
         >
-          <View style={styles.navFabCircle}>
-            <Ionicons name="camera" size={22} color={colors.textInverse} />
-          </View>
+          {/* Icono del mockup: marco de escaneo + lente circular al centro */}
+          <Ionicons name="scan-outline" size={26} color={colors.ink} />
+          <View style={styles.fabLens} pointerEvents="none" />
         </Pressable>
 
-        {/* 4. Recetas */}
-        <Pressable
-          style={({ pressed }) => [styles.navItem, pressed && styles.cardPressed]}
-          onPress={() => navigateToTab(2)}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: isRecipes }}
-          accessibilityLabel="Recetas"
-        >
-          {isRecipes ? (
-            <Animated.View
-              style={[
-                styles.navActivePill,
-                { transform: [{ scale: pillScale }], opacity: pillOpacity },
-              ]}
-            >
-              <Ionicons name="restaurant" size={20} color={colors.primary} />
-            </Animated.View>
-          ) : (
-            <Ionicons name="restaurant-outline" size={22} color={colors.textSecondary} />
-          )}
-          <Text style={isRecipes ? styles.navLabelActive : styles.navLabel}>Recetas</Text>
-        </Pressable>
-
-        {/* 5. Compras */}
-        <Pressable
-          style={({ pressed }) => [styles.navItem, pressed && styles.cardPressed]}
-          onPress={() => navigateToTab(3)}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: isShopping }}
-          accessibilityLabel="Lista de Compras"
-        >
-          <View style={{ position: 'relative' }}>
-            {isShopping ? (
-              <Animated.View
-                style={[
-                  styles.navActivePill,
-                  { transform: [{ scale: pillScale }], opacity: pillOpacity },
-                ]}
-              >
-                <Ionicons name="cart" size={20} color={colors.primary} />
-              </Animated.View>
-            ) : (
-              <Ionicons name="cart-outline" size={22} color={colors.textSecondary} />
-            )}
-            {pendingItems.length > 0 && (
-              <View style={styles.navBadge}>
-                <Text style={styles.navBadgeText}>{pendingItems.length}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={isShopping ? styles.navLabelActive : styles.navLabel}>Compras</Text>
-        </Pressable>
+        {renderTab(tabs[2])}
+        {renderTab(tabs[3])}
       </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Organismos.dc.html / Despensa.dc.html: barra cacao flotante de 72 dp, radio 36, márgenes 14.
   bottomNavWrapper: {
     position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
+    left: 14,
+    right: 14,
     zIndex: 999,
   },
   bottomNavContainer: {
+    height: NAV_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: colors.surface,
+    justifyContent: 'space-between',
+    backgroundColor: colors.ink,
     borderRadius: radii.floatingNav,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 6,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     ...elevations.lg,
   },
   navItem: {
+    minWidth: 50,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: spacing.touchTargetMin,
-    minHeight: spacing.touchTargetMin,
   },
-  navActivePill: {
+  idleIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activePill: {
+    height: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 10,
+    paddingRight: 14,
+    borderRadius: 25,
     backgroundColor: colors.primaryContainer,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 5,
-    borderRadius: radii.circular,
-    marginBottom: 2,
   },
-  navLabel: {
-    fontSize: typography.sizes.caption,
-    color: colors.textSecondary,
-    fontWeight: typography.weights.medium,
-    marginTop: 2,
+  activeLabel: {
+    fontSize: typography.sizes.bodySmall,
+    fontWeight: typography.weights.semibold,
+    color: colors.ink,
   },
-  navLabelActive: {
-    fontSize: typography.sizes.caption,
-    color: colors.primary,
-    fontWeight: typography.weights.bold,
-    marginTop: 2,
-  },
-  navFabItem: {
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 19,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: spacing.touchTargetMin,
-    minHeight: spacing.touchTargetMin,
   },
-  navFabCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.circular,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
-  },
-  navBadge: {
+  fabLens: {
     position: 'absolute',
-    top: -4,
-    right: -6,
-    backgroundColor: colors.primary,
-    minWidth: 16,
-    height: 16,
-    borderRadius: radii.circular,
-    paddingHorizontal: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: colors.ink,
   },
-  navBadgeText: {
-    color: colors.textInverse,
-    fontSize: typography.sizes.micro,
-    lineHeight: typography.lineHeights.micro,
-    fontWeight: typography.weights.bold,
+  fabPressed: {
+    transform: [{ scale: 0.94 }],
+    opacity: 0.9,
   },
-  cardPressed: {
+  badge: {
+    position: 'absolute',
+    top: 3,
+    right: 1,
+  },
+  pressed: {
     opacity: 0.85,
-    transform: [{ scale: 0.95 }],
   },
 });
