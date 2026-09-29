@@ -9,6 +9,7 @@ import {
 import { AuthService } from '../services/auth-service';
 import { generateOperationId } from '../utils/uuid';
 import { flushOutbox } from '../services/outbox-dispatcher';
+import { updateIngredientSynced, deleteIngredientSynced } from '../services/inventory-mutations';
 
 let memoryInventory: Ingredient[] | null = null;
 let isSyncingInventory = false;
@@ -189,48 +190,10 @@ export function useInventory() {
   };
 
   const updateItem = async (item: Ingredient) => {
-    const startUserId = LocalStorage.getCurrentUserId();
-    if (!startUserId) throw new Error('No hay usuario autenticado');
-
     try {
-      // Optimista: actualiza en local primero
-      await LocalStorage.updateIngredient(item);
+      // Optimista en local + mutación en la cola Outbox (inventory-mutations)
+      await updateIngredientSynced(item);
       await loadItems();
-
-      // Compactación segura: si existe un 'create' previo que NUNCA salió a red (attemptCount === 0),
-      // actualizar directamente el payload del create sin encolar un update redundante.
-      const queue = LocalStorage.getOutboxQueue();
-      const pendingCreate = queue.find(
-        (m) =>
-          m.entity === 'inventory' &&
-          m.entityId === item.id &&
-          m.action === 'create' &&
-          m.attemptCount === 0 &&
-          m.status === 'pending'
-      );
-
-      if (pendingCreate) {
-        await LocalStorage.updateOutboxMutation(pendingCreate.operationId, {
-          payload: item,
-        });
-      } else {
-        const mutation: OutboxMutation<Ingredient> = {
-          operationId: generateOperationId(),
-          userId: startUserId,
-          entity: 'inventory',
-          action: 'update',
-          entityId: item.id,
-          payload: item,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          status: 'pending',
-          attemptCount: 0,
-          nextAttemptAt: 0,
-        };
-        await LocalStorage.enqueueOutboxMutation(mutation);
-      }
-
-      flushOutbox().catch(() => {});
     } catch (err: any) {
       setError(err?.message || 'Error al actualizar el alimento');
       throw err;
@@ -238,52 +201,9 @@ export function useInventory() {
   };
 
   const deleteItem = async (id: string) => {
-    const startUserId = LocalStorage.getCurrentUserId();
-    if (!startUserId) throw new Error('No hay usuario autenticado');
-
     try {
-      // Optimista: elimina en local y marca en pendingDeletedInventory
-      await LocalStorage.deleteIngredient(id);
+      await deleteIngredientSynced(id);
       await loadItems();
-
-      // Compactación segura:
-      // Si la entidad tiene un 'create' pendiente con attemptCount === 0 (nunca salió al backend),
-      // purgar el 'create' (y cualquier 'update') sin enviar DELETE a la red, y limpiar pendingDeleted.
-      const queue = LocalStorage.getOutboxQueue();
-      const pendingCreate = queue.find(
-        (m) =>
-          m.entity === 'inventory' &&
-          m.entityId === id &&
-          m.action === 'create' &&
-          m.attemptCount === 0 &&
-          m.status === 'pending'
-      );
-
-      if (pendingCreate) {
-        for (const m of queue) {
-          if (m.entity === 'inventory' && m.entityId === id) {
-            await LocalStorage.removeOutboxMutation(m.operationId);
-          }
-        }
-        await LocalStorage.removePendingDeletedInventory(id).catch(() => {});
-      } else {
-        // Si ya existía o fue intentado (attemptCount > 0), encolar mutación de delete en el outbox
-        const mutation: OutboxMutation<{ id: string }> = {
-          operationId: generateOperationId(),
-          userId: startUserId,
-          entity: 'inventory',
-          action: 'delete',
-          entityId: id,
-          payload: { id },
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          status: 'pending',
-          attemptCount: 0,
-          nextAttemptAt: 0,
-        };
-        await LocalStorage.enqueueOutboxMutation(mutation);
-        flushOutbox().catch(() => {});
-      }
     } catch (err: any) {
       setError(err?.message || 'Error al eliminar el alimento');
       throw err;
@@ -301,8 +221,11 @@ export function useInventory() {
     }
   };
 
+  // «Marcar como consumido» deja el alimento en 0 (Sin stock); borrarlo es decisión aparte del usuario.
   const consumeItem = async (id: string) => {
-    return deleteItem(id);
+    const current = items.find((i) => i.id === id);
+    if (!current) return;
+    return updateItem({ ...current, quantity: 0 });
   };
 
   return {

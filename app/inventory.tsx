@@ -1,14 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
-  Modal,
-  TextInput,
   ScrollView,
   Pressable,
-  Alert,
   Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
@@ -23,15 +19,24 @@ import {
   SkeletonCard,
   EmptyState,
   ErrorState,
-  PrimaryButton,
   ActionSheetModal,
   StaggerView,
+  PantryHealthCard,
   getBottomContentPadding,
-  M3Dialog,
+  NAV_HEIGHT,
+  NAV_BOTTOM_OFFSET,
   M3DatePickerModal,
   Chip,
+  Text,
+  ScreenHeader,
+  M3Dialog,
+  IngredientFormSheet,
+  SpeedDialFab,
+  SelectionHeader,
+  SelectionActionBar,
 } from '../src/components';
 import { getExpirationStatus } from '../src/utils/expiration';
+import { daysUntil } from '../src/utils/dates';
 import { colors, radii, spacing, typography, CATEGORY_LIST } from '../src/theme';
 
 type CategoryFilter = 'all' | 'expiring' | IngredientCategory;
@@ -42,25 +47,15 @@ const CATEGORIES: {
   icon?: keyof typeof Ionicons.glyphMap;
 }[] = [
   { key: 'all', label: 'Todos' },
-  { key: 'expiring', label: 'Por vencer / Vencidos', icon: 'time-outline' },
+  { key: 'expiring', label: 'Por vencer', icon: 'time-outline' },
   ...CATEGORY_LIST.map((c) => ({ key: c.key as CategoryFilter, label: c.label, icon: c.icon })),
-];
-
-const UNITS: IngredientUnit[] = [
-  'units',
-  'grams',
-  'kilograms',
-  'milliliters',
-  'liters',
-  'package',
-  'unknown',
 ];
 
 export default function InventoryScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ filter?: string; from?: string }>();
+  const params = useLocalSearchParams<{ filter?: string; from?: string; add?: string }>();
   const { items, status, error, reload, addItem, updateItem, deleteItem, deleteMultipleItems, consumeItem } =
     useInventory();
   const isLeavingRef = useRef(false);
@@ -114,6 +109,7 @@ export default function InventoryScreen() {
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
     title: string;
+    titleEmphasis?: string;
     description?: string;
     confirmDestructive?: boolean;
     confirmText?: string;
@@ -123,15 +119,23 @@ export default function InventoryScreen() {
     title: '',
   });
 
-  const isSelectMode = selectedIds.size > 0;
+  // El modo selección es un estado propio (no depende de tener algo seleccionado):
+  // así el botón «Seleccionar» puede activarlo sin preseleccionar nada.
+  const [selectionModeOn, setSelectionModeOn] = useState(false);
+  const isSelectMode = selectionModeOn;
 
   const toggleSelectItem = (id: string) => {
+    setSelectionModeOn(true);
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  };
+
+  const handleEnterSelectMode = () => {
+    setSelectionModeOn(true);
   };
 
   const handleSelectAll = () => {
@@ -144,6 +148,7 @@ export default function InventoryScreen() {
 
   const handleCancelSelection = () => {
     setSelectedIds(new Set());
+    setSelectionModeOn(false);
   };
 
   const handleDeleteSelected = () => {
@@ -151,13 +156,15 @@ export default function InventoryScreen() {
     const count = selectedIds.size;
     setConfirmModal({
       visible: true,
-      title: count === items.length ? 'Eliminar todo el inventario' : 'Eliminar seleccionados',
-      description: `¿Estás seguro de eliminar estos ${count} alimentos de tu inventario? Esta acción no se puede deshacer.`,
+      title: '¿Eliminar',
+      titleEmphasis: `${count} ${count === 1 ? 'alimento' : 'alimentos'}?`,
+      description: 'Se quitarán de tu despensa en este dispositivo y se sincronizará al volver la conexión.',
       confirmDestructive: true,
-      confirmText: `Eliminar (${count})`,
+      confirmText: 'Eliminar',
       onConfirm: async () => {
         await deleteMultipleItems(Array.from(selectedIds));
         setSelectedIds(new Set());
+        setSelectionModeOn(false);
       },
     });
   };
@@ -168,6 +175,12 @@ export default function InventoryScreen() {
       setSelectedCategory('expiring');
     }
   }, [params.filter]);
+
+  // «Agregar a mano» desde el Escaneo (límite de fotos / nada detectado): abre el formulario al llegar.
+  React.useEffect(() => {
+    if (params.add === '1') openAddModal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.add]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -180,12 +193,34 @@ export default function InventoryScreen() {
         matchesCategory = item.category === selectedCategory;
       }
       return matchesSearch && matchesCategory;
+    }).sort((a, b) => {
+      // Agotados («Sin stock») al final: primero lo que sí puedes usar.
+      const oa = a.quantity === 0 ? 1 : 0;
+      const ob = b.quantity === 0 ? 1 : 0;
+      if (oa !== ob) return oa - ob;
+      // «por vencimiento»: lo que vence antes arriba; sin fecha al final (Despensa.dc.html)
+      const da = daysUntil(a.expirationDate);
+      const db = daysUntil(b.expirationDate);
+      if (da === null && db === null) return a.name.localeCompare(b.name, 'es');
+      if (da === null) return 1;
+      if (db === null) return -1;
+      return da - db;
     });
   }, [items, searchQuery, selectedCategory]);
 
-  const openAddModal = () => {
+  // «Salud de tu despensa»: conteo por estado sobre TODO el inventario (no el filtrado).
+  const pantryHealthCounts = useMemo(() => {
+    const counts = { fresh: 0, expiringSoon: 0, expired: 0, unknown: 0 };
+    for (const item of items) {
+      const { status: s } = getExpirationStatus(item.expirationDate);
+      counts[s] += 1;
+    }
+    return counts;
+  }, [items]);
+
+  const openAddModal = (prefillName?: string) => {
     setEditingItem(null);
-    setName('');
+    setName(prefillName || '');
     setQuantity('1');
     setUnit('units');
     setCategory('vegetable');
@@ -311,8 +346,9 @@ export default function InventoryScreen() {
   const handleDelete = (id: string, itemName: string) => {
     setConfirmModal({
       visible: true,
-      title: 'Eliminar alimento',
-      description: `¿Estás seguro de eliminar "${itemName}" de tu inventario?`,
+      title: '¿Eliminar',
+      titleEmphasis: `${itemName}?`,
+      description: 'Se quitará de tu despensa en este dispositivo y se sincronizará al volver la conexión.',
       confirmDestructive: true,
       confirmText: 'Eliminar',
       onConfirm: () => deleteItem(id),
@@ -322,8 +358,9 @@ export default function InventoryScreen() {
   const handleConsume = (id: string, itemName: string) => {
     setConfirmModal({
       visible: true,
-      title: 'Consumir alimento',
-      description: `¿Deseas marcar como consumido "${itemName}"?`,
+      title: '¿Marcar como',
+      titleEmphasis: 'agotado?',
+      description: `«${itemName}» quedará en tu despensa como «Sin stock» hasta que lo repongas o lo elimines.`,
       confirmDestructive: false,
       confirmText: 'Confirmar',
       onConfirm: () => consumeItem(id),
@@ -348,132 +385,119 @@ export default function InventoryScreen() {
     [isSelectMode, selectedIds, toggleSelectItem, openEditModal, handleDelete, handleConsume]
   );
 
-  return (
-    <AppScreen style={styles.screen}>
-      {/* ── Cabecera Editorial Despensa ── */}
-      <View style={styles.headerSection}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.screenTitle}>Mi Despensa</Text>
-          <Text style={styles.screenSubtitle}>
-            {items.length === 0
-              ? 'Organiza tus alimentos e ingredientes'
-              : `${items.length} alimento${items.length === 1 ? '' : 's'} guardado${items.length === 1 ? '' : 's'}`}
-          </Text>
-        </View>
-        {/* Escaneo con IA: solo desde el FAB central de la barra inferior (decisión de diseño, Etapa 2) */}
-      </View>
+  const allSelected = selectedIds.size === filteredItems.length && filteredItems.length > 0;
+  const bottomBarPosition = Math.max(insets.bottom, 0) + NAV_BOTTOM_OFFSET;
 
-      {/* ── Buscador ── */}
-      <View style={styles.searchSection}>
-        <SearchInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Buscar en tu despensa o nevera..."
-        />
-      </View>
-
-      {/* ── Filtros por categoría estilo Delivery ── */}
-      <View style={styles.categoriesWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesList}
-        >
-          {CATEGORIES.map((cat) => (
-            <Chip
-              key={cat.key}
-              label={cat.label}
-              icon={cat.icon}
-              selected={selectedCategory === cat.key}
-              onPress={() => setSelectedCategory(cat.key)}
-              variant="filter"
+  // Buscador, filtros, salud y conteo se desplazan con la lista: al bajar, los alimentos ocupan la pantalla.
+  const listHeader = isSelectMode ? null : (
+    <View style={styles.listHeader}>
+          {/* ── Buscador ── */}
+          <View style={styles.searchSection}>
+            <SearchInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Buscar en tu despensa o nevera..."
             />
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* ── Barra de Gestión y Selección Rápida ── */}
-      {status === 'success' && filteredItems.length > 0 && (
-        <View style={styles.bulkToolbar}>
-          <View style={styles.bulkTopRow}>
-            <View style={styles.bulkInfo}>
-              <Text style={styles.bulkCountText}>
-                {filteredItems.length} {filteredItems.length === 1 ? 'alimento' : 'alimentos'}
-              </Text>
-              {isSelectMode && (
-                <Text style={styles.bulkSelectedText}>
-                  ({selectedIds.size} seleccionados)
-                </Text>
-              )}
-            </View>
-
-            <Pressable
-              onPress={handleSelectAll}
-              style={styles.bulkActionBtn}
-              accessibilityRole="button"
-              accessibilityLabel={
-                selectedIds.size === filteredItems.length
-                  ? 'Deseleccionar todos los alimentos'
-                  : 'Seleccionar todos los alimentos'
-              }
-            >
-              <Ionicons
-                name={
-                  selectedIds.size === filteredItems.length && filteredItems.length > 0
-                    ? 'checkbox'
-                    : 'square-outline'
-                }
-                size={16}
-                color={colors.primary}
-                style={{ marginRight: 5 }}
-              />
-              <Text style={styles.bulkActionBtnText}>
-                {selectedIds.size === filteredItems.length && filteredItems.length > 0
-                  ? 'Deseleccionar todos'
-                  : 'Seleccionar todos'}
-              </Text>
-            </Pressable>
           </View>
 
-          {isSelectMode && (
-            <View style={styles.bulkBottomRow}>
-              <Pressable
-                onPress={handleDeleteSelected}
-                style={styles.bulkDeleteBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Eliminar alimentos seleccionados"
-              >
-                <Ionicons name="trash-outline" size={15} color={colors.error.text} style={{ marginRight: spacing.xs }} />
-                <Text style={styles.bulkDeleteBtnText}>Eliminar ({selectedIds.size})</Text>
-              </Pressable>
+          {/* ── Filtros por categoría estilo Delivery ── */}
+          <View style={styles.categoriesWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesList}
+            >
+              {CATEGORIES.map((cat) => (
+                <Chip
+                  key={cat.key}
+                  label={cat.label}
+                  icon={cat.icon}
+                  selected={selectedCategory === cat.key}
+                  onPress={() => setSelectedCategory(cat.key)}
+                  variant="filter"
+                />
+              ))}
+            </ScrollView>
+          </View>
 
+          {/* ── Salud de tu despensa (Despensa.dc.html, aprobado) ── */}
+          {status === 'success' && !searchQuery.trim() && selectedCategory === 'all' && (
+            <View style={styles.healthCardWrapper}>
+              <PantryHealthCard
+                counts={pantryHealthCounts}
+                onPress={() => setSelectedCategory('expiring')}
+              />
+            </View>
+          )}
+
+          {/* ── Barra de conteo + Seleccionar ── */}
+          {status === 'success' && filteredItems.length > 0 && (
+            <View style={styles.countRow}>
+              <Text style={styles.countRowText}>
+                {`${filteredItems.length} ${filteredItems.length === 1 ? 'alimento' : 'alimentos'} · por vencimiento`}
+              </Text>
               <Pressable
-                onPress={handleCancelSelection}
-                style={styles.bulkCancelBtn}
+                onPress={handleEnterSelectMode}
+                style={styles.selectEntryBtn}
                 accessibilityRole="button"
-                accessibilityLabel="Cancelar selección"
+                accessibilityLabel="Activar modo de selección"
               >
-                <Text style={styles.bulkCancelBtnText}>Cancelar</Text>
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.textPrimary} />
+                <Text style={styles.selectEntryBtnText}>Seleccionar</Text>
               </Pressable>
             </View>
           )}
+    </View>
+  );
+
+
+  return (
+    <AppScreen style={styles.screen}>
+      {/* ── Cabecera: normal o barra contextual de selección (Despensa-Seleccion.dc.html) ── */}
+      {isSelectMode ? (
+        <View style={styles.selectionHeaderWrap}>
+          <SelectionHeader
+            count={selectedIds.size}
+            allSelected={allSelected}
+            onToggleAll={handleSelectAll}
+            onCancel={handleCancelSelection}
+          />
+        </View>
+      ) : (
+        <View style={styles.headerSection}>
+          <View style={{ flex: 1 }}>
+            <ScreenHeader
+              title="Mi"
+              emphasis="Despensa"
+              subtitle={
+                items.length === 0
+                  ? 'Organiza tus alimentos e ingredientes'
+                  : `${items.length} alimento${items.length === 1 ? '' : 's'} guardado${items.length === 1 ? '' : 's'}`
+              }
+            />
+          </View>
+          {/* Escaneo con IA: solo desde el FAB central de la barra inferior (decisión de diseño, Etapa 2) */}
         </View>
       )}
 
       {/* ── Contenido de la lista según estados ── */}
+      {status !== 'success' && listHeader && <View style={styles.headerOutsideList}>{listHeader}</View>}
+
       {status === 'loading' && (
         <View style={styles.listContainer}>
-          <SkeletonCard variant="ingredient" />
-          <SkeletonCard variant="ingredient" />
-          <SkeletonCard variant="ingredient" />
-          <SkeletonCard variant="ingredient" />
+          {[1, 0.85, 0.7, 0.55, 0.4].map((o) => (
+            <View key={o} style={{ opacity: o }}>
+              <SkeletonCard variant="ingredient" />
+            </View>
+          ))}
         </View>
       )}
 
       {status === 'error' && (
         <ErrorState
-          title="No pudimos cargar tu inventario"
-          message={error || 'Hubo un error de lectura local.'}
+          title="No pudimos cargar tu"
+          titleEmphasis="despensa"
+          message={error || 'Hubo un error de lectura local. Tus datos no se han perdido.'}
           onRetry={reload}
         />
       )}
@@ -488,28 +512,51 @@ export default function InventoryScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           renderItem={renderIngredientItem}
+          ListHeaderComponent={listHeader}
+          keyboardShouldPersistTaps="handled"
           initialNumToRender={8}
           maxToRenderPerBatch={10}
           windowSize={5}
           removeClippedSubviews={Platform.OS === 'android'}
           ListEmptyComponent={
-            searchQuery.trim() || selectedCategory !== 'all' ? (
+            searchQuery.trim() ? (
               <EmptyState
-                title="Sin resultados"
-                description={`No encontramos alimentos para "${searchQuery || selectedCategory}".`}
-                actionLabel="Ver todos"
-                onAction={() => {
+                title="Sin resultados para"
+                titleEmphasis={`«${searchQuery.trim()}»`}
+                description="Revisa la ortografía o agrégalo si acabas de comprarlo."
+                iconName="search-outline"
+                tone="neutral"
+                actionLabel={`Agregar «${searchQuery.trim()}»`}
+                actionTone="tint"
+                actionIconName="add"
+                onAction={() => openAddModal(searchQuery.trim())}
+                secondaryActionLabel="Ver todos"
+                onSecondaryAction={() => {
                   setSearchQuery('');
                   setSelectedCategory('all');
                 }}
+              />
+            ) : selectedCategory !== 'all' ? (
+              <EmptyState
+                title="Nada en esta"
+                titleEmphasis="categoría"
+                description="No encontramos alimentos con este filtro."
+                secondaryActionLabel="Ver todos"
+                onSecondaryAction={() => setSelectedCategory('all')}
                 iconName="search-outline"
+                tone="neutral"
               />
             ) : (
               <EmptyState
-                title="Tu inventario está vacío"
+                title="Tu despensa está"
+                titleEmphasis="vacía"
                 description="Escanea tu nevera con la cámara o añade alimentos manualmente para comenzar."
                 actionLabel="Escanear alimentos"
+                actionTone="brand"
+                actionIconName="scan-outline"
                 onAction={() => router.push('/scan')}
+                secondaryActionLabel="Agregar a mano"
+                onSecondaryAction={() => openAddModal()}
                 iconName="basket-outline"
               />
             )
@@ -517,170 +564,59 @@ export default function InventoryScreen() {
         />
       )}
 
-      {/* ── FAB Botón Flotante para Añadir Manual (BUG-02: Dinámico con insets.bottom) ── */}
-      <Pressable
-        style={[
-          styles.fab,
-          { bottom: Math.max(105, (insets.bottom || 0) + 84) },
-        ]}
-        onPress={openAddModal}
-        accessibilityRole="button"
-        accessibilityLabel="Añadir alimento manualmente"
-      >
-        <Ionicons name="add" size={28} color={colors.surface} />
-      </Pressable>
+      {/* ── FAB extendido «Agregar» (oculto en modo selección) ── */}
+      {!isSelectMode && (
+        <SpeedDialFab
+          accessibilityLabel="Agregar alimento"
+          style={{ right: spacing.screenGutter, bottom: bottomBarPosition + NAV_HEIGHT + 16 }}
+          actions={[
+            { key: 'scan', label: 'Escanear con la cámara', iconName: 'scan-outline', tone: 'brand', onPress: () => router.push('/scan') },
+            { key: 'manual', label: 'Escribir a mano', iconName: 'create-outline', onPress: () => openAddModal() },
+          ]}
+        />
+      )}
 
-      {/* ── Modal de Creación / Edición ── */}
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {editingItem ? 'Editar alimento' : 'Añadir al inventario'}
-              </Text>
-              <Pressable
-                onPress={() => setModalVisible(false)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Cerrar modal"
-              >
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </Pressable>
-            </View>
+      {/* ── Barra de acciones flotante: reemplaza la navegación mientras se selecciona ── */}
+      {isSelectMode && (
+        <SelectionActionBar
+          count={selectedIds.size}
+          itemNoun="alimentos"
+          onCancel={handleCancelSelection}
+          onDelete={handleDeleteSelected}
+        />
+      )}
 
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
-              <Text style={styles.label}>Nombre del alimento * (máx 60 caracteres)</Text>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Ej. Tomates cherry"
-                placeholderTextColor={colors.textMuted}
-                maxLength={60}
-                style={styles.modalInput}
-              />
-
-              <View style={styles.row}>
-                <View style={{ flex: 1, marginRight: 10 }}>
-                  <Text style={styles.label}>Cantidad (positiva)</Text>
-                  <View style={styles.stepperContainer}>
-                    <Pressable
-                      onPress={() => {
-                        const cur = parseFloat(quantity) || 1;
-                        const next = Math.max(1, Math.round((cur - 1) * 10) / 10);
-                        setQuantity(String(next));
-                      }}
-                      style={styles.stepperBtn}
-                      accessibilityRole="button"
-                      accessibilityLabel="Reducir cantidad"
-                    >
-                      <Ionicons name="remove" size={18} color={colors.textPrimary} />
-                    </Pressable>
-                    <TextInput
-                      value={quantity}
-                      onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
-                      placeholder="1"
-                      keyboardType="numeric"
-                      placeholderTextColor={colors.textMuted}
-                      maxLength={8}
-                      style={styles.stepperInput}
-                    />
-                    <Pressable
-                      onPress={() => {
-                        const cur = parseFloat(quantity) || 0;
-                        const next = Math.round((cur + 1) * 10) / 10;
-                        setQuantity(String(next));
-                      }}
-                      style={styles.stepperBtn}
-                      accessibilityRole="button"
-                      accessibilityLabel="Aumentar cantidad"
-                    >
-                      <Ionicons name="add" size={18} color={colors.textPrimary} />
-                    </Pressable>
-                  </View>
-                </View>
-
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Unidad</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.unitScroll}>
-                    {UNITS.map((u) => (
-                      <Pressable
-                        key={u}
-                        onPress={() => setUnit(u)}
-                        style={[styles.smallPill, unit === u && styles.smallPillActive]}
-                      >
-                        <Text style={[styles.smallPillText, unit === u && styles.smallPillTextActive]}>
-                          {u}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-
-              <Text style={styles.label}>Categoría</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.unitScroll}>
-                {CATEGORIES.filter((c) => c.key !== 'all' && c.key !== 'expiring').map((cat) => (
-                  <Pressable
-                    key={cat.key}
-                    onPress={() => setCategory(cat.key as IngredientCategory)}
-                    style={[styles.smallPill, category === cat.key && styles.smallPillActive]}
-                  >
-                    <Text style={[styles.smallPillText, category === cat.key && styles.smallPillTextActive]}>
-                      {cat.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-
-              <Text style={styles.label}>Fecha de vencimiento</Text>
-              <Pressable
-                onPress={() => setIsDatePickerVisible(true)}
-                style={[styles.modalInput, { justifyContent: 'center' }]}
-                accessibilityRole="button"
-                accessibilityLabel="Seleccionar fecha de vencimiento en el calendario"
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text
-                    style={{
-                      color: expirationDate ? colors.textPrimary : colors.textMuted,
-                      fontSize: typography.sizes.body,
-                      fontWeight: expirationDate ? '600' : '400',
-                    }}
-                  >
-                    {expirationDate || 'Seleccionar en el calendario'}
-                  </Text>
-                  <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                </View>
-              </Pressable>
-
-              <View style={{ marginTop: spacing.xxl, marginBottom: spacing.lg }}>
-                <PrimaryButton
-                  title={editingItem ? 'Guardar cambios' : 'Añadir alimento'}
-                  onPress={handleSave}
-                />
-                {editingItem && (
-                  <Pressable
-                    style={styles.modalDeleteBtn}
-                    onPress={() => {
-                      setModalVisible(false);
-                      handleDelete(editingItem.id, editingItem.name);
-                    }}
-                  >
-                    <Ionicons name="trash-outline" size={16} color={colors.error.text} style={{ marginRight: 6 }} />
-                    <Text style={styles.modalDeleteText}>Eliminar este alimento</Text>
-                  </Pressable>
-                )}
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      {/* ── Hoja «Añadir / Editar alimento» (Despensa-Formulario.dc.html) ── */}
+      <IngredientFormSheet
+        visible={modalVisible}
+        mode={editingItem ? 'edit' : 'add'}
+        values={{ name, quantity, unit, category, expirationDate }}
+        onChange={(key, value) => {
+          if (key === 'name') setName(value as string);
+          else if (key === 'quantity') setQuantity(value as string);
+          else if (key === 'unit') setUnit(value as IngredientUnit);
+          else if (key === 'category') setCategory(value as IngredientCategory);
+          else if (key === 'expirationDate') setExpirationDate(value as string);
+        }}
+        onSubmit={handleSave}
+        onClose={() => setModalVisible(false)}
+        onOpenCalendar={() => setIsDatePickerVisible(true)}
+        onDelete={
+          editingItem
+            ? () => {
+                setModalVisible(false);
+                handleDelete(editingItem.id, editingItem.name);
+              }
+            : undefined
+        }
+      />
 
       {/* ── Modal de Confirmación Único (BUG-08) ── */}
       <ActionSheetModal
         visible={confirmModal.visible}
         onClose={() => setConfirmModal((prev) => ({ ...prev, visible: false }))}
         title={confirmModal.title}
+        titleEmphasis={confirmModal.titleEmphasis}
         description={confirmModal.description}
         variant="confirmation"
         confirmDestructive={confirmModal.confirmDestructive}
@@ -709,6 +645,11 @@ export default function InventoryScreen() {
 }
 
 const styles = StyleSheet.create({
+  selectionHeaderWrap: {
+    marginHorizontal: spacing.screenGutter,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
   screen: {
     backgroundColor: colors.background,
   },
@@ -720,114 +661,24 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.xs,
   },
-  screenTitle: {
-    fontSize: typography.sizes.screenTitle,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
+  // ── Barra contextual de selección (reemplaza el header) ──
+  selectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    height: 64,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.floatingNav,
+    backgroundColor: colors.surface,
   },
-  screenSubtitle: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
+  // ── Barra de acciones flotante de selección (sobre la nav inferior) ──
   searchSection: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xs,
     paddingBottom: spacing.sm,
-  },
-  bulkToolbar: {
-    flexDirection: 'column',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 6,
-    backgroundColor: 'transparent',
-    marginBottom: 6,
-    gap: spacing.sm,
-  },
-  bulkTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  bulkBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-    paddingTop: 6,
-  },
-  bulkInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  bulkCountText: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  bulkSelectedText: {
-    fontSize: typography.sizes.label,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  bulkActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: radii.circular,
-    backgroundColor: colors.primaryContainer,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  bulkActionBtnText: {
-    fontSize: typography.sizes.label,
-    fontWeight: '700',
-    color: colors.primaryDark,
-  },
-  bulkDeleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: radii.circular,
-    backgroundColor: colors.error.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  bulkDeleteBtnText: {
-    fontSize: typography.sizes.label,
-    fontWeight: '700',
-    color: colors.error.text,
-  },
-  bulkCancelBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: radii.circular,
-    backgroundColor: colors.surfaceVariant,
-  },
-  bulkCancelBtnText: {
-    fontSize: typography.sizes.label,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  modalDeleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    minHeight: 52,
-    marginTop: spacing.md,
-    borderRadius: radii.circular,
-    backgroundColor: colors.error.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  modalDeleteText: {
-    fontSize: typography.sizes.bodySmall,
-    fontWeight: '700',
-    color: colors.error.text,
   },
   categoriesWrapper: {
     marginBottom: spacing.sm,
@@ -836,126 +687,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
   },
+  healthCardWrapper: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  countRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  countRowText: {
+    fontSize: typography.sizes.metadata,
+    fontWeight: typography.weights.semibold,
+    color: colors.textSecondary,
+  },
+  selectEntryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 48,
+    paddingHorizontal: spacing.xs,
+  },
+  selectEntryBtnText: {
+    fontSize: typography.sizes.metadata,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  // La cabecera de la lista ya trae su propio margen lateral: se compensa el de la lista.
+  listHeader: {
+    marginHorizontal: -spacing.lg,
+    marginTop: -spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  headerOutsideList: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
   listContainer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: 110,
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 96,
-    width: 58,
-    height: 58,
-    borderRadius: radii.circular,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.scrim,
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    maxHeight: '85%',
-    padding: spacing.xxl,
-    paddingBottom: spacing.xxxl,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  modalTitle: {
-    fontSize: typography.sizes.cardTitle,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  modalBody: {
-    maxHeight: 500,
-  },
-  label: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 6,
-    marginTop: 10,
-  },
-  modalInput: {
-    height: 52,
-    backgroundColor: colors.surfaceVariant,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.buttons,
-    paddingHorizontal: spacing.lg,
-    fontSize: typography.sizes.body,
-    color: colors.textPrimary,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  unitScroll: {
-    flexDirection: 'row',
-    marginBottom: spacing.xs,
-  },
-  smallPill: {
-    height: 38,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.circular,
-    backgroundColor: colors.surfaceVariant,
-    marginRight: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  smallPillActive: {
-    backgroundColor: colors.primary,
-  },
-  smallPillText: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 18,
-  },
-  smallPillTextActive: {
-    color: colors.textInverse,
-  },
-  stepperContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 52,
-    backgroundColor: colors.surfaceVariant,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.buttons,
-    overflow: 'hidden',
-  },
-  stepperBtn: {
-    width: 44,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-  stepperInput: {
-    flex: 1,
-    height: 50,
-    textAlign: 'center',
-    fontSize: typography.sizes.body,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    paddingHorizontal: 4,
   },
 });
