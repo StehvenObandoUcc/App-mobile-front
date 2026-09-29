@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable, Image } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
@@ -48,7 +48,7 @@ export function RecipeCover({ banner, imageUri, isSaved, topInset, onBack, onTog
         </>
       )}
       <View style={[styles.coverBar, { top: 20 + topInset }]}>
-        <IconButton iconName="chevron-back" variant="surface" accessibilityLabel="Volver" onPress={onBack} style={styles.coverBtn} />
+        <IconButton iconName="chevron-back" variant="white" accessibilityLabel="Volver" onPress={onBack} style={styles.coverBtn} />
         <IconButton
           iconName={isSaved ? 'heart' : 'heart-outline'}
           variant="surface"
@@ -229,6 +229,29 @@ export function StepItem({ index, text, state, onPress }: { index: number; text:
 }
 
 // ── StickyActionBar ───────────────────────────────────────────────────────────
+/** StepsLoading — «El Chef IA está escribiendo los pasos…» + dos pasos fantasma (Recetas-Estados · D). */
+export function StepsLoading() {
+  return (
+    <View style={styles.stepsLoadingWrap} accessibilityLiveRegion="polite" accessibilityState={{ busy: true }}>
+      <View style={styles.stepsLoadingBanner}>
+        <ActivityIndicator color={colors.tertiary} />
+        <AppText variant="body" weight="medium" color={colors.onTertiaryContainer} style={styles.stepsLoadingText}>
+          El Chef IA está escribiendo los pasos…
+        </AppText>
+      </View>
+      {[1, 0.7].map((o) => (
+        <View key={o} style={[styles.ghostStep, { opacity: o }]} importantForAccessibility="no-hide-descendants">
+          <View style={styles.ghostDot} />
+          <View style={styles.ghostLines}>
+            <View style={[styles.ghostLine, { width: o === 1 ? '90%' : '80%', backgroundColor: colors.m3.surfaceContainerHigh }]} />
+            <View style={[styles.ghostLine, { width: o === 1 ? '60%' : '50%' }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export function StickyActionBar({ note, bottomInset, children }: { note?: string; bottomInset: number; children: React.ReactNode }) {
   return (
     <View style={[styles.sticky, { paddingBottom: Math.max(bottomInset + 12, 28) }]}>
@@ -246,6 +269,45 @@ export function StickyActionBar({ note, bottomInset, children }: { note?: string
 }
 
 const styles = StyleSheet.create({
+  stepsLoadingWrap: {
+    gap: 14,
+  },
+  stepsLoadingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: radii.alerts,
+    backgroundColor: colors.tertiaryContainer,
+  },
+  stepsLoadingText: {
+    flex: 1,
+    fontSize: 15,
+  },
+  ghostStep: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+    borderRadius: radii.alerts,
+    backgroundColor: colors.surface,
+  },
+  ghostDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.m3.surfaceContainer,
+  },
+  ghostLines: {
+    flex: 1,
+    gap: 8,
+    paddingTop: 4,
+  },
+  ghostLine: {
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.m3.surfaceContainer,
+  },
   aiBadge: {
     alignSelf: 'flex-start',
     flexDirection: 'row',

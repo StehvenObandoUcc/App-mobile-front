@@ -9,7 +9,7 @@ import { recipeBanner, DIFFICULTY_LABELS, missingLabel as missingText } from '..
 /**
  * RecipeCard — Organismos.dc.html
  * Franja superior de 150 dp: foto si hay `imageUri`; si no, pastel + plato blanco con icono.
- * Coincidencia en frambuesa (dato de la IA). Botones 48 dp: «⋯» (más opciones → onDelete) y guardar.
+ * Coincidencia en frambuesa (dato de la IA). Botón 48 dp: solo guardar (corazón), como el mockup; borrar = mantener presionado → selección.
  * Cuerpo: título 20/600, descripción, meta (tiempo · dificultad segmentada · porciones)
  * y progreso de ingredientes segmentado «Tienes 7 de 8 · Falta 1».
  * Seleccionado: anillo cacao 2 dp + check circular en la esquina.
@@ -143,16 +143,6 @@ export function RecipeCard({
 
           {!isSelectMode && (
             <View style={styles.bannerActions}>
-              {onDelete && (
-                <Pressable
-                  onPress={onDelete}
-                  style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Más opciones de la receta ${recipe.title}`}
-                >
-                  <Ionicons name="ellipsis-horizontal" size={20} color={colors.textPrimary} />
-                </Pressable>
-              )}
               {onSave && (
                 <Pressable
                   onPress={handleSavePress}
@@ -270,28 +260,28 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   banner: {
-    height: 150,
+    height: 132, // Recetas.dc.html
     overflow: 'hidden',
   },
   bannerHalo: {
     position: 'absolute',
     right: -20,
     bottom: -44,
-    width: 190,
-    height: 190,
-    borderRadius: 95,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
     backgroundColor: colors.surface,
     opacity: 0.55,
   },
   plate: {
     position: 'absolute',
     right: 26,
-    bottom: -8,
-    width: 124,
-    height: 124,
-    borderRadius: 62,
+    bottom: -10,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     backgroundColor: colors.surface,
-    borderWidth: 10,
+    borderWidth: 9,
     borderColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
@@ -300,7 +290,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 14,
     top: 14,
-    height: 32,
+    height: 30,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -319,7 +309,7 @@ const styles = StyleSheet.create({
   roundBtn: {
     width: spacing.touchTargetMin,
     height: spacing.touchTargetMin,
-    borderRadius: radii.circular,
+    borderRadius: spacing.touchTargetMin / 2,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -339,7 +329,7 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 26,
     height: 26,
-    borderRadius: radii.circular,
+    borderRadius: 13,
     borderWidth: 2,
     borderColor: colors.borderStrong,
     backgroundColor: colors.surface,
@@ -357,7 +347,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   title: {
-    lineHeight: 26,
+    fontSize: 19,
+    lineHeight: 25,
   },
   metaRow: {
     flexDirection: 'row',
