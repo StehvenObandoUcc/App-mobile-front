@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LocalStorage } from '../storage/local-storage';
 import { flushOutbox } from '../services/outbox-dispatcher';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Estado visible de la cola Outbox (patrón Offline-First) para el OfflineBanner.
@@ -34,6 +35,22 @@ function readSnapshot(): Snapshot {
 }
 
 const SYNCED_VISIBLE_MS = 2000;
+const LAST_SYNC_KEY = '@food_ai_last_sync_at';
+
+/** Momento de la última sincronización completa (Configuración › «Última vez: hace …»). */
+export async function getLastSyncAt(): Promise<number | null> {
+  try {
+    const raw = await AsyncStorage.getItem(LAST_SYNC_KEY);
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function markSynced() {
+  AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now())).catch(() => {});
+}
 
 export function useOutboxStatus(pollMs = 3000) {
   const [snapshot, setSnapshot] = useState<Snapshot>(readSnapshot);
@@ -63,7 +80,9 @@ export function useOutboxStatus(pollMs = 3000) {
   useEffect(() => {
     const hadPending = prevPending.current > 0;
     prevPending.current = snapshot.pendingCount;
+    // Solo cuenta como sincronización real cuando había pendientes y se vaciaron.
     if (hadPending && snapshot.pendingCount === 0 && snapshot.stuckCount === 0) {
+      markSynced();
       setShowSynced(true);
       const t = setTimeout(() => setShowSynced(false), SYNCED_VISIBLE_MS);
       return () => clearTimeout(t);
