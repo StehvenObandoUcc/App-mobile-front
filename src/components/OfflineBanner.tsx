@@ -9,10 +9,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radii } from '../theme';
-import { fontFamilyFor } from '../utils/brand-font';
 import type { OutboxBannerState } from '../types';
 
-import { Text } from './Text';
+import { AppText } from './AppText';
 export type OfflineBannerProps = {
   state: OutboxBannerState;
   pendingCount: number;
@@ -28,7 +27,10 @@ function resolveCopy(state: OutboxBannerState, pending: number, stuck: number) {
     case 'offline':
       return {
         title: 'Sin conexión',
-        body: `${pending} ${plural(pending, 'cambio se sincronizará', 'cambios se sincronizarán')} al volver`,
+        body:
+          pending > 0
+            ? `${pending} ${plural(pending, 'cambio se sincronizará', 'cambios se sincronizarán')} al volver`
+            : 'Lo que tienes guardado sigue disponible',
       };
     case 'authBlocked':
       return {
@@ -107,9 +109,13 @@ export function OfflineBanner({
         <Ionicons name={tone.icon} size={20} color={tone.fg} />
       </View>
       <View style={styles.textCol}>
-        <Text style={[styles.title, { color: tone.fg, fontFamily: fontFamilyFor('semibold') }]}>{title}</Text>
+        <AppText weight="semibold" color={tone.fg} style={styles.title}>
+          {title}
+        </AppText>
         {body ? (
-          <Text style={[styles.body, { color: tone.fg, fontFamily: fontFamilyFor('regular') }]}>{body}</Text>
+          <AppText weight="regular" color={tone.fg} style={styles.body}>
+            {body}
+          </AppText>
         ) : null}
       </View>
       {showRetry && (
@@ -128,9 +134,9 @@ export function OfflineBanner({
           {isRetrying ? (
             <ActivityIndicator size="small" color={colors.textInverse} />
           ) : (
-            <Text numberOfLines={1} style={[styles.retryText, { fontFamily: fontFamilyFor('semibold') }]}>
+            <AppText numberOfLines={1} weight="semibold" color={colors.textInverse} style={styles.retryText}>
               Reintentar
-            </Text>
+            </AppText>
           )}
         </Pressable>
       )}
@@ -143,12 +149,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: radii.alerts,
-    padding: spacing.md,
+    padding: 12,
   },
   iconCircle: {
     width: 40,
     height: 40,
-    borderRadius: radii.circular,
+    borderRadius: 20, // radio exacto: con 999 Android a veces lo pinta cuadrado
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -160,27 +166,25 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
   },
   title: {
-    fontSize: typography.sizes.bodySmall,
-    lineHeight: typography.lineHeights.bodySmall,
-    fontWeight: typography.weights.semibold,
+    fontSize: 15,
+    lineHeight: 20,
   },
   body: {
-    fontSize: typography.sizes.metadata,
-    lineHeight: typography.lineHeights.metadata,
+    fontSize: 13,
+    lineHeight: 18,
   },
   retry: {
     flexShrink: 0,
     minHeight: spacing.touchTargetMin,
     minWidth: 96,
     paddingHorizontal: spacing.lg,
-    borderRadius: radii.circular,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   retryPressed: { opacity: 0.88, transform: [{ scale: 0.97 }] },
   retryText: {
-    color: colors.textInverse,
-    fontSize: typography.sizes.bodySmall,
-    fontWeight: typography.weights.semibold,
+    fontSize: 14,
+    lineHeight: 18,
   },
 });

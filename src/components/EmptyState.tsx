@@ -18,6 +18,9 @@ export type EmptyStateProps = {
   description: string;
   iconName?: keyof typeof Ionicons.glyphMap;
   tone?: BlobTone;
+  blobDotColors?: [string, string];
+  /** 'lg' (defecto, pantalla completa) · 'md' (estado dentro de una pantalla con encabezado, p. ej. sin conexión). */
+  blobSize?: 'md' | 'lg';
   actionLabel?: string;
   onAction?: () => void;
   /** 'ink' (defecto) · 'brand' (escanear) · 'ai' · 'tint' (durazno, p. ej. «Agregar "mango"») */
@@ -33,6 +36,8 @@ export function EmptyState({
   description,
   iconName = 'basket-outline',
   tone = 'fresh',
+  blobDotColors,
+  blobSize = 'lg',
   actionLabel,
   onAction,
   actionTone = 'ink',
@@ -45,7 +50,7 @@ export function EmptyState({
 
   return (
     <View style={styles.container}>
-      <IllustrationBlob iconName={iconName} tone={tone} size="lg" />
+      <IllustrationBlob iconName={iconName} tone={tone} size={blobSize} dotColors={blobDotColors} />
       <AppText variant="headline" weight="light" align="center" style={styles.title}>
         {title}
         {titleEmphasis ? <AppText weight="semibold">{` ${titleEmphasis}`}</AppText> : null}

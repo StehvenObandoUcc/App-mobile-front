@@ -23,9 +23,11 @@ export type IllustrationBlobProps = {
   tone?: BlobTone;
   /** 'md' = 120×104 (estados dentro de lista) · 'lg' = 150×128 (pantalla completa) */
   size?: 'md' | 'lg';
+  /** Colores de los puntos decorativos [arriba-derecha, abajo-izquierda] si el mockup usa otros. */
+  dotColors?: [string, string];
 };
 
-export function IllustrationBlob({ iconName, tone = 'fresh', size = 'md' }: IllustrationBlobProps) {
+export function IllustrationBlob({ iconName, tone = 'fresh', size = 'md', dotColors }: IllustrationBlobProps) {
   const t = TONES[tone];
   const lg = size === 'lg';
   const k = lg ? 1.25 : 1;
@@ -48,13 +50,13 @@ export function IllustrationBlob({ iconName, tone = 'fresh', size = 'md' }: Illu
           },
         ]}
       />
-      {t.dots && (
+      {(t.dots || dotColors) && (
         <>
-          <View style={[styles.dot, { right: 0, top: 0, width: 34 * k, height: 34 * k, backgroundColor: colors.categories.grain.background }]} />
-          {lg && <View style={[styles.dot, { left: 4, bottom: 6, width: 26, height: 26, backgroundColor: colors.primaryContainer }]} />}
+          <View style={[styles.dot, { right: 0, top: 0, width: 34 * k, height: 34 * k, borderRadius: 17 * k, backgroundColor: dotColors?.[0] ?? colors.categories.grain.background }]} />
+          {lg && <View style={[styles.dot, { left: 4, bottom: 6, width: 26, height: 26, borderRadius: 13, backgroundColor: dotColors?.[1] ?? colors.primaryContainer }]} />}
         </>
       )}
-      <View style={[styles.iconCircle, { left: 32 * k, top: 24 * k, width: 56 * k, height: 56 * k }]}>
+      <View style={[styles.iconCircle, { left: 32 * k, top: 24 * k, width: 56 * k, height: 56 * k, borderRadius: 28 * k }]}>
         <Ionicons name={iconName} size={28 * k} color={t.icon} />
       </View>
     </View>
@@ -63,10 +65,9 @@ export function IllustrationBlob({ iconName, tone = 'fresh', size = 'md' }: Illu
 
 const styles = StyleSheet.create({
   blob: { position: 'absolute' },
-  dot: { position: 'absolute', borderRadius: radii.circular },
+  dot: { position: 'absolute' },
   iconCircle: {
     position: 'absolute',
-    borderRadius: radii.circular,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
