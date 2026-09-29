@@ -11,7 +11,9 @@ import {
   AppText,
   PrimaryButton,
   M3Dialog,
-  ErrorState,
+  InlineErrorCard,
+  EmptyState,
+  StepsLoading,
   AiBadge,
   RecipeCover,
   StatTile,
@@ -58,6 +60,7 @@ export default function RecipeDetailScreen() {
   const { addFromRecipe } = useShoppingList();
 
   const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [isFinishing, setIsFinishing] = useState(false);
   const [isLoadingSteps, setIsLoadingSteps] = useState(false);
@@ -85,6 +88,7 @@ export default function RecipeDetailScreen() {
     if (!recipeId) return;
     getRecipeById(recipeId).then((rec) => {
       setRecipe(rec);
+      setNotFound(!rec);
       // Pasos bajo demanda: si la receta aún no los tiene, se piden a la IA.
       if (rec && (!rec.steps || rec.steps.length === 0)) loadSteps(rec);
     });
@@ -105,6 +109,22 @@ export default function RecipeDetailScreen() {
   );
 
   const steps = useMemo(() => (recipe?.steps ?? []).map(cleanStepText), [recipe?.steps]);
+
+  if (!recipe && notFound) {
+    return (
+      <View style={[styles.loading, { paddingTop: insets.top, paddingHorizontal: 24 }]}>
+        <EmptyState
+          title="No encontramos"
+          titleEmphasis="esta receta"
+          description="Puede que la hayas borrado o que ya no esté disponible."
+          iconName="restaurant-outline"
+          tone="neutral"
+          actionLabel="Ver mis recetas"
+          onAction={() => router.replace('/recipes')}
+        />
+      </View>
+    );
+  }
 
   if (!recipe) {
     return (
@@ -129,7 +149,21 @@ export default function RecipeDetailScreen() {
     setCompletedSteps((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
 
   const handleAddMissing = async () => {
-    const res = await addFromRecipe(recipe.missingIngredients, recipe.title);
+    let res: { addedCount: number; mergedCount: number };
+    try {
+      res = await addFromRecipe(recipe.missingIngredients, recipe.title);
+    } catch {
+      setDialog({
+        visible: true,
+        title: 'No se pudieron',
+        titleEmphasis: 'agregar',
+        message: 'Inténtalo de nuevo en un momento.',
+        type: 'error',
+        confirmText: 'Entendido',
+        onConfirm: closeDialog,
+      });
+      return;
+    }
     setDialog({
       visible: true,
       title: '¡Listo! Faltantes en tu',
@@ -141,7 +175,7 @@ export default function RecipeDetailScreen() {
       cancelText: 'Seguir aquí',
       onConfirm: () => {
         closeDialog();
-        router.push('/shopping-list');
+        router.navigate('/shopping-list');
       },
       onCancel: closeDialog,
     });
@@ -298,19 +332,11 @@ export default function RecipeDetailScreen() {
               <AiBadge label="Generados por IA" size="sm" />
             </View>
 
-            {isLoadingSteps && (
-              <View style={styles.stepsLoading} accessibilityLiveRegion="polite">
-                <ActivityIndicator color={colors.tertiary} />
-                <AppText variant="bodySmall" color={colors.onTertiaryContainer} style={styles.flex}>
-                  El Chef IA está escribiendo los pasos…
-                </AppText>
-              </View>
-            )}
+            {isLoadingSteps && <StepsLoading />}
 
             {stepsError && !isLoadingSteps && (
-              <ErrorState
-                title="No pudimos generar"
-                titleEmphasis="los pasos"
+              <InlineErrorCard
+                title="No pudimos generar los pasos"
                 message="Revisa tu conexión. Los ingredientes de la receta siguen disponibles."
                 onRetry={() => loadSteps(recipe)}
               />
