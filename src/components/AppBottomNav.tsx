@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useSyncExternalStore } from 'react';
-import { View, StyleSheet, Pressable, PanResponder, Animated, Easing } from 'react-native';
+import React, { useRef, useEffect, useState, useSyncExternalStore } from 'react';
+import { View, StyleSheet, Pressable, PanResponder, Animated, Easing, LayoutAnimation, LayoutChangeEvent } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,12 +13,62 @@ import {
   getSwipeTransition,
 } from '../utils/tabSwipeState';
 
-import { Text } from './Text';
+import { AppText } from './AppText';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 export const NAV_HEIGHT = 72; // Organismos.dc.html: barra flotante de 72 dp
 export const NAV_BOTTOM_OFFSET = 12;
 
 export const getBottomContentPadding = (bottomInset: number) =>
   NAV_HEIGHT + Math.max(bottomInset, 0) + NAV_BOTTOM_OFFSET + 16;
+
+const PILL_H = 50;
+const MID_BASE = 100; // ancho base del centro de la píldora; se estira con scaleX
+const SLIDE_MS = 280;
+const EASE = Easing.bezier(0.2, 0, 0, 1);
+
+/** Icono de pestaña: fundido de claro (contorno) a cacao (relleno). */
+function TabIcon({
+  icon,
+  iconActive,
+  active,
+  reduceMotion,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconActive: keyof typeof Ionicons.glyphMap;
+  active: boolean;
+  reduceMotion: boolean;
+}) {
+  const v = useRef(new Animated.Value(active ? 1 : 0)).current;
+  useEffect(() => {
+    if (reduceMotion) v.setValue(active ? 1 : 0);
+    else Animated.timing(v, { toValue: active ? 1 : 0, duration: SLIDE_MS, easing: EASE, useNativeDriver: true }).start();
+  }, [active, reduceMotion, v]);
+  return (
+    <View style={styles.iconBox}>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.center, { opacity: v.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]}>
+        <Ionicons name={icon} size={22} color={colors.navIconIdle} />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.center, { opacity: v }]}>
+        <Ionicons name={iconActive} size={22} color={colors.ink} />
+      </Animated.View>
+    </View>
+  );
+}
+
+/** Etiqueta de la pestaña activa: entra con fundido y un leve desplazamiento. */
+function TabLabel({ label, reduceMotion }: { label: string; reduceMotion: boolean }) {
+  const v = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  useEffect(() => {
+    if (!reduceMotion) Animated.timing(v, { toValue: 1, duration: SLIDE_MS, delay: 60, easing: EASE, useNativeDriver: true }).start();
+  }, [reduceMotion, v]);
+  return (
+    <Animated.View style={{ opacity: v, transform: [{ translateX: v.interpolate({ inputRange: [0, 1], outputRange: [-6, 0] }) }] }}>
+      <AppText variant="bodySmall" weight="semibold" color={colors.ink} numberOfLines={1}>
+        {label}
+      </AppText>
+    </Animated.View>
+  );
+}
 
 export function AppBottomNav() {
   const router = useRouter();
@@ -27,9 +77,19 @@ export function AppBottomNav() {
   const { pendingItems } = useShoppingList();
   const isNavigatingRef = useRef(false);
 
-  // Micro-animación nativa y suave para la píldora activa de navegación
-  const pillScale = useRef(new Animated.Value(1)).current;
-  const pillOpacity = useRef(new Animated.Value(1)).current;
+  const reduceMotion = useReduceMotion();
+  // El PanResponder se crea una vez: lee «reducir movimiento» desde una ref para no quedarse con el valor inicial.
+  const reduceMotionRef = useRef(reduceMotion);
+  reduceMotionRef.current = reduceMotion;
+
+  // ── Píldora activa que se desliza (Paso 5 · Animaciones) ──
+  // Se dibuja aparte, detrás de las pestañas, con tres piezas para que todo sea transform nativo:
+  // tapa izquierda (círculo 50) + centro (rectángulo que se estira con scaleX) + tapa derecha.
+  const pillX = useRef(new Animated.Value(0)).current;
+  const pillW = useRef(new Animated.Value(PILL_H)).current;
+  const pillReady = useRef(false);
+  const [pillVisible, setPillVisible] = useState(false);
+  const tabLayouts = useRef<Record<number, { x: number; w: number }>>({}).current;
 
   // Arrastre interactivo en la barra con traslación e inclinación elástica suave
   const navDragX = useRef(new Animated.Value(0)).current;
@@ -57,32 +117,33 @@ export function AppBottomNav() {
 
   useEffect(() => {
     isNavigatingRef.current = false;
-    const { isSwipe } = getSwipeTransition();
+    getSwipeTransition(); // consume la marca de swipe (la píldora ya anima en ambos casos)
+    if (currentTabIndex === -1) setPillVisible(false);
+  }, [pathname]);
 
-    if (isSwipe) {
-      // Micro-animación pop suave (escala 0.88 -> 1.0) al cambiar de pestaña mediante swipe
-      pillScale.setValue(0.88);
-      pillOpacity.setValue(0.7);
-      Animated.parallel([
-        Animated.spring(pillScale, {
-          toValue: 1,
-          tension: 180,
-          friction: 12,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pillOpacity, {
-          toValue: 1,
-          duration: 160,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // Si fue una pulsación directa sin deslizar (ej. Inicio a Recetas),
-      // se establece inmediatamente sin animación para máxima rapidez y limpieza.
-      pillScale.setValue(1);
-      pillOpacity.setValue(1);
+  /** Mueve la píldora al tab `index` cuando conocemos su posición real (onLayout). */
+  const movePill = (index: number) => {
+    const l = tabLayouts[index];
+    if (!l) return;
+    if (!pillReady.current || reduceMotion) {
+      pillX.setValue(l.x);
+      pillW.setValue(l.w);
+      pillReady.current = true;
+      setPillVisible(true);
+      return;
     }
-  }, [pathname, pillScale, pillOpacity]);
+    setPillVisible(true);
+    Animated.parallel([
+      Animated.timing(pillX, { toValue: l.x, duration: SLIDE_MS, easing: EASE, useNativeDriver: true }),
+      Animated.timing(pillW, { toValue: l.w, duration: SLIDE_MS, easing: EASE, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const onTabLayout = (index: number, active: boolean) => (e: LayoutChangeEvent) => {
+    const { x, width } = e.nativeEvent.layout;
+    tabLayouts[index] = { x, w: width };
+    if (active) movePill(index);
+  };
 
   const navigateToTab = (targetIndex: number) => {
     const curr = currentTabIndexRef.current;
@@ -91,7 +152,14 @@ export function AppBottomNav() {
     if (isNavigatingRef.current) return;
 
     isNavigatingRef.current = true;
-    router.push(MAIN_TABS[targetIndex] as any);
+    // Las pestañas cambian de ancho (la activa muestra su etiqueta): se anima en el hilo de UI.
+    if (!reduceMotionRef.current) {
+      LayoutAnimation.configureNext({
+        duration: SLIDE_MS,
+        update: { type: LayoutAnimation.Types.easeInEaseOut },
+      });
+    }
+    router.navigate(MAIN_TABS[targetIndex] as any); // navigate: no apila pestañas
 
     // Timeout de seguridad que previene bloqueos bajo cualquier circunstancia
     setTimeout(() => {
@@ -207,32 +275,31 @@ export function AppBottomNav() {
   const renderTab = (t: (typeof tabs)[number]) => (
     <Pressable
       key={t.label}
-      style={({ pressed }) => [styles.navItem, pressed && styles.pressed]}
+      onLayout={onTabLayout(t.index, t.active)}
+      style={({ pressed }) => [styles.navItem, t.active && styles.navItemActive, pressed && styles.pressed]}
       onPress={() => navigateToTab(t.index)}
       accessibilityRole="tab"
       accessibilityState={{ selected: t.active }}
       accessibilityLabel={t.a11y}
     >
-      {t.active ? (
-        // Pestaña activa: píldora durazno con icono + etiqueta (Organismos.dc.html)
-        <Animated.View style={[styles.activePill, { transform: [{ scale: pillScale }], opacity: pillOpacity }]}>
-          <Ionicons name={t.iconActive} size={22} color={colors.ink} />
-          <Text style={styles.activeLabel} numberOfLines={1}>
-            {t.label}
-          </Text>
-        </Animated.View>
-      ) : (
-        <View style={styles.idleIcon}>
-          <Ionicons name={t.icon} size={22} color={colors.navIconIdle} />
-          {t.badge !== undefined && t.badge > 0 && (
-            <View style={styles.badge} pointerEvents="none">
-              <CountBadge count={t.badge} />
-            </View>
-          )}
+      <TabIcon icon={t.icon} iconActive={t.iconActive} active={t.active} reduceMotion={reduceMotion} />
+      {t.active && <TabLabel label={t.label} reduceMotion={reduceMotion} />}
+      {!t.active && t.badge !== undefined && t.badge > 0 && (
+        <View style={styles.badge} pointerEvents="none">
+          <CountBadge count={t.badge} />
         </View>
       )}
     </Pressable>
   );
+
+  // FAB: se hunde al presionar y rebota al soltar.
+  const fabScale = useRef(new Animated.Value(1)).current;
+  const fabIn = () =>
+    Animated.timing(fabScale, { toValue: 0.94, duration: 90, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  const fabOut = () =>
+    reduceMotion
+      ? fabScale.setValue(1)
+      : Animated.spring(fabScale, { toValue: 1, friction: 4, tension: 220, useNativeDriver: true }).start();
 
   // Oculta mientras una pantalla muestra su propia barra flotante (modo selección).
   if (navHidden) return null;
@@ -245,19 +312,41 @@ export function AppBottomNav() {
           { transform: [{ translateX: navDragX }, { rotate: navDragTilt }, { scale: navDragScale }] },
         ]}
       >
+        {/* Píldora durazno que se desliza detrás de la pestaña activa */}
+        {pillVisible && currentTabIndex !== -1 && (
+          <View style={styles.pillLayer} pointerEvents="none">
+            <Animated.View style={[styles.pillCap, { transform: [{ translateX: pillX }] }]} />
+            <Animated.View
+              style={[
+                styles.pillMid,
+                {
+                  transform: [
+                    { translateX: Animated.add(pillX, PILL_H / 2) },
+                    { scaleX: Animated.multiply(Animated.add(pillW, -PILL_H), 1 / MID_BASE) },
+                  ],
+                },
+              ]}
+            />
+            <Animated.View style={[styles.pillCap, { transform: [{ translateX: Animated.add(pillX, Animated.add(pillW, -PILL_H)) }] }]} />
+          </View>
+        )}
+
         {renderTab(tabs[0])}
         {renderTab(tabs[1])}
 
         {/* FAB central de escaneo: squircle tomate con icono cacao */}
         <Pressable
-          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+          onPressIn={fabIn}
+          onPressOut={fabOut}
           onPress={() => router.push('/scan')}
           accessibilityRole="button"
           accessibilityLabel="Escanear alimentos con la cámara"
         >
-          {/* Icono del mockup: marco de escaneo + lente circular al centro */}
-          <Ionicons name="scan-outline" size={26} color={colors.ink} />
-          <View style={styles.fabLens} pointerEvents="none" />
+          <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
+            {/* Icono del mockup: marco de escaneo + lente circular al centro */}
+            <Ionicons name="scan-outline" size={26} color={colors.ink} />
+            <View style={styles.fabLens} pointerEvents="none" />
+          </Animated.View>
         </Pressable>
 
         {renderTab(tabs[2])}
@@ -286,32 +375,44 @@ const styles = StyleSheet.create({
     ...elevations.lg,
   },
   navItem: {
-    minWidth: 50,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  idleIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activePill: {
-    height: 50,
+    minWidth: PILL_H,
+    height: PILL_H,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navItemActive: {
     gap: 6,
     paddingLeft: 10,
     paddingRight: 14,
-    borderRadius: 25,
+  },
+  iconBox: {
+    width: 22,
+    height: 22,
+  },
+  center: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pillLayer: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'center',
+  },
+  pillCap: {
+    position: 'absolute',
+    left: 0,
+    width: PILL_H,
+    height: PILL_H,
+    borderRadius: PILL_H / 2,
     backgroundColor: colors.primaryContainer,
   },
-  activeLabel: {
-    fontSize: typography.sizes.bodySmall,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
+  pillMid: {
+    position: 'absolute',
+    left: 0,
+    width: MID_BASE,
+    height: PILL_H,
+    backgroundColor: colors.primaryContainer,
+    transformOrigin: 'left center',
   },
   fab: {
     width: 56,
@@ -328,10 +429,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 2,
     borderColor: colors.ink,
-  },
-  fabPressed: {
-    transform: [{ scale: 0.94 }],
-    opacity: 0.9,
   },
   badge: {
     position: 'absolute',
