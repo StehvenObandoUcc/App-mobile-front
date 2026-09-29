@@ -1,58 +1,66 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ActivityIndicator,
-  Alert,
-  Image,
-  Linking,
-} from 'react-native';
+import { View, StyleSheet, Pressable, Image, Linking } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScan } from '../src/hooks/useScan';
-import {
-  getTestPhotoCount,
-  incrementTestPhotoCount,
-  MAX_TEST_PHOTOS,
-} from '../src/services/scan-limit';
-import { AppScreen, PrimaryButton, SecondaryButton } from '../src/components';
-import { colors, radii, spacing, typography } from '../src/theme';
+import { getTestPhotoCount, incrementTestPhotoCount, MAX_TEST_PHOTOS } from '../src/services/scan-limit';
+import { AppText, IconButton, QuotaPill, StatusScreen, AiProgressScreen } from '../src/components';
+import { ScanInput } from '../src/types';
+import { colors, radii } from '../src/theme';
+
+/**
+ * Escaneo (Escaneo.dc.html + Escaneo-Estados.dc.html).
+ * - Cámara: barra con volver y cuota, título, visor, consejos y controles (galería · obturador · girar).
+ * - Analizando: AiProgressScreen a pantalla completa, sin salida hasta terminar.
+ * - Límite de 5 fotos y Error: StatusScreen en la misma pantalla (sin Alert).
+ * Un intento fallido no cuenta como foto de prueba: el contador sube solo si el análisis funciona.
+ */
+type ScanView = 'camera' | 'limit' | 'error';
+
+const ANALYSIS_STEPS = ['Foto optimizada', 'Identificando ingredientes…', 'Comparando con tu despensa'];
 
 export default function ScanScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraView>(null);
   const [facing, setFacing] = useState<CameraType>('back');
+  // Linterna: ilumina la vista y la foto cuando hay poca luz (solo cámara trasera).
+  const [torchOn, setTorchOn] = useState(false);
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
   const [testPhotoCount, setTestPhotoCount] = useState<number>(0);
-  const { status, error, analyzeImage } = useScan();
+  const [view, setView] = useState<ScanView>('camera');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const lastInputRef = useRef<ScanInput | null>(null);
+  const { status, analyzeImage } = useScan();
   const autoRequestedRef = useRef(false);
 
-  // Resetear la vista previa congelada, sincronizar cuota de fotos y RE-consultar el permiso
-  // de cámara al enfocar: si el usuario lo concedió manualmente desde Ajustes (flujo "Abrir
-  // ajustes" cuando canAskAgain es false), el estado de useCameraPermissions no se refresca
-  // solo al volver a primer plano, y la pantalla quedaría congelada en "permiso necesario".
+  const goHome = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  // Al enfocar: limpiar la foto congelada, leer la cuota (si ya se usaron las 5, mostrar el límite)
+  // y RE-consultar el permiso (si lo concedió desde Ajustes, useCameraPermissions no se refresca solo).
   useFocusEffect(
     useCallback(() => {
       setCapturedPhotoUri(null);
       setIsCapturing(false);
+      setTorchOn(false);
       autoRequestedRef.current = false;
-      getTestPhotoCount().then(setTestPhotoCount);
+      getTestPhotoCount().then((count) => {
+        setTestPhotoCount(count);
+        setView(count >= MAX_TEST_PHOTOS ? 'limit' : 'camera');
+      });
       if (!permission?.granted) {
         getPermission().catch(() => {});
       }
     }, [permission?.granted, getPermission])
   );
 
-  // Permisos ya se piden al arrancar la app (primeAppPermissionsOnce en _layout.tsx). Si el
-  // usuario los negó entonces, al intentar usar la cámara aquí se "reactiva" la solicitud
-  // automáticamente en lugar de dejarlo solo con un botón que debe descubrir por su cuenta.
+  // Si el permiso se negó al arrancar la app, se vuelve a pedir al entrar aquí.
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain && !autoRequestedRef.current) {
       autoRequestedRef.current = true;
@@ -62,168 +70,21 @@ export default function ScanScreen() {
 
   const isAnalyzing = isCapturing || status === 'loading';
 
-  // Verifica si se alcanzó el límite de 5 fotos en la fase de pruebas
   const checkTestLimit = (): boolean => {
     if (testPhotoCount >= MAX_TEST_PHOTOS) {
-      Alert.alert(
-        'Límite de fotos alcanzado',
-        `Durante la fase de pruebas, el escaneo inteligente con IA está limitado a ${MAX_TEST_PHOTOS} fotos para proteger los recursos de la API.\n\n¡Puedes continuar añadiendo y gestionando todos tus alimentos manualmente en tu inventario!`,
-        [
-          { text: 'Ir a Inventario', onPress: () => router.replace('/inventory') },
-          { text: 'Entendido', style: 'cancel' },
-        ]
-      );
+      setView('limit');
       return false;
     }
     return true;
   };
 
-  // Seleccionar foto directamente desde la galería del dispositivo
-  const handlePickFromGallery = async () => {
-    if (isAnalyzing) return;
-    if (!checkTestLimit()) return;
-
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: false,
-        quality: 0.8,
-      });
-
-      if (result.canceled || !result.assets || result.assets.length === 0) {
-        return;
-      }
-
-      const asset = result.assets[0];
-      if (!asset.uri) return;
-
-      setIsCapturing(true);
-      setCapturedPhotoUri(asset.uri);
-
-      // Redimensionar en el móvil a width: 1024 manteniendo compress: 0.8
-      const manipulated = await ImageManipulator.manipulateAsync(
-        asset.uri,
-        [{ resize: { width: 1024 } }],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-      );
-
-      const scanResult = await analyzeImage({
-        imageUri: manipulated.uri,
-        mimeType: 'image/jpeg',
-        base64: manipulated.base64 || undefined,
-      });
-
-      await incrementTestPhotoCount();
-      setTestPhotoCount((prev) => prev + 1);
-
-      router.push({
-        pathname: '/scan-result',
-        params: {
-          scanId: scanResult.scanId,
-          imageUri: scanResult.imageUri,
-          ingredientsData: JSON.stringify(scanResult.ingredients),
-          warningsData: JSON.stringify(scanResult.warnings || []),
-        },
-      });
-
-    } catch (err: any) {
-      setCapturedPhotoUri(null);
-      Alert.alert(
-        'No pudimos analizar la imagen',
-        err?.message || 'Ocurrió un error al procesar la imagen de la galería.',
-        [{ text: 'Entendido', style: 'default' }]
-      );
-    } finally {
-      setIsCapturing(false);
-    }
-  };
-
-  if (!permission) {
-    return <View style={styles.blackContainer} />;
-  }
-
-  if (!permission.granted) {
-    const canAskAgain = permission.canAskAgain;
-    return (
-      <AppScreen style={styles.permissionScreen}>
-        <View style={styles.permissionTopNav}>
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-            style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Volver al inicio"
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-          </Pressable>
-        </View>
-
-        <View style={styles.permissionContainer}>
-          <View style={styles.permissionIconCircle}>
-            <Ionicons name="camera-outline" size={48} color={colors.primary} />
-          </View>
-          <Text style={styles.permissionTitle}>Permiso de cámara necesario</Text>
-          <Text style={styles.permissionSubtitle}>
-            Food AI necesita acceso a tu cámara para escanear tus alimentos e identificar lo que tienes en tu nevera o despensa. También puedes seleccionar una foto de tu galería.
-          </Text>
-          <View style={{ width: '100%', maxWidth: 280, marginTop: spacing.xxl, gap: spacing.md }}>
-            {canAskAgain ? (
-              <PrimaryButton
-                title="Dar permiso de cámara"
-                iconName="camera-outline"
-                onPress={requestPermission}
-              />
-            ) : (
-              <PrimaryButton
-                title="Abrir ajustes"
-                iconName="settings-outline"
-                onPress={() => Linking.openSettings()}
-              />
-            )}
-            <SecondaryButton
-              title="Elegir de la galería"
-              iconName="images-outline"
-              variant="outline"
-              onPress={handlePickFromGallery}
-            />
-          </View>
-        </View>
-      </AppScreen>
-    );
-  }
-
-  const handleCapture = async () => {
-    if (!cameraRef.current || isAnalyzing) return;
-    if (!checkTestLimit()) return;
-
+  /** Envía la foto ya optimizada a la IA; si falla, muestra el error sin gastar una foto de prueba. */
+  const runAnalysis = async (input: ScanInput) => {
     setIsCapturing(true);
     try {
-      // 1. Capturar fotografía
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
-      if (!photo?.uri) {
-        throw new Error('No se pudo capturar la fotografía');
-      }
-
-      // Congelar la vista con la foto capturada (punto intermedio, oculta la cámara en vivo)
-      setCapturedPhotoUri(photo.uri);
-
-      // Redimensionar en el móvil a width: 1024 manteniendo compress: 0.8 (Ponytail Opt 1)
-      const manipulated = await ImageManipulator.manipulateAsync(
-        photo.uri,
-        [{ resize: { width: 1024 } }],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-      );
-
-      // 2. Analizar mediante el servicio desacoplado con payload ligero (~120 KB en vez de 4 MB)
-      const result = await analyzeImage({
-        imageUri: manipulated.uri,
-        mimeType: 'image/jpeg',
-        base64: manipulated.base64 || undefined,
-      });
-
+      const result = await analyzeImage(input);
       await incrementTestPhotoCount();
       setTestPhotoCount((prev) => prev + 1);
-
-      // 3. Navegar a la pantalla de revisión con los datos reales de la IA
       router.push({
         pathname: '/scan-result',
         params: {
@@ -233,337 +94,376 @@ export default function ScanScreen() {
           warningsData: JSON.stringify(result.warnings || []),
         },
       });
-
     } catch (err: any) {
       setCapturedPhotoUri(null);
-      Alert.alert(
-        'No pudimos analizar tu foto',
-        err?.message || 'Intenta de nuevo en unos segundos.',
-        [{ text: 'Entendido', style: 'default' }]
-      );
+      setErrorMessage(err?.message || null);
+      setView('error');
     } finally {
       setIsCapturing(false);
     }
   };
 
+  /** Redimensiona a 1024 px (≈120 KB) y analiza. */
+  const analyzeUri = async (uri: string) => {
+    setIsCapturing(true);
+    setCapturedPhotoUri(uri);
+    try {
+      const manipulated = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 1024 } }], {
+        compress: 0.8,
+        format: ImageManipulator.SaveFormat.JPEG,
+        base64: true,
+      });
+      const input: ScanInput = {
+        imageUri: manipulated.uri,
+        mimeType: 'image/jpeg',
+        base64: manipulated.base64 || undefined,
+      };
+      lastInputRef.current = input;
+      await runAnalysis(input);
+    } catch (err: any) {
+      setCapturedPhotoUri(null);
+      setErrorMessage(err?.message || null);
+      setView('error');
+      setIsCapturing(false);
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    if (isAnalyzing || !checkTestLimit()) return;
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 0.8 });
+    const uri = !result.canceled ? result.assets?.[0]?.uri : undefined;
+    if (uri) await analyzeUri(uri);
+  };
+
+  const handleCapture = async () => {
+    if (!cameraRef.current || isAnalyzing || !checkTestLimit()) return;
+    setIsCapturing(true);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
+      if (!photo?.uri) throw new Error('No se pudo capturar la fotografía');
+      await analyzeUri(photo.uri);
+    } catch (err: any) {
+      setErrorMessage(err?.message || null);
+      setView('error');
+      setIsCapturing(false);
+    }
+  };
+
+  const analyzing = (
+    <AiProgressScreen
+      visible={isAnalyzing}
+      title="Analizando tu"
+      emphasis="foto"
+      steps={ANALYSIS_STEPS}
+      iconName="sparkles"
+      stepMs={1600}
+      footnote="Esto tarda unos segundos. Al terminar verás lo que encontramos."
+      topSlot={
+        <QuotaPill
+          tone="light"
+          used={Math.min(testPhotoCount + 1, MAX_TEST_PHOTOS)}
+          max={MAX_TEST_PHOTOS}
+          label={`Foto ${Math.min(testPhotoCount + 1, MAX_TEST_PHOTOS)} de ${MAX_TEST_PHOTOS} de prueba`}
+        />
+      }
+    />
+  );
+
+  // ── Límite de fotos (B) ──
+  if (view === 'limit') {
+    return (
+      <StatusScreen
+        topSlot={
+          <QuotaPill tone="warning" used={MAX_TEST_PHOTOS} max={MAX_TEST_PHOTOS} label={`${MAX_TEST_PHOTOS} de ${MAX_TEST_PHOTOS} fotos usadas`} />
+        }
+        art={{
+          iconName: 'scan-outline',
+          blobColor: colors.functional.expiringSoon.background,
+          tileColor: colors.surface,
+          iconColor: colors.difficulty.medium.segment,
+        }}
+        title="Usaste tus"
+        emphasis={`${MAX_TEST_PHOTOS} fotos de prueba`}
+        message="Mientras tanto puedes seguir agregando alimentos a tu despensa a mano."
+        primary={{ title: 'Agregar a mano', iconName: 'add', onPress: () => router.replace({ pathname: '/inventory', params: { add: '1' } }) }}
+        secondary={{ title: 'Volver al inicio', onPress: () => router.replace('/') }}
+      />
+    );
+  }
+
+  // ── Error al analizar (C) ──
+  if (view === 'error') {
+    return (
+      <>
+        <StatusScreen
+          role="alert"
+          topSlot={<QuotaPill tone="light" label="Este intento no cuenta como foto de prueba" />}
+          art={{
+            iconName: 'cloud-offline-outline',
+            blobColor: colors.m3.errorContainer,
+            tileColor: colors.surface,
+            iconColor: colors.m3.error,
+            dotBottomColor: colors.categories.grain.background,
+          }}
+          title="No pudimos"
+          emphasis="analizar tu foto"
+          message={errorMessage && !/network|fetch|timeout/i.test(errorMessage) ? errorMessage : 'Revisa tu conexión e inténtalo de nuevo.'}
+          primary={{
+            title: 'Reintentar análisis',
+            iconName: 'refresh',
+            onPress: () => {
+              setView('camera');
+              if (lastInputRef.current) runAnalysis(lastInputRef.current);
+            },
+          }}
+          secondary={{ title: 'Tomar otra foto', onPress: () => setView('camera') }}
+        />
+        {analyzing}
+      </>
+    );
+  }
+
+  if (!permission) {
+    return <View style={styles.camera} />;
+  }
+
+  // ── Sin permiso de cámara ──
+  if (!permission.granted) {
+    return (
+      <StatusScreen
+        art={{
+          iconName: 'camera-outline',
+          blobColor: colors.primaryContainer,
+          tileColor: colors.surface,
+          iconColor: colors.primary,
+          dotTopColor: colors.categories.grain.background,
+        }}
+        title="Necesitamos tu"
+        emphasis="cámara"
+        message="Con la cámara identificamos lo que tienes en tu nevera o despensa. También puedes elegir una foto de tu galería."
+        primary={
+          permission.canAskAgain
+            ? { title: 'Dar permiso de cámara', iconName: 'camera-outline', onPress: requestPermission }
+            : { title: 'Abrir ajustes', iconName: 'settings-outline', onPress: () => Linking.openSettings() }
+        }
+        secondary={{ title: 'Elegir de la galería', iconName: 'images-outline', onPress: handlePickFromGallery }}
+      />
+    );
+  }
+
+  // ── Cámara (Escaneo.dc.html) ──
   return (
-    <View style={styles.blackContainer}>
+    <View style={styles.camera}>
       {capturedPhotoUri ? (
         <Image source={{ uri: capturedPhotoUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       ) : (
-        <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} />
+        <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} enableTorch={torchOn && facing === 'back'} />
       )}
 
-      {/* ── Barra superior flotante (botón volver y chip de cuota de prueba) ── */}
-      {!capturedPhotoUri && !isAnalyzing && (
-        <View style={styles.cameraTopBar} pointerEvents="box-none">
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-            style={({ pressed }) => [styles.topCircleBtn, pressed && { opacity: 0.7 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Volver al inicio"
-          >
-            <Ionicons name="arrow-back" size={22} color={colors.textInverse} />
-          </Pressable>
+      {/* Velos para leer el texto sobre la imagen */}
+      <View pointerEvents="none" style={[styles.scrimTop, { height: insets.top + 170 }]} />
+      <View pointerEvents="none" style={[styles.scrimBottom, { height: insets.bottom + 250 }]} />
 
-          <View
-            style={[
-              styles.testQuotaBadge,
-              testPhotoCount >= MAX_TEST_PHOTOS && styles.testQuotaBadgeExceeded,
-            ]}
-            accessibilityRole="text"
-            accessibilityLabel={`Fase de pruebas: ${testPhotoCount} de ${MAX_TEST_PHOTOS} fotos escaneadas`}
-          >
-            <Ionicons
-              name={testPhotoCount >= MAX_TEST_PHOTOS ? 'alert-circle' : 'sparkles'}
-              size={14}
-              color={testPhotoCount >= MAX_TEST_PHOTOS ? '#FBBF24' : '#60A5FA'}
-            />
-            <Text
-              style={[
-                styles.testQuotaText,
-                testPhotoCount >= MAX_TEST_PHOTOS && styles.testQuotaTextExceeded,
-              ]}
-            >
-              {testPhotoCount >= MAX_TEST_PHOTOS
-                ? `Límite alcanzado (${MAX_TEST_PHOTOS}/${MAX_TEST_PHOTOS})`
-                : `Pruebas: ${testPhotoCount}/${MAX_TEST_PHOTOS} fotos`}
-            </Text>
-          </View>
+      {/* Barra superior */}
+      <View style={[styles.topBar, { top: insets.top + 12 }]}>
+        <IconButton iconName="chevron-back" variant="ink" accessibilityLabel="Volver al inicio" onPress={goHome} />
+        <View style={styles.flex} />
+        {facing === 'back' && (
+          <IconButton
+            iconName={torchOn ? 'flash' : 'flash-off-outline'}
+            variant={torchOn ? 'tonal' : 'ink'}
+            accessibilityLabel={torchOn ? 'Apagar flash' : 'Encender flash'}
+            accessibilityHint="Ilumina los alimentos cuando hay poca luz"
+            onPress={() => setTorchOn((v) => !v)}
+          />
+        )}
+        <QuotaPill
+          tone="camera"
+          used={testPhotoCount}
+          max={MAX_TEST_PHOTOS}
+          label={`${testPhotoCount} de ${MAX_TEST_PHOTOS} fotos`}
+          accessibilityLabel={`Fase de pruebas: ${testPhotoCount} de ${MAX_TEST_PHOTOS} fotos escaneadas`}
+        />
+      </View>
+
+      {/* Título + guía */}
+      <View style={[styles.heading, { top: insets.top + 84 }]}>
+        <AppText weight="light" color={colors.textInverse} style={styles.title} accessibilityRole="header">
+          {'Escanea tus '}
+          <AppText weight="semibold" color={colors.textInverse}>
+            alimentos
+          </AppText>
+        </AppText>
+        <AppText variant="body" color={colors.onCameraMuted} style={styles.subtitle}>
+          Encuadra los productos dentro del marco
+        </AppText>
+      </View>
+
+      {/* Visor + consejos */}
+      <View pointerEvents="none" style={styles.center}>
+        <View style={styles.frame} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <View style={[styles.corner, styles.cornerTL]} />
+          <View style={[styles.corner, styles.cornerTR]} />
+          <View style={[styles.corner, styles.cornerBL]} />
+          <View style={[styles.corner, styles.cornerBR]} />
         </View>
-      )}
-
-      {/* ── Overlay visor de encuadre (solo cuando la cámara en vivo está activa) ── */}
-      {!capturedPhotoUri && (
-        <View style={[styles.overlay, isAnalyzing && styles.overlayAnalyzing]} pointerEvents="box-none">
-          <View style={styles.frameContainer}>
-            <View style={[styles.corner, styles.cornerTL]} />
-            <View style={[styles.corner, styles.cornerTR]} />
-            <View style={[styles.corner, styles.cornerBL]} />
-            <View style={[styles.corner, styles.cornerBR]} />
-          </View>
-          <Text style={styles.hint}>
-            Encuadra los alimentos dentro del recuadro
-          </Text>
+        <View style={styles.tips}>
+          {['Con buena luz'].map((tip) => (
+            <View key={tip} style={styles.tip}>
+              <AppText variant="bodySmall" color={colors.textInverse} style={styles.tipText}>
+                {tip}
+              </AppText>
+            </View>
+          ))}
         </View>
-      )}
+      </View>
 
-      {/* ── Overlay de análisis en progreso (BUG-01) ── */}
-      {isAnalyzing && (
-        <View style={styles.analyzingOverlay}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.analyzingText}>Analizando tu foto con IA...</Text>
-          <Text style={styles.analyzingHint}>Identificando ingredientes...</Text>
-        </View>
-      )}
+      {/* Controles */}
+      <View style={[styles.controls, { bottom: insets.bottom + 40 }]}>
+        <IconButton
+          iconName="image-outline"
+          variant="ink"
+          iconSize={24}
+          style={styles.sideBtn}
+          accessibilityLabel="Seleccionar foto de la galería"
+          onPress={handlePickFromGallery}
+        />
+        <Pressable
+          onPress={handleCapture}
+          style={({ pressed }) => [styles.shutter, pressed && styles.shutterPressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Tomar fotografía y analizar alimentos"
+        >
+          <View style={styles.shutterInner} />
+        </Pressable>
+        <IconButton
+          iconName="sync-outline"
+          variant="ink"
+          iconSize={24}
+          style={styles.sideBtn}
+          accessibilityLabel="Cambiar entre cámara frontal y trasera"
+          onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+        />
+      </View>
 
-      {/* ── Barra de controles inferiores (oculta durante el análisis) ── */}
-      {!isAnalyzing && (
-        <View style={styles.controls}>
-          {/* Cambiar cámara */}
-          <Pressable
-            style={styles.circleBtn}
-            onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
-            accessibilityRole="button"
-            accessibilityLabel="Cambiar entre cámara frontal y trasera"
-          >
-            <Ionicons name="camera-reverse-outline" size={26} color={colors.surface} />
-          </Pressable>
-
-          {/* Botón obturador */}
-          <Pressable
-            style={[
-              styles.shutterButton,
-              testPhotoCount >= MAX_TEST_PHOTOS && styles.shutterDisabled,
-            ]}
-            onPress={handleCapture}
-            accessibilityRole="button"
-            accessibilityLabel="Tomar fotografía y analizar alimentos"
-          >
-            <View
-              style={[
-                styles.shutterInner,
-                testPhotoCount >= MAX_TEST_PHOTOS && styles.shutterInnerDisabled,
-              ]}
-            />
-          </Pressable>
-
-          {/* Galería */}
-          <Pressable
-            style={styles.circleBtn}
-            onPress={handlePickFromGallery}
-            accessibilityRole="button"
-            accessibilityLabel="Seleccionar foto de la galería"
-          >
-            <Ionicons name="images-outline" size={24} color={colors.surface} />
-          </Pressable>
-        </View>
-      )}
+      {analyzing}
     </View>
-
   );
 }
 
-const CORNER_SIZE = 28;
+const CORNER = 48;
 const CORNER_WIDTH = 4;
+const CORNER_RADIUS = 22;
 
 const styles = StyleSheet.create({
-  blackContainer: {
+  flex: { flex: 1 },
+  camera: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: colors.cameraScrim,
   },
-  permissionScreen: {
-    backgroundColor: colors.background,
-  },
-  permissionTopNav: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.circular,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  permissionContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxxl,
-  },
-  permissionIconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: radii.circular,
-    backgroundColor: colors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xl,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-  },
-  permissionTitle: {
-    fontSize: typography.sizes.headline,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  permissionSubtitle: {
-    fontSize: typography.sizes.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  overlay: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  frameContainer: {
-    width: 270,
-    height: 270,
-    position: 'relative',
-  },
-  corner: {
+  scrimTop: {
     position: 'absolute',
-    width: CORNER_SIZE,
-    height: CORNER_SIZE,
-    borderColor: colors.primary,
-  },
-  cornerTL: { top: 0, left: 0, borderTopWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH },
-  cornerTR: { top: 0, right: 0, borderTopWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH },
-  cornerBL: { bottom: 0, left: 0, borderBottomWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH },
-  cornerBR: { bottom: 0, right: 0, borderBottomWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH },
-  hint: {
-    color: colors.textInverse,
-    marginTop: spacing.xl,
-    fontSize: typography.sizes.bodySmall,
-    fontWeight: '600',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 6,
-    borderRadius: radii.circular,
-  },
-  overlayAnalyzing: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  analyzingOverlay: {
-    position: 'absolute',
+    left: 0,
+    right: 0,
     top: 0,
+    backgroundColor: colors.cameraScrim,
+    opacity: 0.55,
+  },
+  scrimBottom: {
+    position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-    paddingHorizontal: spacing.xxl,
+    backgroundColor: colors.cameraScrim,
+    opacity: 0.7,
   },
-  analyzingText: {
-    color: colors.textInverse,
-    fontSize: typography.sizes.cardTitle,
-    fontWeight: '700',
-    marginTop: spacing.lg,
-    textAlign: 'center',
-  },
-  analyzingHint: {
-    color: colors.textMuted,
-    fontSize: typography.sizes.bodySmall,
-    marginTop: 6,
-    textAlign: 'center',
-  },
-  controls: {
+  topBar: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 36,
-    paddingBottom: 48,
-    paddingTop: spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    gap: 10,
   },
-  circleBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: radii.circular,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shutterButton: {
-    width: 80,
-    height: 80,
-    borderRadius: radii.circular,
-    backgroundColor: colors.primaryContainer,
-    borderWidth: 4,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shutterDisabled: {
-    opacity: 0.45,
-    borderColor: colors.border,
-  },
-  shutterInner: {
-    width: 58,
-    height: 58,
-    borderRadius: radii.circular,
-    backgroundColor: colors.primary,
-  },
-  shutterInnerDisabled: {
-    backgroundColor: colors.textMuted,
-  },
-  cameraTopBar: {
+  heading: {
     position: 'absolute',
-    top: 50,
+    left: 24,
+    right: 24,
+    gap: 4,
+  },
+  title: {
+    fontSize: 28,
+    lineHeight: 34,
+  },
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  center: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 28,
+    paddingBottom: 40, // el visor queda un poco arriba del centro, como en el mockup
+  },
+  frame: {
+    width: 320,
+    maxWidth: '82%',
+    aspectRatio: 320 / 340,
+  },
+  corner: {
+    position: 'absolute',
+    width: CORNER,
+    height: CORNER,
+    borderColor: colors.textInverse,
+  },
+  cornerTL: { top: 0, left: 0, borderTopWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH, borderTopLeftRadius: CORNER_RADIUS },
+  cornerTR: { top: 0, right: 0, borderTopWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH, borderTopRightRadius: CORNER_RADIUS },
+  cornerBL: { bottom: 0, left: 0, borderBottomWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH, borderBottomLeftRadius: CORNER_RADIUS },
+  cornerBR: { bottom: 0, right: 0, borderBottomWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH, borderBottomRightRadius: CORNER_RADIUS },
+  tips: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  tip: {
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: radii.pill,
+    backgroundColor: colors.ink,
+    justifyContent: 'center',
+  },
+  tipText: {
+    fontSize: 13,
+    lineHeight: 17,
+  },
+  controls: {
+    position: 'absolute',
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    zIndex: 10,
+    justifyContent: 'space-evenly',
   },
-  topCircleBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.circular,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+  sideBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
-  testQuotaBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: radii.circular,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+  shutter: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 4,
+    borderColor: colors.textInverse,
+    padding: 5,
   },
-  testQuotaBadgeExceeded: {
-    backgroundColor: 'rgba(180, 83, 9, 0.85)',
-    borderColor: '#F59E0B',
+  shutterPressed: {
+    transform: [{ scale: 0.94 }],
   },
-  testQuotaText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  testQuotaTextExceeded: {
-    color: '#FFFBEB',
+  shutterInner: {
+    flex: 1,
+    borderRadius: 33,
+    backgroundColor: colors.accent,
   },
 });
-

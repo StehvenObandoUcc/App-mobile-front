@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { useAuth } from '../src/hooks/useAuth';
-import { AppBottomNav } from '../src/components';
+import { AppBottomNav, Text } from '../src/components';
 import { colors, typography, spacing, radii } from '../src/theme';
 import { primeAppPermissionsOnce } from '../src/utils/permissions';
 import { useExpiryReminderSync } from '../src/hooks/useExpiryReminderSync';
@@ -14,16 +14,21 @@ import {
 
 // Avisos de vencimiento: mostrar la notificación también con la app abierta.
 configureNotifications();
-// Fuente de marca Outfit (Despensa Tonal): cuando existan los 4 TTF en assets/fonts/,
-// descomentar esta línea y la llamada `useBrandFonts()` de abajo. Ver src/hooks/useBrandFonts.ts.
-// import { useBrandFonts } from '../src/hooks/useBrandFonts';
+// Fuente de marca Outfit (Despensa Tonal).
+import { useBrandFonts } from '../src/hooks/useBrandFonts';
 
 export default function Layout() {
   const { isAuthenticated, isHydrated } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const pathname = usePathname();
-  // const brandFontsReady = useBrandFonts(); // y sumar `|| !brandFontsReady` al splash de abajo
+  const brandFontsReady = useBrandFonts();
+  // Si la fuente tarda más de 3 s, se sigue con la del sistema para no bloquear el arranque.
+  const [fontWaitExpired, setFontWaitExpired] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setFontWaitExpired(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Mantiene programados los avisos de vencimiento (y los quita al cerrar sesión).
   useExpiryReminderSync(isHydrated && isAuthenticated, pathname);
@@ -54,7 +59,7 @@ export default function Layout() {
   }, [isHydrated, isAuthenticated]);
 
   // Pantalla de carga para arranque en frío (evita parpadeos de login antes de verificar SecureStore)
-  if (!isHydrated) {
+  if (!isHydrated || (!brandFontsReady && !fontWaitExpired)) {
     return (
       <View style={styles.splashContainer}>
         <View style={styles.iconCircle}>
@@ -66,7 +71,7 @@ export default function Layout() {
     );
   }
 
-  const hideBottomNavOn = ['/login', '/scan', '/scan-result', '/recipe-detail', '/settings'];
+  const hideBottomNavOn = ['/login', '/scan', '/scan-result', '/recipe-detail', '/settings', '/design-catalog'];
   const showBottomNav = !hideBottomNavOn.includes(pathname);
 
   return (
@@ -82,6 +87,7 @@ export default function Layout() {
       >
         <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="settings" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="design-catalog" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen
           name="inventory"
@@ -101,11 +107,11 @@ export default function Layout() {
         />
         <Stack.Screen
           name="scan-result"
-          options={{ title: 'Revisar Detección', animation: 'slide_from_right' }}
+          options={{ headerShown: false, animation: 'slide_from_right' }}
         />
         <Stack.Screen
           name="recipe-detail"
-          options={{ title: 'Preparar Receta', animation: 'slide_from_right' }}
+          options={{ headerShown: false, animation: 'slide_from_right' }}
         />
       </Stack>
       {showBottomNav && <AppBottomNav />}
