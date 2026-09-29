@@ -69,6 +69,7 @@ const extended = {
   cameraScrim: '#1E1714',
   onCameraMuted: '#F2E6DE',
   quotaDotIdle: '#7A5A4F', // punto de foto sin usar sobre cacao
+  textBody: '#3F3631', // párrafos largos (Legal.dc.html) · 11.9:1 sobre blanco
 } as const;
 
 export const colors = {
