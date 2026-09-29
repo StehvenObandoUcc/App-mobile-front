@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInventory } from '../src/hooks/useInventory';
 import { useRecipes } from '../src/hooks/useRecipes';
@@ -14,7 +13,7 @@ import {
   getBottomContentPadding,
   ActionSheetModal,
   OfflineBanner,
-  Text,
+  AppText,
   ScreenHeader,
   IconButton,
   AvatarButton,
@@ -27,18 +26,30 @@ import {
   SecondaryButton,
 } from '../src/components';
 import { useOutboxStatus } from '../src/hooks/useOutboxStatus';
+import { useAvatar } from '../src/hooks/useAvatar';
 import { useAuth } from '../src/hooks/useAuth';
 import { useShoppingList } from '../src/hooks/useShoppingList';
 import { colors, radii, spacing, typography, elevations } from '../src/theme';
 
+/**
+ * Sin sesión no se monta Inicio: antes se cargaban despensa, recetas y compras (y una llamada al servidor)
+ * solo para redirigir al login después. Ahora se redirige de inmediato.
+ */
 export default function HomeScreen() {
+  const { isAuthenticated, isHydrated } = useAuth();
+  if (!isHydrated) return null;
+  if (!isAuthenticated) return <Redirect href="/login" />;
+  return <HomeContent />;
+}
+
+function HomeContent() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items } = useInventory();
   const { recipes, toggleSave, deleteRecipe } = useRecipes();
   const { pendingItems } = useShoppingList();
   const { user } = useAuth();
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const { uri: avatarUri } = useAvatar(user?.id);
 
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
@@ -52,17 +63,6 @@ export default function HomeScreen() {
     title: '',
   });
 
-  useFocusEffect(
-    React.useCallback(() => {
-      if (user?.id) {
-        AsyncStorage.getItem(`@food_ai_avatar_${user.id}`).then((uri) => {
-          setAvatarUri(uri || null);
-        }).catch(() => {});
-      } else {
-        setAvatarUri(null);
-      }
-    }, [user?.id])
-  );
 
   const handleLongPressRecipe = (recipe: Recipe) => {
     setConfirmModal({
@@ -128,7 +128,7 @@ export default function HomeScreen() {
                 uri={avatarUri}
                 signedIn={!!user}
                 accessibilityLabel={user ? `Perfil de ${user.name}` : 'Iniciar sesión o ver perfil'}
-                onPress={() => router.push({ pathname: '/login', params: { view: 'profile' } })}
+                onPress={() => router.push('/profile')}
               />
             </>
           }
@@ -160,7 +160,7 @@ export default function HomeScreen() {
             label={'Alimentos\nen despensa'}
             value={ingredientCount}
             accessibilityLabel={`Despensa con ${ingredientCount} alimentos: ${freshCount} frescos, ${expiringCount} por vencer`}
-            onPress={() => router.push('/inventory')}
+            onPress={() => router.navigate('/inventory')}
             footer={
               ingredientCount > 0 ? (
                 <View style={styles.tileFooter}>
@@ -169,10 +169,10 @@ export default function HomeScreen() {
                     {expiringCount > 0 && <View style={[styles.freshSeg, { flexGrow: expiringCount, backgroundColor: colors.difficulty.medium.segment }]} />}
                     {unknownCount > 0 && <View style={[styles.freshSeg, { flexGrow: unknownCount, backgroundColor: colors.borderStrong }]} />}
                   </View>
-                  <Text style={styles.tileCaption}>{`${freshCount} frescos · ${expiringCount} por vencer`}</Text>
+                  <AppText variant="metadata" color={colors.functional.fresh.text}>{`${freshCount} frescos · ${expiringCount} por vencer`}</AppText>
                 </View>
               ) : (
-                <Text style={styles.tileCaption}>Escanea o agrega tu primer alimento</Text>
+                <AppText variant="metadata" color={colors.functional.fresh.text}>Escanea o agrega tu primer alimento</AppText>
               )
             }
           />
@@ -189,7 +189,7 @@ export default function HomeScreen() {
               label="Por comprar"
               value={pendingItems.length}
               accessibilityLabel={`${pendingItems.length} compras pendientes`}
-              onPress={() => router.push('/shopping-list')}
+              onPress={() => router.navigate('/shopping-list')}
             />
           </View>
         </View>
@@ -202,7 +202,7 @@ export default function HomeScreen() {
           <TodayRecipeCard
             recipe={featuredRecipe}
             onOpen={() => featuredRecipe && openRecipe(featuredRecipe.id)}
-            onEmptyAction={() => router.push('/inventory')}
+            onEmptyAction={() => router.navigate('/inventory')}
           />
         </View>
       </StaggerView>
@@ -222,7 +222,7 @@ export default function HomeScreen() {
           ) : (
             <View style={styles.allFresh}>
               <Ionicons name="checkmark-circle-outline" size={20} color={colors.functional.fresh.text} />
-              <Text style={styles.allFreshText}>Tu despensa está al día. Nada próximo a vencer.</Text>
+              <AppText variant="bodySmall" color={colors.functional.fresh.text} style={styles.allFreshText}>Tu despensa está al día. Nada próximo a vencer.</AppText>
             </View>
           )}
         </View>
@@ -234,7 +234,7 @@ export default function HomeScreen() {
           <SectionHeader
             title="Ideas para cocinar"
             actionLabel={`Ver todas (${recipes.length})`}
-            onAction={() => router.push('/recipes')}
+            onAction={() => router.navigate('/recipes')}
           />
           {availableRecipes.length > 0 ? (
             <ScrollView
@@ -257,7 +257,7 @@ export default function HomeScreen() {
               title="Generar ideas con Chef IA"
               iconName="sparkles-outline"
               variant="outline"
-              onPress={() => router.push('/recipes')}
+              onPress={() => router.navigate('/recipes')}
             />
           )}
         </View>
@@ -331,9 +331,6 @@ const styles = StyleSheet.create({
   },
   allFreshText: {
     flex: 1,
-    fontSize: typography.sizes.bodySmall,
-    lineHeight: 20,
-    color: colors.functional.fresh.text,
   },
   carousel: {
     marginRight: -spacing.screenGutter,
