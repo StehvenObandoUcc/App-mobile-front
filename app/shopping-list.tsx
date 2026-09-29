@@ -1,1080 +1,391 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  SectionList,
-  FlatList,
-  Alert,
-  KeyboardAvoidingView,
-} from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShoppingList } from '../src/hooks/useShoppingList';
 import { useInventory } from '../src/hooks/useInventory';
-import { getExpirationStatus } from '../src/utils/expiration';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AppScreen,
+  AppText,
   PrimaryButton,
-  SecondaryButton,
-  SearchInput,
   EmptyState,
   ActionSheetModal,
-  getBottomContentPadding,
   M3Dialog,
-  Chip,
-  Text,
-  TextInput,
   ScreenHeader,
+  CountTile,
+  DashedAddButton,
+  ShoppingItemRow,
+  ShoppingItemFormSheet,
+  PantryPickerSheet,
+  NAV_HEIGHT,
+  NAV_BOTTOM_OFFSET,
+  getBottomContentPadding,
 } from '../src/components';
-import { IngredientCategory, IngredientUnit, ShoppingItem } from '../src/types';
-import { Modal } from 'react-native';
-import { colors, radii, spacing, typography, CATEGORY_LIST, getCategoryConfig } from '../src/theme';
+import { IngredientCategory, IngredientUnit, ShoppingItem, Ingredient } from '../src/types';
+import { normalizeName } from '../src/utils/consumption';
+import { colors, radii, spacing, elevations } from '../src/theme';
 
-const CATEGORIES = CATEGORY_LIST.map((c) => ({ label: c.label, value: c.key, icon: c.icon }));
+/**
+ * Compras (Compras.dc.html · Compras-Agregar.dc.html · Compras-Estados.dc.html).
+ * Encabezado, fichas «Por comprar / Comprados», botón punteado «Agregar», secciones con ShoppingItemRow,
+ * botón flotante «Pasar N a mi despensa». Quitar y Limpiar piden confirmación (tarjeta centrada).
+ */
+type DialogState = {
+  visible: boolean;
+  title: string;
+  titleEmphasis?: string;
+  message: string;
+  type?: 'success' | 'info' | 'warning' | 'error';
+  iconName?: 'trash-outline';
+  confirmText?: string;
+  confirmTone?: 'ink' | 'danger';
+  cancelText?: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  actionsLayout?: 'row' | 'stacked';
+  hero?: boolean;
+};
 
-const UNITS: { label: string; value: IngredientUnit }[] = [
-  { label: 'uds', value: 'units' },
-  { label: 'kg', value: 'kilograms' },
-  { label: 'g', value: 'grams' },
-  { label: 'L', value: 'liters' },
-  { label: 'ml', value: 'milliliters' },
-  { label: 'paq', value: 'package' },
-];
+const EMPTY_FORM = { name: '', quantity: '1', unit: 'units' as IngredientUnit, category: 'other' as IngredientCategory };
 
 export default function ShoppingListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const {
-    items,
-    pendingItems,
-    boughtItems,
-    addItem,
-    toggleBought,
-    deleteItem,
-    clearBought,
-    moveBoughtToInventory,
-  } = useShoppingList();
+  const { items, pendingItems, boughtItems, addItem, toggleBought, deleteItem, clearBought, moveBoughtToInventory } =
+    useShoppingList();
   const { items: inventoryItems } = useInventory();
 
-  const [name, setName] = useState('');
-  const [quantity, setQuantity] = useState('1');
-  const [unit, setUnit] = useState<IngredientUnit>('units');
-  const [category, setCategory] = useState<IngredientCategory>('other');
-  const [isAdding, setIsAdding] = useState(false);
+  const [chooserVisible, setChooserVisible] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [formVisible, setFormVisible] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
   const [isMoving, setIsMoving] = useState(false);
+  const [dialog, setDialog] = useState<DialogState>({ visible: false, title: '', message: '', onConfirm: () => {} });
+  const closeDialog = () => setDialog((p) => ({ ...p, visible: false }));
 
-  // Estados para selector de adición
-  const [isAddChooserVisible, setIsAddChooserVisible] = useState(false);
-  const [isInventoryPickerVisible, setIsInventoryPickerVisible] = useState(false);
-  const [inventorySearch, setInventorySearch] = useState('');
+  const showError = (message: string) =>
+    setDialog({ visible: true, title: 'Algo salió', titleEmphasis: 'mal', message, type: 'error', onConfirm: closeDialog });
+  const warn = (title: string, titleEmphasis: string, message: string) =>
+    setDialog({ visible: true, title, titleEmphasis, message, type: 'warning', onConfirm: closeDialog });
 
-  const [dialogConfig, setDialogConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type?: 'success' | 'info' | 'warning' | 'error';
-    confirmText?: string;
-    onConfirm: () => void;
-    cancelText?: string;
-    onCancel?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-    onConfirm: () => {},
-  });
-
-  // Inventario filtrado y ordenado para el picker
-  const filteredInventory = inventoryItems
-    .filter((inv) => inv.name.toLowerCase().includes(inventorySearch.toLowerCase().trim()))
-    .sort((a, b) => {
-      const sa = getExpirationStatus(a.expirationDate);
-      const sb = getExpirationStatus(b.expirationDate);
-      const prioA = sa.status === 'expired' ? 3 : sa.status === 'expiringSoon' ? 2 : 1;
-      const prioB = sb.status === 'expired' ? 3 : sb.status === 'expiringSoon' ? 2 : 1;
-      return prioB - prioA;
-    });
-
-  const handleAddFromInventory = async (invItem: typeof inventoryItems[0]) => {
+  // ── Agregar ──
+  const pendingNames = useMemo(() => new Set(pendingItems.map((p) => normalizeName(p.name))), [pendingItems]);
+  const handlePick = async (inv: Ingredient) => {
     try {
-      await addItem(invItem.name, invItem.quantity || 1, invItem.unit, invItem.category);
+      // Agotado (0): se agrega sin cantidad para que elijas cuánto comprar.
+      await addItem(inv.name, inv.quantity ? inv.quantity : null, inv.unit, inv.category);
     } catch {
-      setDialogConfig({
-        visible: true,
-        title: 'Error',
-        message: 'No se pudo agregar el producto a la lista.',
-        type: 'error',
-        onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
-      });
+      showError('No se pudo agregar el producto a la lista.');
     }
   };
 
-  const handleAddItem = async () => {
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setDialogConfig({
-        visible: true,
-        title: 'Nombre requerido',
-        message: 'Por favor ingresa el nombre del producto a comprar.',
-        type: 'warning',
-        onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
-      });
-      return;
+  const handleSaveForm = async () => {
+    const trimmed = form.name.trim();
+    if (!trimmed) return warn('Falta el', 'nombre', 'Escribe el nombre del producto que vas a comprar.');
+    if (trimmed.length > 60) return warn('Nombre muy', 'largo', 'El nombre no puede pasar de 60 caracteres.');
+    let qty: number | null = null;
+    if (form.quantity.trim()) {
+      const q = parseFloat(form.quantity.trim().replace(',', '.'));
+      if (isNaN(q) || q <= 0 || q > 99999) return warn('Cantidad', 'inválida', 'Usa un número mayor que 0 y menor que 99 999.');
+      qty = q;
     }
-
-    if (trimmed.length > 60) {
-      setDialogConfig({
-        visible: true,
-        title: 'Nombre muy largo',
-        message: 'El nombre del producto no puede superar los 60 caracteres.',
-        type: 'warning',
-        onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
-      });
-      return;
-    }
-
-    let parsedQty: number | null = null;
-    if (quantity.trim()) {
-      const q = parseFloat(quantity.trim().replace(',', '.'));
-      if (isNaN(q) || q <= 0) {
-        setDialogConfig({
-          visible: true,
-          title: 'Cantidad inválida',
-          message: 'La cantidad debe ser un número positivo mayor que cero.',
-          type: 'warning',
-          onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
-        });
-        return;
-      }
-      if (q > 99999) {
-        setDialogConfig({
-          visible: true,
-          title: 'Cantidad excedida',
-          message: 'La cantidad no puede superar 99,999.',
-          type: 'warning',
-          onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
-        });
-        return;
-      }
-      parsedQty = q;
-    }
-
     try {
-      await addItem(trimmed, parsedQty, unit, category);
-      setName('');
-      setQuantity('1');
-      setIsAdding(false);
+      await addItem(trimmed, qty, form.unit, form.category);
+      setFormVisible(false);
+      setForm(EMPTY_FORM);
     } catch {
-      setDialogConfig({
-        visible: true,
-        title: 'Error',
-        message: 'No se pudo agregar el producto a la lista.',
-        type: 'error',
-        onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
-      });
+      showError('No se pudo agregar el producto a la lista.');
     }
   };
 
-  const handleMoveToInventory = async () => {
-    if (boughtItems.length === 0) return;
-
-    setDialogConfig({
+  // ── Quitar / Limpiar (siempre con confirmación) ──
+  const confirmRemove = (item: ShoppingItem) =>
+    setDialog({
       visible: true,
-      title: 'Pasar a mi despensa',
-      message: `¿Deseas transferir ${boughtItems.length} producto(s) comprados a tu inventario? Se calculará su fecha estimada de caducidad.`,
-      type: 'info',
-      confirmText: 'Sí, transferir',
+      title: '¿Quitar',
+      titleEmphasis: `${item.name}?`,
+      message: 'Se quitará de tu lista de compras.',
+      type: 'error',
+      iconName: 'trash-outline',
+      confirmText: 'Quitar',
+      confirmTone: 'danger',
       cancelText: 'Cancelar',
-      onCancel: () => setDialogConfig((p) => ({ ...p, visible: false })),
-      onConfirm: async () => {
-        setDialogConfig((p) => ({ ...p, visible: false }));
-        setIsMoving(true);
-        try {
-          const movedCount = await moveBoughtToInventory();
-          setDialogConfig({
-            visible: true,
-            title: '¡Despensa actualizada!',
-            message: `Se han agregado ${movedCount} alimento(s) a tu inventario con caducidad estimada.`,
-            type: 'success',
-            confirmText: 'Ver inventario',
-            cancelText: 'Continuar en lista',
-            onCancel: () => setDialogConfig((p) => ({ ...p, visible: false })),
-            onConfirm: () => {
-              setDialogConfig((p) => ({ ...p, visible: false }));
-              router.push('/inventory');
-            },
-          });
-        } catch {
-          setDialogConfig({
-            visible: true,
-            title: 'Error',
-            message: 'No se pudieron mover los productos al inventario.',
-            type: 'error',
-            onConfirm: () => setDialogConfig((p) => ({ ...p, visible: false })),
-          });
-        } finally {
-          setIsMoving(false);
-        }
+      onCancel: closeDialog,
+      onConfirm: () => {
+        closeDialog();
+        deleteItem(item.id).catch(() => showError('No se pudo quitar el producto.'));
+      },
+    });
+
+  const confirmClear = () => {
+    const n = boughtItems.length;
+    setDialog({
+      visible: true,
+      title: '¿Limpiar',
+      titleEmphasis: n === 1 ? '1 comprado?' : `${n} comprados?`,
+      message: 'Se quitarán de la lista sin pasarlos a tu despensa.',
+      type: 'error',
+      iconName: 'trash-outline',
+      confirmText: 'Limpiar',
+      confirmTone: 'danger',
+      cancelText: 'Cancelar',
+      onCancel: closeDialog,
+      onConfirm: () => {
+        closeDialog();
+        clearBought().catch(() => showError('No se pudo limpiar la lista.'));
       },
     });
   };
 
-  type ShoppingSection = {
-    type: 'pending' | 'bought';
-    title: string;
-    data: ShoppingItem[];
+  // ── Pasar a la despensa (Compras-Estados · derecha) ──
+  const handleMove = async () => {
+    if (boughtItems.length === 0 || isMoving) return;
+    setIsMoving(true);
+    try {
+      const moved = await moveBoughtToInventory();
+      setDialog({
+        visible: true,
+        title: '¡Despensa',
+        titleEmphasis: 'actualizada!',
+        message: `Pasaste ${moved} ${moved === 1 ? 'producto' : 'productos'} a tu despensa. Les pusimos una fecha de vencimiento estimada que puedes cambiar.`,
+        type: 'success',
+        hero: true,
+        actionsLayout: 'stacked',
+        confirmText: 'Ver despensa',
+        cancelText: 'Seguir en compras',
+        onCancel: closeDialog,
+        onConfirm: () => {
+          closeDialog();
+          router.navigate('/inventory');
+        },
+      });
+    } catch {
+      showError('No se pudieron pasar los productos a tu despensa.');
+    } finally {
+      setIsMoving(false);
+    }
   };
 
-  const sections = useMemo<ShoppingSection[]>(() => {
-    const list: ShoppingSection[] = [
-      {
-        type: 'pending',
-        title: `Por Comprar (${pendingItems.length})`,
-        data: pendingItems,
-      },
-    ];
-    if (boughtItems.length > 0) {
-      list.push({
-        type: 'bought',
-        title: `Comprados (${boughtItems.length})`,
-        data: boughtItems,
-      });
-    }
-    return list;
-  }, [pendingItems, boughtItems]);
+  const openChooser = () => setChooserVisible(true);
+  const moveButtonBottom = Math.max(insets.bottom, 0) + NAV_BOTTOM_OFFSET + NAV_HEIGHT + 16;
 
-  const renderShoppingItem = useCallback(
-    ({ item, section }: { item: ShoppingItem; section: ShoppingSection }) => {
-      const isBought = section.type === 'bought';
-      return (
-        <View style={[styles.itemCard, isBought && styles.itemCardBought]}>
-          <Pressable
-            onPress={() => toggleBought(item.id)}
-            style={[styles.checkboxCircle, isBought && styles.checkboxCircleChecked]}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: isBought }}
-          >
-            {isBought ? (
-              <Ionicons name="checkmark" size={14} color={colors.surface} />
-            ) : (
-              <View style={styles.checkboxInnerUnchecked} />
-            )}
-          </Pressable>
-
-          <View style={{ flex: 1, marginHorizontal: spacing.md }}>
-            <Text style={[styles.itemName, isBought && styles.itemNameBought]}>{item.name}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 3 }}>
-              {item.category && item.category !== 'other' && (
-                <View style={styles.catBadge}>
-                  <Ionicons name={getCategoryConfig(item.category).icon} size={11} color={colors.textSecondary} style={{ marginRight: 3 }} />
-                  <Text style={styles.catBadgeText}>{getCategoryConfig(item.category).label}</Text>
-                </View>
-              )}
-              {item.recipeSource && (
-                <View style={styles.sourceBadge}>
-                  <Ionicons name="restaurant-outline" size={11} color={colors.primaryDark} style={{ marginRight: 3 }} />
-                  <Text style={styles.sourceText} numberOfLines={1}>
-                    Receta: {item.recipeSource}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {item.quantity !== null && (
-            <Text style={[styles.itemQty, isBought && styles.itemQtyBought]}>
-              {item.quantity} {item.unit}
-            </Text>
-          )}
-
-          <Pressable
-            onPress={() => deleteItem(item.id)}
-            style={styles.deleteButton}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Eliminar ${item.name}`}
-          >
-            <Ionicons name="trash-outline" size={18} color={isBought ? colors.textMuted : colors.error.text} />
-          </Pressable>
-        </View>
-      );
-    },
-    [toggleBought, deleteItem]
-  );
-
-  const handleConfirmClearBought = useCallback(() => {
-    Alert.alert(
-      '¿Limpiar compras finalizadas?',
-      `¿Deseas quitar de la lista los ${boughtItems.length} producto(s) marcados como comprados?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Limpiar',
-          style: 'destructive',
-          onPress: () => clearBought(),
-        },
-      ]
-    );
-  }, [boughtItems.length, clearBought]);
-
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: ShoppingSection }) => {
-      const isBought = section.type === 'bought';
-      return (
-        <View style={[styles.sectionHeader, isBought && { marginTop: spacing.xl }]}>
-          <Text style={[styles.sectionTitle, isBought && { color: colors.functional.fresh.text }]}>
-            {section.title}
-          </Text>
-          {isBought && (
-            <Pressable
-              onPress={handleConfirmClearBought}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Limpiar productos comprados"
-            >
-              <Text style={styles.clearText}>Limpiar</Text>
-            </Pressable>
-          )}
-        </View>
-      );
-    },
-    [handleConfirmClearBought]
-  );
-
-  const renderSectionFooter = useCallback(
-    ({ section }: { section: ShoppingSection }) => {
-      if (section.type === 'pending' && pendingItems.length === 0) {
-        return (
-          <EmptyState
-            title="No tienes compras pendientes"
-            description="Agrega productos arriba o desde los ingredientes que te falten en cualquier receta."
-            iconName="basket-outline"
-          />
-        );
-      }
-      if (section.type === 'bought' && boughtItems.length > 0) {
-        return (
-          <View style={{ marginTop: spacing.lg, marginBottom: spacing.md }}>
-            <PrimaryButton
-              title={`Pasar ${boughtItems.length} a mi despensa`}
-              iconName="arrow-up-circle"
-              onPress={handleMoveToInventory}
-              isLoading={isMoving}
-            />
-          </View>
-        );
-      }
-      return null;
-    },
-    [pendingItems.length, boughtItems.length, handleMoveToInventory, isMoving]
-  );
-
-  const renderListHeader = useCallback(() => (
+  const overlays = (
     <>
-      {/* ── Cabecera Editorial ── */}
-      <View style={styles.headerSection}>
-        <ScreenHeader
-          title="Lista de"
-          emphasis="compras"
-          subtitle={
-            items.length === 0
-              ? 'Marca lo que compres y pásalo a tu despensa'
-              : `${pendingItems.length} pendiente${pendingItems.length === 1 ? '' : 's'} · ${boughtItems.length} comprada${boughtItems.length === 1 ? '' : 's'}`
-          }
-        />
-      </View>
-
-      {/* ── Resumen Estadístico ── */}
-      <View style={styles.summaryRow}>
-        <View style={[styles.summaryCard, styles.summaryPending]}>
-          <View style={styles.summaryIconCirclePending}>
-            <Ionicons name="cart-outline" size={20} color={colors.primary} />
-          </View>
-          <View>
-            <Text style={styles.summaryNum}>{pendingItems.length}</Text>
-            <Text style={styles.summaryLabel}>Por comprar</Text>
-          </View>
-        </View>
-
-        <View style={[styles.summaryCard, styles.summaryBought]}>
-          <View style={styles.summaryIconCircleBought}>
-            <Ionicons name="checkmark-done" size={20} color={colors.functional.fresh.text} />
-          </View>
-          <View>
-            <Text style={styles.summaryNum}>{boughtItems.length}</Text>
-            <Text style={styles.summaryLabel}>Comprados</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* ── Botón / Formulario Rápido de Añadir ── */}
-      {!isAdding ? (
-        <Pressable
-          style={({ pressed }) => [styles.addTriggerButton, pressed && styles.cardPressed]}
-          onPress={() => setIsAddChooserVisible(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Agregar producto a comprar"
-        >
-          <Ionicons name="add-circle" size={22} color={colors.primary} style={{ marginRight: spacing.sm }} />
-          <Text style={styles.addTriggerText}>Agregar producto a la lista</Text>
-        </Pressable>
-      ) : (
-        <View style={styles.formCard}>
-          <View style={styles.formHeader}>
-            <Text style={styles.formTitle}>Nuevo Producto</Text>
-            <Pressable
-              onPress={() => setIsAdding(false)}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Cerrar formulario de nuevo producto"
-            >
-              <Ionicons name="close-circle-outline" size={22} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Nombre (ej. Leche, Tomates, Huevos)"
-            placeholderTextColor={colors.textMuted}
-            maxLength={60}
-            style={styles.textInput}
-          />
-
-          <View style={styles.qtyRow}>
-            <View style={[styles.stepperContainer, { flex: 1.1, marginRight: 10 }]}>
-              <Pressable
-                onPress={() => {
-                  const cur = parseFloat(quantity) || 1;
-                  const next = Math.max(1, Math.round((cur - 1) * 10) / 10);
-                  setQuantity(String(next));
-                }}
-                style={styles.stepperBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Reducir cantidad"
-              >
-                <Ionicons name="remove" size={18} color={colors.textPrimary} />
-              </Pressable>
-              <TextInput
-                value={quantity}
-                onChangeText={(val) => setQuantity(val.replace(/[^0-9.]/g, ''))}
-                placeholder="1"
-                keyboardType="numeric"
-                placeholderTextColor={colors.textMuted}
-                maxLength={8}
-                style={styles.stepperInput}
-              />
-              <Pressable
-                onPress={() => {
-                  const cur = parseFloat(quantity) || 0;
-                  const next = Math.round((cur + 1) * 10) / 10;
-                  setQuantity(String(next));
-                }}
-                style={styles.stepperBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Aumentar cantidad"
-              >
-                <Ionicons name="add" size={18} color={colors.textPrimary} />
-              </Pressable>
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1.5 }}>
-              <View style={styles.unitChipContainer}>
-                {UNITS.map((u) => (
-                  <Chip
-                    key={u.value}
-                    label={u.label}
-                    selected={unit === u.value}
-                    onPress={() => setUnit(u.value)}
-                    variant="filter"
-                  />
-                ))}
-              </View>
-            </ScrollView>
-          </View>
-
-          {/* Categorías */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: spacing.sm }}>
-            <View style={styles.categoryChipContainer}>
-              {CATEGORIES.map((cat) => (
-                <Chip
-                  key={cat.value}
-                  label={cat.label}
-                  icon={cat.icon}
-                  selected={category === cat.value}
-                  onPress={() => setCategory(cat.value)}
-                  variant="filter"
-                />
-              ))}
-            </View>
-          </ScrollView>
-
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
-            <View style={{ flex: 1 }}>
-              <SecondaryButton title="Cancelar" variant="outline" onPress={() => setIsAdding(false)} />
-            </View>
-            <View style={{ flex: 1.5 }}>
-              <PrimaryButton title="Guardar" iconName="checkmark" onPress={handleAddItem} />
-            </View>
-          </View>
-        </View>
-      )}
-    </>
-  ), [items.length, pendingItems.length, boughtItems.length, isAdding, name, quantity, unit, category]);
-
-  return (
-    <AppScreen style={styles.screen}>
-      <KeyboardAvoidingView
-        behavior="height"
-        style={{ flex: 1 }}
-      >
-        <SectionList<ShoppingItem, ShoppingSection>
-          sections={sections}
-          keyExtractor={(item) => item.id}
-          renderItem={renderShoppingItem}
-          renderSectionHeader={renderSectionHeader}
-          renderSectionFooter={renderSectionFooter}
-          ListHeaderComponent={renderListHeader}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: Math.max(110, getBottomContentPadding(insets.bottom)) },
-          ]}
-        />
-      </KeyboardAvoidingView>
-
-      {/* ── Selector de Tipo de Adición (BUG/Feature UI) ── */}
       <ActionSheetModal
-        visible={isAddChooserVisible}
-        onClose={() => setIsAddChooserVisible(false)}
-        title="Agregar a la lista de compras"
+        visible={chooserVisible}
+        onClose={() => setChooserVisible(false)}
+        variant="choices"
+        title="Agregar a la"
+        titleEmphasis="lista"
         description="¿Cómo deseas agregar este producto?"
         actions={[
           {
-            label: 'Elegir de mi despensa / inventario',
+            label: 'Elegir de mi despensa',
+            description: 'Repón algo que ya tienes o se está acabando',
             icon: 'basket-outline',
-            onPress: () => {
-              setIsAddChooserVisible(false);
-              setIsInventoryPickerVisible(true);
-            },
+            tone: colors.categories.vegetable,
+            onPress: () => setPickerVisible(true),
           },
           {
-            label: 'Crear nuevo producto personalizado',
-            icon: 'add-circle-outline',
+            label: 'Crear producto nuevo',
+            description: 'Escribe el nombre, cantidad y categoría',
+            icon: 'add',
+            tone: { background: colors.primaryContainer, text: colors.onPrimaryContainer },
             onPress: () => {
-              setIsAddChooserVisible(false);
-              setIsAdding(true);
+              setForm(EMPTY_FORM);
+              setFormVisible(true);
             },
           },
         ]}
       />
+      <PantryPickerSheet
+        visible={pickerVisible}
+        items={inventoryItems}
+        isInList={(inv) => pendingNames.has(normalizeName(inv.name))}
+        onPick={handlePick}
+        onClose={() => setPickerVisible(false)}
+      />
+      <ShoppingItemFormSheet
+        visible={formVisible}
+        values={form}
+        onChange={(key, value) => setForm((f) => ({ ...f, [key]: value }))}
+        onSubmit={handleSaveForm}
+        onClose={() => setFormVisible(false)}
+      />
+      <M3Dialog
+        visible={dialog.visible}
+        title={dialog.title}
+        titleEmphasis={dialog.titleEmphasis}
+        message={dialog.message}
+        type={dialog.type}
+        iconName={dialog.iconName}
+        confirmText={dialog.confirmText}
+        confirmTone={dialog.confirmTone}
+        cancelText={dialog.cancelText}
+        onConfirm={dialog.onConfirm}
+        onCancel={dialog.onCancel}
+        actionsLayout={dialog.actionsLayout}
+        hero={dialog.hero}
+      />
+    </>
+  );
 
-      {/* ── Modal de Selección desde Inventario ── */}
-      <Modal
-        visible={isInventoryPickerVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsInventoryPickerVisible(false)}
+  // ── Sin compras (Compras-Estados · izquierda) ──
+  if (items.length === 0) {
+    return (
+      <AppScreen style={styles.screen}>
+        <View style={styles.header}>
+          <ScreenHeader title="Lista de" emphasis="compras" />
+        </View>
+        <View style={[styles.emptyWrap, { paddingBottom: getBottomContentPadding(insets.bottom) }]}>
+          <EmptyState
+            title="No tienes compras"
+            titleEmphasis="pendientes"
+            description="Agrega productos aquí o desde los ingredientes que te falten en cualquier receta."
+            iconName="cart-outline"
+            tone="brand"
+            blobDotColors={[colors.secondaryContainer, colors.categories.grain.background]}
+            actionLabel="Agregar producto"
+            actionIconName="add"
+            onAction={openChooser}
+          />
+        </View>
+        {overlays}
+      </AppScreen>
+    );
+  }
+
+  return (
+    <AppScreen style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: getBottomContentPadding(insets.bottom) + (boughtItems.length > 0 ? 72 : 0) },
+        ]}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={styles.modalIconWrap}>
-                  <Ionicons name="basket" size={20} color={colors.primary} />
-                </View>
-                <View>
-                  <Text style={styles.modalTitle}>Agregar desde tu Despensa</Text>
-                  <Text style={styles.modalSubtitle}>Toca un alimento para añadirlo</Text>
-                </View>
-              </View>
+        <ScreenHeader title="Lista de" emphasis="compras" subtitle="Marca lo que compres y pásalo a tu despensa" />
+
+        <View style={styles.tiles}>
+          <CountTile label="Por comprar" value={pendingItems.length} tone={{ background: colors.primaryContainer, text: colors.onPrimaryContainer }} />
+          <CountTile label="Comprados" value={boughtItems.length} tone={colors.functional.fresh} />
+        </View>
+
+        <DashedAddButton label="Agregar producto a la lista" onPress={openChooser} />
+
+        <AppText variant="sectionTitle" style={styles.sectionTitle} accessibilityRole="header">
+          {'Por comprar '}
+          <AppText weight="regular" color={colors.textSecondary}>{`· ${pendingItems.length}`}</AppText>
+        </AppText>
+        <View style={styles.list}>
+          {pendingItems.length === 0 ? (
+            <AppText variant="bodySmall" color={colors.textSecondary}>
+              Todo comprado. Pásalo a tu despensa con el botón de abajo.
+            </AppText>
+          ) : (
+            pendingItems.map((item) => (
+              <ShoppingItemRow key={item.id} item={item} onToggle={() => toggleBought(item.id)} onRemove={() => confirmRemove(item)} />
+            ))
+          )}
+        </View>
+
+        {boughtItems.length > 0 && (
+          <>
+            <View style={styles.boughtHeader}>
+              <AppText variant="sectionTitle" color={colors.functional.fresh.text} style={styles.flex} accessibilityRole="header">
+                {'Comprados '}
+                <AppText weight="regular" color={colors.functional.fresh.text}>{`· ${boughtItems.length}`}</AppText>
+              </AppText>
               <Pressable
-                onPress={() => setIsInventoryPickerVisible(false)}
-                hitSlop={10}
-                style={styles.modalCloseBtn}
+                onPress={confirmClear}
+                style={({ pressed }) => [styles.clear, pressed && styles.clearPressed]}
                 accessibilityRole="button"
-                accessibilityLabel="Cerrar selector de despensa"
+                accessibilityLabel="Limpiar productos comprados"
               >
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <AppText variant="bodySmall" weight="semibold" color={colors.primary}>
+                  Limpiar
+                </AppText>
               </Pressable>
             </View>
-
-            <View style={{ marginBottom: spacing.md }}>
-              <SearchInput
-                value={inventorySearch}
-                onChangeText={setInventorySearch}
-                placeholder="Buscar en tu despensa..."
-              />
+            <View style={[styles.list, styles.boughtList]}>
+              {boughtItems.map((item) => (
+                <ShoppingItemRow key={item.id} item={item} onToggle={() => toggleBought(item.id)} onRemove={() => confirmRemove(item)} />
+              ))}
             </View>
+          </>
+        )}
+      </ScrollView>
 
-            <FlatList
-              data={filteredInventory}
-              keyExtractor={(inv) => inv.id}
-              showsVerticalScrollIndicator={false}
-              style={{ maxHeight: 360 }}
-              renderItem={({ item: inv }) => {
-                const s = getExpirationStatus(inv.expirationDate);
-                const isAlreadyInList = pendingItems.some(
-                  (p) => p.name.toLowerCase() === inv.name.toLowerCase()
-                );
-
-                return (
-                  <Pressable
-                    key={inv.id}
-                    onPress={() => handleAddFromInventory(inv)}
-                    style={({ pressed }) => [
-                      styles.invPickerRow,
-                      pressed && styles.cardPressed,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Agregar ${inv.name} a compras`}
-                  >
-                    <View style={[styles.invPickerIcon, { backgroundColor: colors.primaryContainer }]}>
-                      <Ionicons name="nutrition-outline" size={18} color={colors.primary} />
-                    </View>
-
-                    <View style={{ flex: 1, marginHorizontal: 10 }}>
-                      <Text style={styles.invPickerName} numberOfLines={1}>
-                        {inv.name}
-                      </Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                        {inv.quantity !== null && (
-                          <Text style={styles.invPickerQty}>
-                            Stock: {inv.quantity} {inv.unit}
-                          </Text>
-                        )}
-                        <Chip variant="status" status={s.status} label={s.label} />
-                      </View>
-                    </View>
-
-                    <View
-                      style={[
-                        styles.invPickerAddBtn,
-                        isAlreadyInList && styles.invPickerAddBtnAdded,
-                      ]}
-                    >
-                      <Ionicons
-                        name={isAlreadyInList ? 'checkmark' : 'add'}
-                        size={18}
-                        color={isAlreadyInList ? colors.functional.fresh.text : colors.surface}
-                      />
-                    </View>
-                  </Pressable>
-                );
-              }}
-              ListEmptyComponent={
-                <EmptyState
-                  title={inventorySearch.trim() ? 'No hay alimentos que coincidan' : 'No tienes alimentos en tu inventario'}
-                  description={inventorySearch.trim() ? 'Prueba con otro término de búsqueda.' : 'Agrega alimentos desde la pestaña Despensa.'}
-                  iconName="basket-outline"
-                />
-              }
-            />
-
-            <View style={{ marginTop: 14 }}>
-              <SecondaryButton
-                title="Listo"
-                variant="outline"
-                onPress={() => setIsInventoryPickerVisible(false)}
-              />
-            </View>
-          </View>
+      {boughtItems.length > 0 && (
+        <View style={[styles.moveWrap, { bottom: moveButtonBottom }]} pointerEvents="box-none">
+          <PrimaryButton
+            title={`Pasar ${boughtItems.length} a mi despensa`}
+            iconName="basket-outline"
+            onPress={handleMove}
+            isLoading={isMoving}
+            style={styles.moveBtn}
+          />
         </View>
-      </Modal>
+      )}
 
-      <M3Dialog
-        visible={dialogConfig.visible}
-        title={dialogConfig.title}
-        message={dialogConfig.message}
-        type={dialogConfig.type}
-        confirmText={dialogConfig.confirmText}
-        cancelText={dialogConfig.cancelText}
-        onConfirm={dialogConfig.onConfirm}
-        onCancel={dialogConfig.onCancel}
-      />
+      {overlays}
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.background },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: 110,
-  },
-  headerSection: {
-    marginBottom: spacing.lg,
-  },
-  screenTitle: {
-    fontSize: typography.sizes.screenTitle,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  screenSubtitle: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  summaryCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-  },
-  summaryPending: {
-    backgroundColor: colors.secondaryContainer,
-    borderColor: colors.border,
-  },
-  summaryBought: {
-    backgroundColor: colors.functional.fresh.background,
-    borderColor: colors.functional.fresh.border,
-  },
-  summaryIconCirclePending: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  summaryIconCircleBought: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.functional.fresh.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  summaryNum: {
-    fontSize: typography.sizes.sectionTitle,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  summaryLabel: {
-    fontSize: typography.sizes.label,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  addTriggerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radii.circular,
-    minHeight: 52,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.xl,
-    marginBottom: 18,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  addTriggerText: {
-    fontSize: typography.sizes.bodySmall,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.scrim,
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    maxHeight: '85%',
-    padding: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  modalIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalTitle: {
-    fontSize: typography.sizes.cardTitle,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  modalSubtitle: {
-    fontSize: typography.sizes.label,
-    color: colors.textSecondary,
-  },
-  modalCloseBtn: {
-    padding: spacing.xs,
-  },
-  invPickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 18,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  invPickerIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  invPickerName: {
-    fontSize: typography.sizes.bodySmall,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  invPickerQty: {
-    fontSize: typography.sizes.label,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  invPickerAddBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  invPickerAddBtnAdded: {
-    backgroundColor: colors.functional.fresh.background,
-    borderWidth: 1,
-    borderColor: colors.functional.fresh.border,
-  },
-  cardPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.97 }],
-  },
-  formCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.xl,
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  formHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  formTitle: {
-    fontSize: typography.sizes.body,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  textInput: {
+  flex: { flex: 1 },
+  screen: {
     backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 46,
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textPrimary,
-    marginBottom: 10,
   },
-  qtyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
+  header: {
+    paddingHorizontal: spacing.screenGutter,
+    paddingTop: 24,
   },
-  unitChipContainer: {
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
+  emptyWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
-  categoryChipContainer: {
-    flexDirection: 'row',
-    gap: 6,
-    paddingVertical: 2,
+  content: {
+    paddingHorizontal: spacing.screenGutter,
+    paddingTop: 24,
+    gap: 16,
   },
-  sectionHeader: {
+  tiles: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    gap: 12,
   },
   sectionTitle: {
-    fontSize: typography.sizes.body,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    marginTop: 4,
   },
-  clearText: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '600',
-    color: colors.error.text,
+  list: {
+    gap: 8,
   },
-  itemCard: {
+  boughtHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radii.buttons,
-    paddingHorizontal: 14,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginTop: 4,
   },
-  itemCardBought: {
-    backgroundColor: colors.surfaceVariant,
-    borderColor: colors.border,
-    opacity: 0.8,
+  boughtList: {
+    marginTop: -6,
   },
-  checkboxCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
+  clear: {
+    height: 48,
+    paddingHorizontal: 8,
     justifyContent: 'center',
+    borderRadius: radii.pill,
   },
-  checkboxCircleChecked: {
-    backgroundColor: colors.functional.fresh.text,
-    borderColor: colors.functional.fresh.text,
-  },
-  checkboxInnerUnchecked: {
-    width: 0,
-    height: 0,
-  },
-  itemName: {
-    fontSize: typography.sizes.bodySmall,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  itemNameBought: {
-    textDecorationLine: 'line-through',
-    color: colors.textMuted,
-  },
-  catBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  clearPressed: {
     backgroundColor: colors.surfaceVariant,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radii.sm,
-    marginTop: 3,
-    alignSelf: 'flex-start',
   },
-  catBadgeText: {
-    fontSize: typography.sizes.micro,
-    lineHeight: typography.lineHeights.micro,
-    fontWeight: typography.weights.semibold,
-    color: colors.textSecondary,
+  moveWrap: {
+    position: 'absolute',
+    left: spacing.screenGutter,
+    right: spacing.screenGutter,
   },
-  sourceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryContainer,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radii.sm,
-    marginTop: 3,
-    alignSelf: 'flex-start',
-  },
-  sourceText: {
-    fontSize: typography.sizes.micro,
-    lineHeight: typography.lineHeights.micro,
-    fontWeight: typography.weights.semibold,
-    color: colors.primaryDark,
-  },
-  itemQty: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginRight: 10,
-  },
-  itemQtyBought: {
-    color: colors.textMuted,
-  },
-  deleteButton: {
-    padding: spacing.xs,
-  },
-  emptyCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxxl,
-    paddingHorizontal: spacing.xl,
-    backgroundColor: colors.surface,
-    borderRadius: radii.cards,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-  },
-  emptyTitle: {
-    fontSize: typography.sizes.body,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginTop: 10,
-  },
-  emptySubtitle: {
-    fontSize: typography.sizes.label,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    lineHeight: 18,
-  },
-  stepperContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 52,
-    backgroundColor: colors.surfaceVariant,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.buttons,
-    overflow: 'hidden',
-  },
-  stepperBtn: {
-    width: 38,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-  stepperInput: {
-    flex: 1,
-    height: 50,
-    textAlign: 'center',
-    fontSize: typography.sizes.body,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    paddingHorizontal: 2,
+  moveBtn: {
+    minHeight: 56,
+    ...elevations.lg,
   },
 });
