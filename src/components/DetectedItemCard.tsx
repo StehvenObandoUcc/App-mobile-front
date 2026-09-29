@@ -23,6 +23,8 @@ export type DetectedItemCardProps = {
   existing?: Ingredient;
   mergeChecked?: boolean;
   onToggleMerge?: () => void;
+  /** false si la unidad no se puede sumar (p. ej. unidades vs. kg): se avisa que se guarda aparte. */
+  mergeCompatible?: boolean;
 };
 
 export function expiryLabel(date: string | null): string {
@@ -42,7 +44,7 @@ export function confidenceBadge(confidence: number | null | undefined) {
   return { label: 'Verifica este alimento', tone: colors.functional.expired };
 }
 
-export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, mergeChecked = true, onToggleMerge }: DetectedItemCardProps) {
+export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, mergeChecked = true, onToggleMerge, mergeCompatible = true }: DetectedItemCardProps) {
   const cat = getCategoryConfig(item.category);
   const catColor = colors.categories[item.category] || colors.categories.other;
   const qty = item.quantity !== null && item.quantity !== undefined ? formatQuantity(item.quantity, item.unit, { long: true }) : 'sin cantidad';
@@ -93,7 +95,21 @@ export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, m
         <IconButton iconName="trash-outline" variant="ghost" iconSize={19} iconColor={colors.m3.error} accessibilityLabel={`Quitar ${item.name}`} onPress={onRemove} />
       </View>
 
-      {existing && (
+      {existing && !mergeCompatible && (
+        <View style={styles.merge}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+          <View style={styles.mergeText}>
+            <AppText variant="metadata" weight="semibold">
+              {`Ya tienes ${existing.name}${existing.quantity !== null ? ` (${formatQuantity(existing.quantity, existing.unit)})` : ''}`}
+            </AppText>
+            <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
+              Se guardará aparte porque la unidad es distinta
+            </AppText>
+          </View>
+        </View>
+      )}
+
+      {existing && mergeCompatible && (
         <Pressable
           onPress={onToggleMerge}
           style={styles.merge}

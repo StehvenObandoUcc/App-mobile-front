@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Pressable, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
@@ -58,8 +58,22 @@ export function SelectionActionBar({ count, onCancel, onDelete, itemNoun = 'elem
   const insets = useSafeAreaInsets();
   // Mientras esta barra existe, la navegación inferior se oculta (si no, la taparía).
   useEffect(() => hideBottomNav(), []);
+  // Entra desde abajo reemplazando la navegación (Paso 5 · Animaciones).
+  const enter = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(enter, { toValue: 1, duration: 260, easing: Easing.bezier(0.2, 0, 0, 1), useNativeDriver: true }).start();
+  }, [enter]);
   return (
-    <View style={[styles.bar, { bottom: Math.max(insets.bottom, 0) + NAV_BOTTOM_OFFSET }]}>
+    <Animated.View
+      style={[
+        styles.bar,
+        {
+          bottom: Math.max(insets.bottom, 0) + NAV_BOTTOM_OFFSET,
+          opacity: enter,
+          transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [NAV_HEIGHT + 24, 0] }) }],
+        },
+      ]}
+    >
       <Pressable onPress={onCancel} style={styles.cancel} accessibilityRole="button" accessibilityLabel="Cancelar selección">
         <AppText variant="body" weight="semibold" color={colors.m3.inverseOnSurface}>
           Cancelar
@@ -76,7 +90,7 @@ export function SelectionActionBar({ count, onCancel, onDelete, itemNoun = 'elem
         <Ionicons name="trash-outline" size={20} color={colors.m3.onErrorContainer} />
         <AppText variant="body" weight="semibold" color={colors.m3.onErrorContainer}>{`Eliminar (${count})`}</AppText>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 
