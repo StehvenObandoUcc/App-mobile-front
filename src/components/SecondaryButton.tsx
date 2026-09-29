@@ -1,8 +1,14 @@
 import React from 'react';
-import { Text, StyleSheet, ActivityIndicator, View, Pressable } from 'react-native';
+import { StyleSheet, ActivityIndicator, View, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radii } from '../theme';
+import { AppText } from './AppText';
+import { colors, spacing, radii } from '../theme';
 
+/**
+ * SecondaryButton — Componentes.dc.html
+ * variant 'tint': durazno (primaryContainer) con texto onPrimaryContainer (10.25:1).
+ * variant 'outline': blanco con borde outline 1.5 px y texto onSurface.
+ */
 export type SecondaryButtonProps = {
   title: string;
   onPress: () => void;
@@ -10,6 +16,7 @@ export type SecondaryButtonProps = {
   disabled?: boolean;
   iconName?: keyof typeof Ionicons.glyphMap;
   variant?: 'outline' | 'tint';
+  style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   accessibilityHint?: string;
 };
@@ -21,11 +28,13 @@ export function SecondaryButton({
   disabled = false,
   iconName,
   variant = 'tint',
+  style,
   accessibilityLabel,
   accessibilityHint,
 }: SecondaryButtonProps) {
   const isDisabled = disabled || isLoading;
   const isOutline = variant === 'outline';
+  const fg = disabled ? colors.textSecondary : isOutline ? colors.textPrimary : colors.onPrimaryContainer;
 
   return (
     <Pressable
@@ -37,26 +46,21 @@ export function SecondaryButton({
       accessibilityState={{ disabled: isDisabled, busy: isLoading }}
       style={({ pressed }) => [
         styles.button,
-        isOutline ? styles.buttonOutline : styles.buttonTint,
-        isDisabled && styles.disabled,
-        pressed && !isDisabled && styles.pressed,
+        isOutline ? styles.outline : styles.tint,
+        pressed && !isDisabled && (isOutline ? styles.outlinePressed : styles.tintPressed),
+        pressed && !isDisabled && styles.pressedScale,
+        disabled && styles.disabled,
+        style,
       ]}
     >
       {isLoading ? (
-        <ActivityIndicator color={colors.primary} size="small" />
+        <ActivityIndicator color={fg} size="small" />
       ) : (
         <View style={styles.content}>
-          {iconName && (
-            <Ionicons
-              name={iconName}
-              size={18}
-              color={isOutline ? colors.textSecondary : colors.primary}
-              style={styles.icon}
-            />
-          )}
-          <Text style={[styles.title, isOutline ? styles.titleOutline : styles.titleTint]}>
+          {iconName && <Ionicons name={iconName} size={20} color={fg} />}
+          <AppText variant="body" weight="semibold" color={fg} align="center" style={styles.title} numberOfLines={2}>
             {title}
-          </Text>
+          </AppText>
         </View>
       )}
     </Pressable>
@@ -65,45 +69,42 @@ export function SecondaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 52,
-    borderRadius: radii.circular,
+    minHeight: spacing.buttonHeight,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
     paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.md,
   },
-  buttonTint: {
+  tint: {
     backgroundColor: colors.primaryContainer,
   },
-  buttonOutline: {
+  tintPressed: {
+    backgroundColor: colors.m3.inversePrimary,
+  },
+  outline: {
     backgroundColor: colors.surface,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
+  },
+  outlinePressed: {
+    backgroundColor: colors.m3.surfaceContainerLow,
+  },
+  pressedScale: {
+    transform: [{ scale: 0.97 }],
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  icon: {
-    marginRight: spacing.sm,
+    gap: 10,
+    flexShrink: 1,
   },
   title: {
-    fontSize: typography.sizes.body,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 0.2,
-  },
-  titleTint: {
-    color: colors.primary,
-  },
-  titleOutline: {
-    color: colors.textPrimary,
+    flexShrink: 1,
   },
   disabled: {
-    opacity: 0.55,
-  },
-  pressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.97 }],
+    backgroundColor: colors.m3.surfaceContainerHigh,
+    borderColor: colors.m3.surfaceContainerHigh,
   },
 });

@@ -1,16 +1,25 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, View, Insets } from 'react-native';
+import { Pressable, StyleSheet, View, Insets } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radii } from '../theme';
+import { AppText } from './AppText';
+import { colors, spacing, radii } from '../theme';
 import { IngredientCategory, ExpirationStatus } from '../types';
 
+/**
+ * Chip — Componentes.dc.html
+ * - filter: seleccionado = cacao + check (no depende solo del color); sin seleccionar = blanco + borde outline.
+ * - category: pastel de la familia de despensa.
+ * - status: pastel del estado de caducidad.
+ * Visual 36 dp dentro de un objetivo táctil de 48 dp.
+ */
 export type ChipProps = {
   label?: string;
   selected?: boolean;
   disabled?: boolean;
   onPress?: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
-  variant?: 'filter' | 'category' | 'status';
+  /** 'choice': opción única de un grupo (radio), seleccionado en cacao sin ✓ (unidades, atajos de fecha). */
+  variant?: 'filter' | 'choice' | 'category' | 'status';
   category?: IngredientCategory;
   status?: ExpirationStatus;
   accessibilityLabel?: string;
@@ -18,10 +27,7 @@ export type ChipProps = {
   hitSlop?: Insets | number;
 };
 
-const DEFAULT_STATUS_CONFIG: Record<
-  ExpirationStatus,
-  { label: string; icon: keyof typeof Ionicons.glyphMap }
-> = {
+const DEFAULT_STATUS_CONFIG: Record<ExpirationStatus, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
   fresh: { label: 'Fresco', icon: 'checkmark-circle-outline' },
   expiringSoon: { label: 'Próximo a vencer', icon: 'time-outline' },
   expired: { label: 'Vencido', icon: 'alert-circle-outline' },
@@ -41,34 +47,38 @@ export function Chip({
   enableHitSlop,
   hitSlop,
 }: ChipProps) {
-  // Resolución semántica 100% interna vía tokens
   let bg: string = colors.surface;
-  let text: string = colors.textSecondary;
-  let border: string = colors.border;
-  let resolvedLabel: string = label || '';
+  let fg: string = colors.textPrimary;
+  let border: string | undefined = colors.borderStrong;
+  let weight: 'medium' | 'semibold' = 'medium';
+  let resolvedLabel = label || '';
   let resolvedIcon = icon;
 
   if (category && colors.categories[category]) {
     bg = colors.categories[category].background;
-    text = colors.categories[category].text;
-    border = 'transparent';
+    fg = colors.categories[category].text;
+    border = undefined;
+    weight = 'semibold';
   } else if (status && colors.functional[status]) {
+    const cfg = DEFAULT_STATUS_CONFIG[status] || DEFAULT_STATUS_CONFIG.unknown;
     bg = colors.functional[status].background;
-    text = colors.functional[status].text;
-    border = colors.functional[status].border;
-    const statusCfg = DEFAULT_STATUS_CONFIG[status] || DEFAULT_STATUS_CONFIG.unknown;
-    resolvedLabel = label || statusCfg.label;
-    resolvedIcon = icon || statusCfg.icon;
-  } else if (variant === 'filter') {
-    if (selected) {
-      bg = colors.primary;
-      text = colors.textInverse;
-      border = colors.primary;
-    } else {
-      bg = colors.surface;
-      text = colors.textSecondary;
-      border = colors.border;
-    }
+    fg = colors.functional[status].text;
+    border = undefined;
+    weight = 'semibold';
+    resolvedLabel = label || cfg.label;
+    resolvedIcon = icon || cfg.icon;
+  } else if ((variant === 'filter' || variant === 'choice') && selected) {
+    bg = colors.ink;
+    fg = colors.onInk;
+    border = undefined;
+    weight = 'semibold';
+    if (variant === 'filter') resolvedIcon = 'checkmark';
+  }
+
+  if (disabled) {
+    bg = colors.m3.surfaceContainer;
+    fg = colors.textMuted;
+    border = undefined;
   }
 
   const hasAction = Boolean(onPress);
@@ -78,30 +88,29 @@ export function Chip({
       onPress={onPress}
       disabled={!hasAction || disabled}
       hitSlop={enableHitSlop ? (hitSlop ?? 6) : undefined}
-      accessibilityRole={hasAction ? 'button' : 'text'}
+      accessibilityRole={!hasAction ? 'text' : variant === 'choice' ? 'radio' : 'button'}
       accessibilityLabel={accessibilityLabel || resolvedLabel}
       accessibilityState={{
         disabled: hasAction ? disabled : undefined,
         selected: hasAction && variant === 'filter' ? selected : undefined,
+        checked: hasAction && variant === 'choice' ? selected : undefined,
       }}
-      style={({ pressed }) => [
-        styles.touchTarget,
-        pressed && hasAction && !disabled && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.touchTarget, pressed && hasAction && !disabled && styles.pressed]}
     >
       <View
         style={[
           styles.visualChip,
           {
             backgroundColor: bg,
-            borderColor: border,
-            paddingHorizontal: resolvedIcon ? spacing.lg : spacing.md,
+            paddingLeft: resolvedIcon ? 10 : 14,
           },
-          disabled && styles.visualDisabled,
+          border ? { borderWidth: 1, borderColor: border } : null,
         ]}
       >
-        {resolvedIcon && <Ionicons name={resolvedIcon} size={14} color={disabled ? colors.textMuted : text} style={styles.icon} />}
-        <Text style={[styles.label, { color: disabled ? colors.textMuted : text }]}>{resolvedLabel}</Text>
+        {resolvedIcon && <Ionicons name={resolvedIcon} size={16} color={fg} />}
+        <AppText variant="bodySmall" weight={weight} color={fg} numberOfLines={1}>
+          {resolvedLabel}
+        </AppText>
       </View>
     </Pressable>
   );
@@ -109,33 +118,21 @@ export function Chip({
 
 const styles = StyleSheet.create({
   touchTarget: {
-    minHeight: spacing.touchTargetMin, // 48dp garantizado
+    minHeight: spacing.touchTargetMin,
     justifyContent: 'center',
     alignItems: 'center',
   },
   visualChip: {
-    height: 36, // Altura visual óptima de 36dp
+    height: 36,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.chips,
-    borderWidth: 1,
-  },
-  icon: {
-    marginRight: spacing.xs,
-  },
-  label: {
-    fontSize: typography.sizes.label,
-    fontWeight: typography.weights.semibold,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
+    gap: 6,
+    paddingRight: 14,
+    borderRadius: radii.pill,
   },
   pressed: {
-    opacity: 0.82,
+    opacity: 0.85,
     transform: [{ scale: 0.97 }],
-  },
-  visualDisabled: {
-    backgroundColor: colors.surfaceSubtle,
-    borderColor: colors.border,
   },
 });

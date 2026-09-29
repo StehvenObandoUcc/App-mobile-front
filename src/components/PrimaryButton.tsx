@@ -1,7 +1,16 @@
 import React from 'react';
-import { Text, StyleSheet, ActivityIndicator, View, Pressable } from 'react-native';
+import { StyleSheet, ActivityIndicator, View, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radii } from '../theme';
+import { AppText } from './AppText';
+import { colors, spacing, radii } from '../theme';
+
+/**
+ * PrimaryButton — Componentes.dc.html
+ * tone: 'ink' (cacao, acción principal · defecto) | 'brand' (tomate, escaneo) | 'ai' (frambuesa, Chef IA)
+ *       | 'danger' (rojo, solo para confirmar acciones destructivas)
+ * Píldora de 52 dp, plano (sin sombra de color). Presionado: tono más oscuro + escala 0.97.
+ */
+export type ButtonTone = 'ink' | 'brand' | 'ai' | 'danger';
 
 export type PrimaryButtonProps = {
   title: string;
@@ -9,8 +18,19 @@ export type PrimaryButtonProps = {
   isLoading?: boolean;
   disabled?: boolean;
   iconName?: keyof typeof Ionicons.glyphMap;
+  tone?: ButtonTone;
+  /** Ocupa todo el ancho disponible (por defecto se ajusta al contenedor, como antes). */
+  style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+};
+
+const TONES: Record<ButtonTone, { bg: string; pressed: string; fg: string }> = {
+  ink: { bg: colors.ink, pressed: colors.inkPressed, fg: colors.onInk },
+  brand: { bg: colors.m3.primary, pressed: colors.m3.primaryPressed, fg: colors.m3.onPrimary },
+  ai: { bg: colors.m3.tertiary, pressed: colors.m3.tertiaryPressed, fg: colors.m3.onTertiary },
+  // Confirmaciones destructivas (Organismos.dc.html · M3Dialog «Eliminar»): blanco sobre #B3261E 6.54:1
+  danger: { bg: colors.m3.error, pressed: colors.functional.expired.text, fg: colors.m3.onError },
 };
 
 export function PrimaryButton({
@@ -19,10 +39,14 @@ export function PrimaryButton({
   isLoading = false,
   disabled = false,
   iconName,
+  tone = 'ink',
+  style,
   accessibilityLabel,
   accessibilityHint,
 }: PrimaryButtonProps) {
   const isDisabled = disabled || isLoading;
+  const t = TONES[tone];
+  const fg = disabled && !isLoading ? colors.textSecondary : t.fg;
 
   return (
     <Pressable
@@ -34,18 +58,20 @@ export function PrimaryButton({
       accessibilityState={{ disabled: isDisabled, busy: isLoading }}
       style={({ pressed }) => [
         styles.button,
-        isDisabled && styles.disabled,
-        pressed && !isDisabled && styles.pressed,
+        { backgroundColor: t.bg },
+        pressed && !isDisabled && { backgroundColor: t.pressed, transform: [{ scale: 0.97 }] },
+        disabled && !isLoading && styles.disabled,
+        style,
       ]}
     >
       {isLoading ? (
-        <ActivityIndicator color={colors.textInverse} size="small" />
+        <ActivityIndicator color={t.fg} size="small" />
       ) : (
         <View style={styles.content}>
-          {iconName && (
-            <Ionicons name={iconName} size={20} color={colors.textInverse} style={styles.icon} />
-          )}
-          <Text style={styles.title}>{title}</Text>
+          {iconName && <Ionicons name={iconName} size={20} color={fg} />}
+          <AppText variant="body" weight="semibold" color={fg} align="center" style={styles.title} numberOfLines={2}>
+            {title}
+          </AppText>
         </View>
       )}
     </Pressable>
@@ -54,44 +80,24 @@ export function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 52,
-    backgroundColor: colors.primary,
-    borderRadius: radii.circular,
+    minHeight: spacing.buttonHeight,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xxl,
-    paddingVertical: 14,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    paddingVertical: spacing.md,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 10,
     flexShrink: 1,
   },
-  icon: {
-    marginRight: spacing.sm,
-    alignSelf: 'center',
-  },
   title: {
-    color: colors.textInverse,
-    fontSize: typography.sizes.body,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 0.2,
-    textAlign: 'center',
     flexShrink: 1,
   },
   disabled: {
-    backgroundColor: colors.border,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  pressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.97 }],
+    backgroundColor: colors.m3.surfaceContainerHigh,
   },
 });
