@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AsyncStatus, Recipe, DietaryPreference } from '../types';
 import { RecipeService, mockRecipeService, PrepareRecipeResult } from '../services/recipe-service';
 import { LocalStorage } from '../storage/local-storage';
+import type { RecipeGenerationExtras } from '../services/api-client';
 
 let memoryRecipes: Recipe[] | null = null;
 
@@ -89,7 +90,8 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
     focus: string = 'waste_reduction',
     count: number = 2,
     difficulty: string = 'any',
-    dietaryPreference: DietaryPreference = 'any'
+    dietaryPreference: DietaryPreference = 'any',
+    extras: RecipeGenerationExtras = {}
   ): Promise<Recipe[]> => {
     const hadNoRecipes = recipes.length === 0;
     if (hadNoRecipes) {
@@ -102,7 +104,8 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
         focus,
         count,
         difficulty,
-        dietaryPreference
+        dietaryPreference,
+        extras
       );
       setStatus('success');
       return generated;
