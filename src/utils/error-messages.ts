@@ -1,5 +1,12 @@
 export type ErrorContext = 'scan' | 'recipes';
 
+export const NETWORK_ERROR_MESSAGE = 'No hay conexión a internet. Revisa tu red e intenta de nuevo.';
+
+/** true si el mensaje (ya traducido) es el de falta de conexión. */
+export function isNetworkErrorMessage(message: string | null | undefined): boolean {
+  return message === NETWORK_ERROR_MESSAGE;
+}
+
 /**
  * Traduce errores de red y respuestas HTTP del backend a mensajes
  * estandarizados y amigables para el usuario (BUG-05).
@@ -15,7 +22,7 @@ export function getFriendlyErrorMessage(
     String(error?.message || '').toLowerCase().includes('network request failed');
 
   if (isNetwork) {
-    return 'No hay conexión a internet. Revisa tu red e intenta de nuevo.';
+    return NETWORK_ERROR_MESSAGE;
   }
 
   const status = error?.status;
