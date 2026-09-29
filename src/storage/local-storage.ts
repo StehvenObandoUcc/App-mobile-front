@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ingredient, Recipe, ShoppingItem, IngredientCategory, OutboxMutation } from '../types';
 import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
-import { addDaysISO } from '../utils/dates';
+import { addDaysISO, earliestISODate } from '../utils/dates';
+import { convertQuantity } from '../utils/consumption';
+import { generateOperationId } from '../utils/uuid';
 
 export const DEFAULT_SHELF_LIFE_DAYS: Record<IngredientCategory, number> = {
   fruit: 7,
@@ -34,9 +36,59 @@ export interface MoveBoughtSnapshot {
   updatedIngredients: {
     id: string;
     quantity: number | null;
+    /** Unidad final (al reponer un agotado cambia). Opcional para snapshots viejos. */
+    unit?: Ingredient['unit'];
     expirationDate: string | null;
     expirationSource: 'estimated';
   }[];
+}
+
+/**
+ * Mutaciones del Outbox que refleja un traspaso Compras → Despensa (crear/actualizar alimentos y borrar
+ * los comprados). Se guardan en la MISMA escritura que la despensa, así un cierre a mitad no pierde nada.
+ * Si un ítem de compras nunca llegó al servidor (create sin intentar), se purga su cola en vez de enviar DELETE.
+ */
+function buildMoveOutbox(
+  outbox: OutboxMutation[],
+  userId: string,
+  newIngredients: Ingredient[],
+  updated: Ingredient[],
+  boughtItemIds: string[]
+): { outbox: OutboxMutation[]; purgedShoppingIds: string[] } {
+  const now = Date.now();
+  const mk = (entity: 'inventory' | 'shopping', action: 'create' | 'update' | 'delete', entityId: string, payload: any): OutboxMutation => ({
+    operationId: generateOperationId(),
+    userId,
+    entity,
+    action,
+    entityId,
+    payload,
+    createdAt: now,
+    updatedAt: now,
+    status: 'pending',
+    attemptCount: 0,
+    nextAttemptAt: 0,
+  });
+  const unsentCreate = (entity: string, id: string) =>
+    next.find((m) => m.entity === entity && m.entityId === id && m.action === 'create' && m.attemptCount === 0 && m.status === 'pending');
+
+  let next = [...outbox];
+  const purgedShoppingIds: string[] = [];
+  for (const ing of newIngredients) next.push(mk('inventory', 'create', ing.id, ing));
+  for (const ing of updated) {
+    const pc = unsentCreate('inventory', ing.id);
+    if (pc) next = next.map((m) => (m === pc ? { ...m, payload: ing, updatedAt: now } : m));
+    else next.push(mk('inventory', 'update', ing.id, ing));
+  }
+  for (const id of boughtItemIds) {
+    if (unsentCreate('shopping', id)) {
+      next = next.filter((m) => !(m.entity === 'shopping' && m.entityId === id));
+      purgedShoppingIds.push(id);
+    } else {
+      next.push(mk('shopping', 'delete', id, { id }));
+    }
+  }
+  return { outbox: next, purgedShoppingIds };
 }
 
 /**
@@ -97,10 +149,30 @@ async function recoverPendingMoveBoughtTx(userId: string): Promise<void> {
         const item = inv.find((i) => i.id === up.id);
         if (item) {
           item.quantity = up.quantity;
+          if (up.unit) item.unit = up.unit;
           item.expirationDate = up.expirationDate;
           item.expirationSource = up.expirationSource;
         }
       }
+
+      // 5. Encolar en el Outbox lo que el cierre dejó sin enviar (si la escritura atómica no alcanzó a hacerse)
+      const outboxKey = getStorageKey(BASE_KEY_OUTBOX, userId);
+      const savedOutbox = await AsyncStorage.getItem(outboxKey);
+      const outbox: OutboxMutation[] = savedOutbox ? JSON.parse(savedOutbox) : [];
+      // Si la escritura atómica sí alcanzó a guardarse, sus mutaciones ya están (creadas en el mismo instante del traspaso).
+      const alreadyQueued = (id: string) => outbox.some((m) => m.entityId === id && Math.abs(m.createdAt - tx.timestamp) < 60000);
+      const updatedFull = tx.updatedIngredients
+        .map((up) => inv.find((i) => i.id === up.id))
+        .filter((i): i is Ingredient => Boolean(i) && !alreadyQueued((i as Ingredient).id));
+      const built = buildMoveOutbox(
+        outbox,
+        userId,
+        tx.newIngredients.filter((n) => !alreadyQueued(n.id)),
+        updatedFull,
+        tx.boughtItemIds.filter((id) => !alreadyQueued(id))
+      );
+      built.purgedShoppingIds.forEach((id) => pendingMap.delete(id));
+      await AsyncStorage.setItem(outboxKey, JSON.stringify(built.outbox));
 
       // Persistir atómicamente la reconciliación y eliminar el snapshot
       await AsyncStorage.multiSet([
@@ -598,7 +670,8 @@ export const LocalStorage = {
    * - Asigna expirationSource: "estimated" con vida útil calculada según DEFAULT_SHELF_LIFE_DAYS.
    * - Conserva quantity: null si es desconocida, sin inventar cantidades.
    */
-  async moveBoughtToInventory(): Promise<number> {
+  /** `shelfDays`: días de vencimiento de Configuración; null/undefined = automático según el tipo. */
+  async moveBoughtToInventory(shelfDays?: number | null): Promise<number> {
     ensureActiveUser();
     const uid = currentUserId!;
     const boughtItems = memoryShoppingList.filter((item) => item.isBought);
@@ -606,12 +679,7 @@ export const LocalStorage = {
 
     let movedCount = 0;
     const newIngredients: Ingredient[] = [];
-    const updatedIngredients: {
-      id: string;
-      quantity: number | null;
-      expirationDate: string | null;
-      expirationSource: 'estimated';
-    }[] = [];
+    const updatedIngredients: MoveBoughtSnapshot['updatedIngredients'] = [];
 
     // Clonar lista actual para mutación inmutable
     const nextInventory: Ingredient[] = memoryInventory.map((item) => ({ ...item }));
@@ -619,34 +687,41 @@ export const LocalStorage = {
     for (const bought of boughtItems) {
       const match = findSimilarItem(bought.name, nextInventory);
 
-      const days = DEFAULT_SHELF_LIFE_DAYS[bought.category] || 14;
+      const days = shelfDays ?? (DEFAULT_SHELF_LIFE_DAYS[bought.category] || 14);
       // Día local (no UTC): con toISOString() después de las 7 p. m. en Colombia salía un día adelantado.
       const estimatedExp = addDaysISO(days);
 
       const { unit: cleanUnit, quantity: cleanQty } = normalizeItemUnitAndQty(bought.unit, bought.quantity);
 
-      if (match && match.isExact) {
-        // Fusión segura de producto existente
-        const existing = match.item;
-        if (existing.quantity !== null && cleanQty !== null) {
-          existing.quantity = Math.round((existing.quantity + cleanQty) * 10) / 10;
-        } else if (cleanQty !== null) {
-          existing.quantity = cleanQty;
-        }
-        existing.unit = cleanUnit;
+      // Se suma solo si las unidades son compatibles (g↔kg, ml↔L); si no, entra como alimento aparte.
+      const existingForMerge = match && match.isExact ? match.item : null;
+      const restocking = existingForMerge !== null && (existingForMerge.quantity === null || existingForMerge.quantity === 0);
+      const extra =
+        existingForMerge && cleanQty !== null && !restocking
+          ? convertQuantity(cleanQty, cleanUnit, existingForMerge.unit)
+          : null;
+      const canMerge = existingForMerge !== null && (restocking || cleanQty === null || extra !== null);
 
-        // Conservar la fecha más próxima si ambas existen
-        if (existing.expirationDate && estimatedExp) {
-          existing.expirationDate =
-            existing.expirationDate < estimatedExp ? existing.expirationDate : estimatedExp;
-        } else {
+      if (existingForMerge && canMerge) {
+        const existing = existingForMerge;
+        if (restocking) {
+          // Estaba agotado («Sin stock»): se repone con la cantidad, unidad y fecha nuevas.
+          existing.quantity = cleanQty;
+          existing.unit = cleanUnit;
           existing.expirationDate = estimatedExp;
+        } else {
+          if (extra !== null && existing.quantity !== null) {
+            existing.quantity = Math.round((existing.quantity + extra) * 1000) / 1000;
+          }
+          // Conservar la fecha más próxima si ambas existen (texto ISO: sin pasar por UTC)
+          existing.expirationDate = earliestISODate(existing.expirationDate, estimatedExp);
         }
         existing.expirationSource = 'estimated';
 
         updatedIngredients.push({
           id: existing.id,
           quantity: existing.quantity,
+          unit: existing.unit,
           expirationDate: existing.expirationDate,
           expirationSource: 'estimated',
         });
@@ -672,8 +747,14 @@ export const LocalStorage = {
 
     const boughtItemIds = boughtItems.map((b) => b.id);
     const nextShoppingList = memoryShoppingList.filter((item) => !item.isBought);
+    const updatedFull = updatedIngredients
+      .map((u) => nextInventory.find((i) => i.id === u.id))
+      .filter((i): i is Ingredient => Boolean(i));
+    const { outbox: nextOutbox, purgedShoppingIds } = buildMoveOutbox(memoryOutbox, uid, newIngredients, updatedFull, boughtItemIds);
     const nextPendingDeletedShopping = new Map(pendingDeletedShopping);
-    boughtItemIds.forEach((id) => nextPendingDeletedShopping.set(id, Date.now()));
+    boughtItemIds
+      .filter((id) => !purgedShoppingIds.includes(id))
+      .forEach((id) => nextPendingDeletedShopping.set(id, Date.now()));
 
     const txKey = getStorageKey(BASE_KEY_TX_MOVE_BOUGHT, uid);
     const tx: MoveBoughtSnapshot = {
@@ -696,6 +777,8 @@ export const LocalStorage = {
         getStorageKey(BASE_KEY_PENDING_DELETED_SHOPPING, uid),
         JSON.stringify(Array.from(nextPendingDeletedShopping.entries())),
       ],
+      // El Outbox va en la misma escritura: despensa, compras y envíos al servidor quedan juntos.
+      [getStorageKey(BASE_KEY_OUTBOX, uid), JSON.stringify(nextOutbox)],
     ]);
 
     // 3. Limpiar snapshot una vez confirmadas las escrituras
@@ -705,6 +788,7 @@ export const LocalStorage = {
     memoryInventory = nextInventory;
     memoryShoppingList = nextShoppingList;
     pendingDeletedShopping = nextPendingDeletedShopping;
+    memoryOutbox = nextOutbox;
 
     emitChange();
     return movedCount;
