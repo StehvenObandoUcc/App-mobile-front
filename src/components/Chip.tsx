@@ -54,7 +54,13 @@ export function Chip({
   let resolvedLabel = label || '';
   let resolvedIcon = icon;
 
-  if (category && colors.categories[category]) {
+  // Selector de categoría (con onPress): sin elegir = avena; elegida = pastel de la familia + anillo cacao.
+  const categorySelector = variant === 'category' && Boolean(onPress);
+  if (categorySelector && !selected) {
+    bg = colors.surfaceVariant;
+    fg = colors.textPrimary;
+    border = undefined;
+  } else if (category && colors.categories[category]) {
     bg = colors.categories[category].background;
     fg = colors.categories[category].text;
     border = undefined;
@@ -88,12 +94,12 @@ export function Chip({
       onPress={onPress}
       disabled={!hasAction || disabled}
       hitSlop={enableHitSlop ? (hitSlop ?? 6) : undefined}
-      accessibilityRole={!hasAction ? 'text' : variant === 'choice' ? 'radio' : 'button'}
+      accessibilityRole={!hasAction ? 'text' : variant === 'choice' || variant === 'category' ? 'radio' : 'button'}
       accessibilityLabel={accessibilityLabel || resolvedLabel}
       accessibilityState={{
         disabled: hasAction ? disabled : undefined,
         selected: hasAction && variant === 'filter' ? selected : undefined,
-        checked: hasAction && variant === 'choice' ? selected : undefined,
+        checked: hasAction && (variant === 'choice' || categorySelector) ? selected : undefined,
       }}
       style={({ pressed }) => [styles.touchTarget, pressed && hasAction && !disabled && styles.pressed]}
     >
@@ -105,6 +111,7 @@ export function Chip({
             paddingLeft: resolvedIcon ? 10 : 14,
           },
           border ? { borderWidth: 1, borderColor: border } : null,
+          categorySelector && selected ? styles.ring : null,
         ]}
       >
         {resolvedIcon && <Ionicons name={resolvedIcon} size={16} color={fg} />}
@@ -130,6 +137,10 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingRight: 14,
     borderRadius: radii.pill,
+  },
+  ring: {
+    borderWidth: 2,
+    borderColor: colors.ink,
   },
   pressed: {
     opacity: 0.85,

@@ -12,11 +12,19 @@ export type SegmentedControlProps<V extends string | number> = {
   value: V;
   onChange: (value: V) => void;
   accessibilityLabel: string;
+  /** Color del riel: 'low' avena clara (Chef IA) · 'container' avena media (Login, Legal). */
+  rail?: 'low' | 'container';
+  /** 'tab' para pestañas (Login, Legal): rol tab en vez de radio. */
+  role?: 'radio' | 'tab';
 };
 
-export function SegmentedControl<V extends string | number>({ options, value, onChange, accessibilityLabel }: SegmentedControlProps<V>) {
+export function SegmentedControl<V extends string | number>({ options, value, onChange, accessibilityLabel, rail = 'low', role = 'radio' }: SegmentedControlProps<V>) {
   return (
-    <View style={styles.rail} accessibilityRole="radiogroup" accessibilityLabel={accessibilityLabel}>
+    <View
+      style={[styles.rail, rail === 'container' && styles.railContainer]}
+      accessibilityRole={role === 'tab' ? 'tablist' : 'radiogroup'}
+      accessibilityLabel={accessibilityLabel}
+    >
       {options.map((o) => {
         const selected = o.value === value;
         return (
@@ -24,11 +32,11 @@ export function SegmentedControl<V extends string | number>({ options, value, on
             key={String(o.value)}
             onPress={() => onChange(o.value)}
             style={[styles.segment, selected && styles.selected]}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: selected }}
+            accessibilityRole={role}
+            accessibilityState={role === 'tab' ? { selected } : { checked: selected }}
             accessibilityLabel={o.accessibilityLabel ?? o.label}
           >
-            <AppText variant="body" weight={selected ? 'semibold' : 'medium'}>
+            <AppText variant="body" weight={selected ? 'semibold' : 'medium'} style={role === 'tab' ? styles.tabText : undefined}>
               {o.label}
             </AppText>
           </Pressable>
@@ -51,6 +59,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  railContainer: {
+    backgroundColor: colors.m3.surfaceContainer,
+  },
+  tabText: {
+    fontSize: 15,
   },
   selected: {
     backgroundColor: colors.surface,

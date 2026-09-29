@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   btn: {
     width: spacing.touchTargetMin,
     height: spacing.touchTargetMin,
-    borderRadius: radii.circular,
+    borderRadius: spacing.touchTargetMin / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
