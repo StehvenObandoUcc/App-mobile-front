@@ -1,9 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TextInput,
   Pressable,
   ScrollView,
   SectionList,
@@ -27,6 +25,9 @@ import {
   getBottomContentPadding,
   M3Dialog,
   Chip,
+  Text,
+  TextInput,
+  ScreenHeader,
 } from '../src/components';
 import { IngredientCategory, IngredientUnit, ShoppingItem } from '../src/types';
 import { Modal } from 'react-native';
@@ -376,12 +377,15 @@ export default function ShoppingListScreen() {
     <>
       {/* ── Cabecera Editorial ── */}
       <View style={styles.headerSection}>
-        <Text style={styles.screenTitle}>Lista de Compras</Text>
-        <Text style={styles.screenSubtitle}>
-          {items.length === 0
-            ? 'Agrega productos para planificar tu compra'
-            : `${pendingItems.length} pendiente${pendingItems.length === 1 ? '' : 's'} · ${boughtItems.length} comprada${boughtItems.length === 1 ? '' : 's'}`}
-        </Text>
+        <ScreenHeader
+          title="Lista de"
+          emphasis="compras"
+          subtitle={
+            items.length === 0
+              ? 'Marca lo que compres y pásalo a tu despensa'
+              : `${pendingItems.length} pendiente${pendingItems.length === 1 ? '' : 's'} · ${boughtItems.length} comprada${boughtItems.length === 1 ? '' : 's'}`
+          }
+        />
       </View>
 
       {/* ── Resumen Estadístico ── */}

@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TextInput,
   Pressable,
   ScrollView,
   KeyboardAvoidingView,
@@ -12,12 +10,13 @@ import {
   Image,
   Platform,
 } from 'react-native';
+import type { TextInput as RNTextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../src/hooks/useAuth';
-import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog, ProfileCard } from '../src/components';
+import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog, ProfileCard, Text, TextInput } from '../src/components';
 import { colors, radii, spacing, typography, elevations } from '../src/theme';
 
 export default function LoginScreen() {
@@ -58,7 +57,7 @@ export default function LoginScreen() {
     onConfirm: () => {},
   });
 
-  const nameInputRef = useRef<TextInput>(null);
+  const nameInputRef = useRef<RNTextInput>(null);
   const indicatorAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
 
