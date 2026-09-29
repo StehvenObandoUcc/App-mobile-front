@@ -18,9 +18,12 @@ export function validateRecipeIngredients(recipe: Recipe): IngredientValidationR
       missingCount,
       missingItems,
       friendlyMessage: 'No cuentas con todos los ingredientes necesarios para esta receta.',
+      // Aunque falten ingredientes, se descuentan los que sí tienes (decisión de Stehven, 28-09-2026).
       inventoryDeductionNotice:
-        'No se descontará nada de tu inventario. ¿Deseas añadir los ingredientes faltantes a tu lista de compras?',
-      willDeductFromInventory: false,
+        availableCount > 0
+          ? 'Se descontarán de tu despensa solo los ingredientes que tienes; los faltantes no.'
+          : 'No tienes ninguno de estos ingredientes, así que no se descontará nada de tu despensa.',
+      willDeductFromInventory: availableCount > 0,
     };
   }
 

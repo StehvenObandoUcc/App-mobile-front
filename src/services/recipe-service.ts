@@ -11,6 +11,12 @@ import {
 } from './api-client';
 import { AuthService } from './auth-service';
 import { getFriendlyErrorMessage } from '../utils/error-messages';
+import { planConsumption } from '../utils/consumption';
+import { updateIngredientSynced } from './inventory-mutations';
+import { flushOutbox } from './outbox-dispatcher';
+
+/** Lo que devuelve «Preparar receta»: alimentos descontados y los que hay que ajustar a mano. */
+export type PrepareRecipeResult = { consumed: string[]; skipped: string[] };
 
 export interface RecipeService {
   getRecipes(): Promise<Recipe[]>;
@@ -20,7 +26,7 @@ export interface RecipeService {
   toggleSave(id: string): Promise<void>;
   deleteRecipe(id: string): Promise<void>;
   deleteRecipes(ids: string[]): Promise<void>;
-  prepareRecipe(id: string): Promise<string[]>;
+  prepareRecipe(id: string): Promise<PrepareRecipeResult>;
   generateRecipesWithAi(
     ingredients: any[],
     maxPrepTime?: number,
@@ -157,18 +163,32 @@ export const mockRecipeService: RecipeService = {
   },
 
   /**
-   * Finaliza la preparación de una receta y descuenta los ingredientes utilizados del inventario.
+   * Finaliza la preparación de una receta: descuenta de la despensa lo usado (con conversión g↔kg, ml↔L)
+   * y envía cada cambio a la cola Outbox para que el servidor no lo revierta en la siguiente sincronización.
    */
-  async prepareRecipe(id: string): Promise<string[]> {
+  async prepareRecipe(id: string): Promise<PrepareRecipeResult> {
     const recipe = await this.getRecipeById(id);
-    if (!recipe) return [];
+    if (!recipe) return { consumed: [], skipped: [] };
 
-    const toConsume = recipe.availableIngredients.map((ing) => ({
-      name: ing.name,
-      quantity: ing.quantity ?? 1,
-    }));
+    const inventory = await LocalStorage.getInventory();
+    const plan = planConsumption(
+      inventory,
+      recipe.availableIngredients.map((ing) => ({
+        name: ing.name,
+        quantity: ing.quantity,
+        unit: ing.unit,
+        inventoryIngredientId: ing.inventoryIngredientId ?? null,
+      }))
+    );
 
-    return LocalStorage.consumeIngredients(toConsume);
+    const byId = new Map(inventory.map((i) => [i.id, i]));
+    for (const u of plan.updates) {
+      const current = byId.get(u.id);
+      if (current) await updateIngredientSynced({ ...current, quantity: u.quantity, unit: u.unit }, { flush: false });
+    }
+    flushOutbox().catch(() => {});
+
+    return { consumed: plan.consumed, skipped: plan.skipped };
   },
 
   async generateRecipesWithAi(
