@@ -183,6 +183,9 @@ export async function scanImageWithApi(
   }
 }
 
+/** Preferencias de Configuración que viajan al Chef IA: porciones e ingredientes a evitar. */
+export type RecipeGenerationExtras = { servings?: number; avoid?: string[] };
+
 /**
  * Envía el inventario actual y preferencias al endpoint de IA /api/v1/recipes/generate (Fase 1: Resumen liviano).
  */
@@ -192,7 +195,8 @@ export async function generateRecipesWithApi(
   focus: string = 'waste_reduction',
   count: number = 2,
   difficulty: string = 'any',
-  dietaryPreference: DietaryPreference = 'any'
+  dietaryPreference: DietaryPreference = 'any',
+  extras: RecipeGenerationExtras = {}
 ): Promise<any[]> {
   return requestJson<any[]>(`${API_BASE_URL}/api/v1/recipes/generate`, {
     method: 'POST',
@@ -204,6 +208,8 @@ export async function generateRecipesWithApi(
       count,
       difficulty,
       dietary_preference: dietaryPreference,
+      ...(extras.servings ? { servings: extras.servings } : {}),
+      ...(extras.avoid && extras.avoid.length > 0 ? { avoid_ingredients: extras.avoid } : {}),
     }),
   });
 }
@@ -515,3 +521,21 @@ export async function deleteShoppingItemWithApi(id: string): Promise<boolean> {
 }
 
 
+
+
+/**
+ * ¿Responde el servidor? Consulta rápida a /health (4 s máx.). La usa el Chef IA antes de generar:
+ * sin red muestra «El Chef IA necesita conexión» en vez de esperar un error largo.
+ */
+export async function isServerReachable(timeoutMs = 4000): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/health`, { signal: controller.signal });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
