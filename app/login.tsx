@@ -5,789 +5,447 @@ import {
   Pressable,
   ScrollView,
   KeyboardAvoidingView,
-  Alert,
   Animated,
-  Image,
+  Easing,
   Platform,
+  useWindowDimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import type { TextInput as RNTextInput } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/hooks/useAuth';
-import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog, ProfileCard, Text, TextInput } from '../src/components';
-import { colors, radii, spacing, typography, elevations } from '../src/theme';
+import {
+  AppText,
+  PrimaryButton,
+  SecondaryButton,
+  IconButton,
+  M3Dialog,
+  PagerDots,
+  OnboardingSlide,
+  IconTextField,
+  SegmentedControl,
+  PhotoTagSpec,
+} from '../src/components';
+import { colors } from '../src/theme';
+
+/**
+ * Bienvenida (Bienvenida-Fotos.dc.html) + Formulario (Login-Formulario.dc.html).
+ * Bienvenida: 3 pasos con foto real, etiquetas de alimentos, puntos, «Saltar / Siguiente»;
+ * el último paso lleva «Crear cuenta», «Ya tengo cuenta» y los enlaces legales.
+ * El perfil vive ahora en /profile.
+ */
+type Slide = {
+  photo: number;
+  alt: string;
+  title: string;
+  emphasis: string;
+  text: string;
+  focusX?: number;
+  tags: PhotoTagSpec[];
+};
+
+// Coordenadas tomadas del mockup (lienzo de 390 × 470).
+const SLIDES: Slide[] = [
+  {
+    photo: require('../assets/onboarding/onboarding-escanea.jpg'),
+    alt: 'Nevera abierta con verduras frescas',
+    title: 'Tu despensa,',
+    emphasis: 'entendida por IA',
+    text: 'Toma una foto y reconocemos tus alimentos con su fecha de vencimiento.',
+    tags: [
+      { label: 'Repollo morado · 6 días', pill: [180, 4], line: [324, 38, 14] },
+      { label: 'Espinaca · 2 días', pill: [96, 52], line: [161, 86, 74] },
+      { label: 'Zanahoria · 5 días', pill: [6, 96], line: [44, 130, 40] },
+      { label: 'Brócoli · 4 días', pill: [236, 104], line: [267, 138, 22] },
+      { label: 'Huevos · frescos', pill: [262, 196], line: [355, 230, 88] },
+      { label: 'Queso fresco · 3 días', pill: [6, 210], line: [65, 244, 38] },
+      { label: 'Salsa de tomate · 5 días', pill: [130, 256], line: [209, 290, 12] },
+    ],
+  },
+  {
+    photo: require('../assets/onboarding/onboarding-cocina.jpg'),
+    alt: 'Plato de arroz, pollo asado y verduras',
+    title: 'Recetas con',
+    emphasis: 'lo que ya tienes',
+    text: 'El Chef IA cocina ideas con lo que vence primero, para que nada se pierda.',
+    tags: [
+      { label: '92 % con tu despensa', pill: [20, 24], tone: 'ai' },
+      { label: 'Espárragos · 2 días', pill: [120, 76], line: [149, 110, 46] },
+      { label: 'Brócoli · 4 días', pill: [6, 128], line: [57, 162, 28] },
+      { label: 'Alitas de pollo', pill: [228, 130], line: [334, 164, 48] },
+      { label: 'Arroz · 2 tazas', pill: [120, 250], line: [179, 284, 38] },
+    ],
+  },
+  {
+    photo: require('../assets/onboarding/onboarding-compra.jpg'),
+    alt: 'Canasta con tomates, calabacín y verduras',
+    title: 'Compra',
+    emphasis: 'solo lo que falta',
+    text: 'Te avisamos antes de que algo venza y armamos tu lista de compras.',
+    focusX: 0.3,
+    tags: [
+      { label: 'Zapallo amarillo · 3 u', pill: [150, 100], line: [210, 134, 92] },
+      { label: 'Calabacín · 1 u', pill: [8, 170], line: [39, 204, 54] },
+      { label: 'Tomate · 7 u', pill: [150, 262], line: [189, 296, 54] },
+    ],
+  },
+];
+
+type DialogState = {
+  visible: boolean;
+  title: string;
+  titleEmphasis?: string;
+  message: string;
+  type?: 'success' | 'info' | 'warning' | 'error';
+  confirmText?: string;
+  onConfirm: () => void;
+};
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { view } = useLocalSearchParams<{ view?: string }>();
-  const { user, isAuthenticated, login, register, logout, status, error } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { width, height: screenH } = useWindowDimensions();
+  const { isAuthenticated, login, register, status, error } = useAuth();
 
-  // Si el usuario ya está autenticado y no entró expresamente a ver su perfil, redirigir a Inicio (/)
   useEffect(() => {
-    if (isAuthenticated && view !== 'profile') {
-      router.replace('/');
-    }
-  }, [isAuthenticated, view]);
+    if (isAuthenticated) router.replace('/');
+  }, [isAuthenticated]);
 
-  // 'welcome' muestra el onboarding visual hero; 'form' muestra el formulario de login/registro
   const [screenView, setScreenView] = useState<'welcome' | 'form'>('welcome');
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [page, setPage] = useState(0);
+  const pagerRef = useRef<ScrollView>(null);
+  const [mode, setMode] = useState<'login' | 'register'>('register');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [focusedField, setFocusedField] = useState<'name' | 'email' | 'password' | null>(null);
-  const [tabsWidth, setTabsWidth] = useState(0);
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [dialog, setDialog] = useState<DialogState>({ visible: false, title: '', message: '', onConfirm: () => {} });
+  const closeDialog = () => setDialog((p) => ({ ...p, visible: false }));
+  const nameRef = useRef<RNTextInput>(null);
+  const nameAnim = useRef(new Animated.Value(1)).current;
 
-  const [dialogConfig, setDialogConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type?: 'success' | 'info' | 'warning' | 'error';
-    onConfirm: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-    onConfirm: () => {},
-  });
+  // Foto: 470 del lienzo de 390, sin pasar del 56 % del alto del teléfono.
+  const photoH = Math.min(470 * (width / 390), screenH * 0.56);
 
-  const nameInputRef = useRef<RNTextInput>(null);
-  const indicatorAnim = useRef(new Animated.Value(0)).current;
-  const formAnim = useRef(new Animated.Value(0)).current;
+  const goTo = (i: number) => {
+    pagerRef.current?.scrollTo({ x: i * width, animated: true });
+    setPage(i);
+  };
+  const onPagerEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) =>
+    setPage(Math.round(e.nativeEvent.contentOffset.x / width));
 
-  useEffect(() => {
-    return () => {
-      indicatorAnim.stopAnimation();
-      formAnim.stopAnimation();
-    };
-  }, [indicatorAnim, formAnim]);
+  const openForm = (m: 'login' | 'register') => {
+    setMode(m);
+    nameAnim.setValue(m === 'register' ? 1 : 0);
+    setScreenView('form');
+  };
 
-  const handleModeChange = (newMode: 'login' | 'register') => {
-    if (newMode === mode) return;
-    if (newMode === 'login') {
-      nameInputRef.current?.blur();
-    }
-    setMode(newMode);
-
-    indicatorAnim.stopAnimation();
-    Animated.spring(indicatorAnim, {
-      toValue: newMode === 'login' ? 0 : 1,
-      friction: 8,
-      tension: 70,
-      useNativeDriver: true,
-    }).start();
-
-    formAnim.stopAnimation();
-    Animated.timing(formAnim, {
-      toValue: newMode === 'login' ? 0 : 1,
+  const changeMode = (m: 'login' | 'register') => {
+    if (m === mode) return;
+    if (m === 'login') nameRef.current?.blur();
+    setMode(m);
+    Animated.timing(nameAnim, {
+      toValue: m === 'register' ? 1 : 0,
       duration: 220,
+      easing: Easing.bezier(0.2, 0, 0, 1),
       useNativeDriver: true,
     }).start();
   };
+
+  const warn = (title: string, titleEmphasis: string, message: string) =>
+    setDialog({ visible: true, title, titleEmphasis, message, type: 'warning', onConfirm: closeDialog });
 
   const handleSubmit = async () => {
-    const emailTrimmed = email.trim();
-    if (!emailTrimmed || !password) {
-      setDialogConfig({
-        visible: true,
-        title: 'Campos incompletos',
-        message: 'Por favor ingresa tu correo electrónico y contraseña para continuar.',
-        type: 'warning',
-        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
-      });
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailTrimmed)) {
-      setDialogConfig({
-        visible: true,
-        title: 'Correo inválido',
-        message: 'Por favor introduce un correo electrónico válido (ejemplo: usuario@correo.com).',
-        type: 'warning',
-        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
-      });
-      return;
-    }
-
-    if (password.length < 6) {
-      setDialogConfig({
-        visible: true,
-        title: 'Contraseña muy corta',
-        message: 'La contraseña debe tener al menos 6 caracteres por seguridad.',
-        type: 'warning',
-        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
-      });
-      return;
-    }
-
-    if (mode === 'register' && name.trim().length < 2) {
-      setDialogConfig({
-        visible: true,
-        title: 'Nombre requerido',
-        message: 'Por favor ingresa tu nombre (al menos 2 caracteres).',
-        type: 'warning',
-        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
-      });
-      return;
-    }
+    const mail = email.trim();
+    if (mode === 'register' && name.trim().length < 2) return warn('Falta tu', 'nombre', 'Escribe tu nombre (al menos 2 letras).');
+    if (!mail || !password) return warn('Faltan', 'datos', 'Escribe tu correo y tu contraseña para continuar.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return warn('Correo', 'no válido', 'Revisa tu correo (ejemplo: usuario@correo.com).');
+    if (password.length < 6) return warn('Contraseña muy', 'corta', 'Usa al menos 6 caracteres.');
 
     try {
-      if (mode === 'login') {
-        await login(emailTrimmed, password);
-        setDialogConfig({
-          visible: true,
-          title: '¡Bienvenido!',
-          message: 'Sesión iniciada correctamente. Todo listo en tu cocina.',
-          type: 'success',
-          onConfirm: () => {
-            setDialogConfig((prev) => ({ ...prev, visible: false }));
-            router.replace('/');
-          },
-        });
-      } else {
-        await register(emailTrimmed, password, name.trim());
-        setDialogConfig({
-          visible: true,
-          title: '¡Cuenta creada!',
-          message: 'Tu cuenta ha sido registrada con éxito. ¡Bienvenido a Food AI!',
-          type: 'success',
-          onConfirm: () => {
-            setDialogConfig((prev) => ({ ...prev, visible: false }));
-            router.replace('/');
-          },
-        });
-      }
+      if (mode === 'login') await login(mail, password);
+      else await register(mail, password, name.trim());
+      // Al quedar autenticado, el efecto de arriba lleva a Inicio.
     } catch (err: any) {
-      setDialogConfig({
+      setDialog({
         visible: true,
-        title: 'No se pudo iniciar sesión',
-        message: err?.message || 'Verifica tus credenciales e intenta nuevamente.',
+        title: mode === 'login' ? 'No pudimos' : 'No pudimos crear',
+        titleEmphasis: mode === 'login' ? 'iniciar sesión' : 'tu cuenta',
+        message: err?.message || 'Revisa tus datos e inténtalo de nuevo.',
         type: 'error',
-        onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        onConfirm: closeDialog,
       });
     }
   };
 
-  useEffect(() => {
-    if (user?.id) {
-      AsyncStorage.getItem(`@food_ai_avatar_${user.id}`).then((saved) => {
-        if (saved) setAvatarUri(saved);
-      }).catch(() => {});
-    } else {
-      setAvatarUri(null);
-    }
-  }, [user?.id]);
+  const dialogEl = (
+    <M3Dialog
+      visible={dialog.visible}
+      title={dialog.title}
+      titleEmphasis={dialog.titleEmphasis}
+      message={dialog.message}
+      type={dialog.type}
+      confirmText={dialog.confirmText}
+      onConfirm={dialog.onConfirm}
+    />
+  );
 
-  const handlePickAvatar = async () => {
-    try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert(
-          'Permiso necesario',
-          'Se requiere acceso a tus fotos para personalizar tu foto de perfil.',
-          [{ text: 'Entendido' }]
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-        base64: true,
-      });
-
-      if (!result.canceled && result.assets && result.assets[0]?.base64 && user?.id) {
-        const mime = result.assets[0].mimeType || 'image/jpeg';
-        const dataUri = `data:${mime};base64,${result.assets[0].base64}`;
-        setAvatarUri(dataUri);
-        await AsyncStorage.setItem(`@food_ai_avatar_${user.id}`, dataUri);
-      }
-    } catch (err: any) {
-      Alert.alert('Error', 'No se pudo seleccionar la foto: ' + (err?.message || 'Error desconocido'));
-    }
-  };
-
-  const handleRemoveAvatar = () => {
-    if (!user?.id) return;
-    Alert.alert(
-      'Eliminar foto',
-      '¿Deseas quitar tu foto de perfil actual?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            setAvatarUri(null);
-            await AsyncStorage.removeItem(`@food_ai_avatar_${user.id}`);
-          },
-        },
-      ]
-    );
-  };
-
-  // ─── Estado 1: Usuario ya autenticado ───────────────────────────────────────
-  if (isAuthenticated && user) {
-    return (
-      <AppScreen style={styles.screen}>
-        <ScrollView
-          contentContainerStyle={styles.profileScrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <ProfileCard
-            user={user}
-            avatarUri={avatarUri}
-            onPickAvatar={handlePickAvatar}
-            onRemoveAvatar={handleRemoveAvatar}
-            onReturnToKitchen={() => router.replace('/')}
-            onRequestLogout={() => setIsLogoutConfirmOpen(true)}
-          />
-        </ScrollView>
-
-        <M3Dialog
-          visible={isLogoutConfirmOpen}
-          title="¿Cerrar sesión?"
-          message="¿Estás seguro de que deseas salir de tu cuenta? Tus datos locales se conservarán en este dispositivo."
-          type="warning"
-          iconName="log-out-outline"
-          confirmText="Cerrar sesión"
-          cancelText="Cancelar"
-          onCancel={() => setIsLogoutConfirmOpen(false)}
-          onConfirm={async () => {
-            setIsLogoutConfirmOpen(false);
-            await logout();
-            setScreenView('welcome');
-          }}
-        />
-      </AppScreen>
-    );
-  }
-
-  // ─── Estado 2: Pantalla de Bienvenida / Onboarding (Matching Reference) ────
+  // ── Bienvenida con fotos ──
   if (screenView === 'welcome') {
+    const last = page === SLIDES.length - 1;
     return (
-      <AppScreen style={styles.screen}>
+      <View style={styles.screen}>
         <ScrollView
-          contentContainerStyle={styles.welcomeScrollContent}
-          showsVerticalScrollIndicator={false}
+          ref={pagerRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onPagerEnd}
+          // Al volver del formulario se remonta en el paso donde estaba (si no, foto y puntos no coinciden).
+          contentOffset={{ x: page * width, y: 0 }}
+          style={styles.pager}
         >
-          {/* Hero Branding */}
-          <View style={styles.welcomeHero}>
-            <View style={styles.brandIconCircle}>
-              <Ionicons name="restaurant" size={38} color={colors.primary} />
-            </View>
-            <Text style={styles.brandTitle}>Food AI</Text>
-            <Text style={styles.brandTagline}>Tu cocina inteligente. Hecha para ti.</Text>
-            <Text style={styles.brandDescription}>
-              Aprovecha al máximo cada ingrediente, reduce el desperdicio y crea recetas deliciosas al instante con Inteligencia Artificial.
-            </Text>
-          </View>
-
-          {/* Tarjetas de Beneficios */}
-          <View style={styles.featuresList}>
-            <View style={styles.featureItem}>
-              <View style={[styles.featureIconBox, { backgroundColor: colors.primaryContainer }]}>
-                <Ionicons name="camera" size={20} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.featureTitle}>Escaneo visual con IA</Text>
-                <Text style={styles.featureDesc}>Identifica ingredientes de tu nevera con una sola fotografía.</Text>
+          {SLIDES.map((s) => (
+            <View key={s.alt} style={{ width }}>
+              <OnboardingSlide
+                photo={s.photo}
+                tags={s.tags}
+                width={width}
+                height={photoH}
+                focusX={s.focusX}
+                accessibilityLabel={s.alt}
+              />
+              <View style={styles.slideText}>
+                <PagerDots count={SLIDES.length} index={page} />
+                <AppText weight="light" align="center" style={styles.slideTitle} accessibilityRole="header">
+                  {`${s.title} `}
+                  <AppText weight="semibold">{s.emphasis}</AppText>
+                </AppText>
+                <AppText variant="body" color={colors.textSecondary} align="center" style={styles.slideBody}>
+                  {s.text}
+                </AppText>
               </View>
             </View>
-
-            <View style={styles.featureItem}>
-              <View style={[styles.featureIconBox, { backgroundColor: '#FEF3C7' }]}>
-                <Ionicons name="sparkles" size={20} color="#D97706" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.featureTitle}>Recetas personalizadas</Text>
-                <Text style={styles.featureDesc}>Genera sugerencias deliciosas basadas en lo que tienes.</Text>
-              </View>
-            </View>
-
-            <View style={styles.featureItem}>
-              <View style={[styles.featureIconBox, { backgroundColor: '#DCFCE7' }]}>
-                <Ionicons name="cart" size={20} color="#15803D" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.featureTitle}>Lista de compras conectada</Text>
-                <Text style={styles.featureDesc}>Agrega faltantes y sincroniza tus compras con tu despensa.</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Botones de Entrada Principal */}
-          <View style={styles.welcomeActions}>
-            <PrimaryButton
-              title="Iniciar sesión o Registrarse"
-              iconName="log-in-outline"
-              onPress={() => setScreenView('form')}
-            />
-
-            {/* Aviso Legal Referencia */}
-            <Text style={styles.legalDisclaimer}>
-              Al continuar, estás indicando que has leído y aceptas nuestros{' '}
-              <Text style={styles.legalLink}>Términos</Text> y{' '}
-              <Text style={styles.legalLink}>Política de privacidad</Text>.
-            </Text>
-          </View>
+          ))}
         </ScrollView>
 
-        <M3Dialog
-          visible={dialogConfig.visible}
-          title={dialogConfig.title}
-          message={dialogConfig.message}
-          type={dialogConfig.type}
-          onConfirm={dialogConfig.onConfirm}
-        />
-      </AppScreen>
+        <View style={[styles.welcomeActions, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]}>
+          {last ? (
+            <>
+              <PrimaryButton title="Crear cuenta" onPress={() => openForm('register')} style={styles.cta} />
+              <SecondaryButton title="Ya tengo cuenta" variant="outline" onPress={() => openForm('login')} />
+              <AppText variant="caption" weight="regular" color={colors.textSecondary} align="center" style={styles.legal}>
+                {'Al continuar aceptas los '}
+                <AppText
+                  variant="caption"
+                  weight="semibold"
+                  color={colors.primary}
+                  onPress={() => router.push({ pathname: '/legal', params: { tab: 'terms' } })}
+                  accessibilityRole="link"
+                >
+                  Términos y condiciones
+                </AppText>
+                {' y la '}
+                <AppText
+                  variant="caption"
+                  weight="semibold"
+                  color={colors.primary}
+                  onPress={() => router.push({ pathname: '/legal', params: { tab: 'privacy' } })}
+                  accessibilityRole="link"
+                >
+                  Política de privacidad
+                </AppText>
+                .
+              </AppText>
+            </>
+          ) : (
+            <View style={styles.row}>
+              <Pressable
+                onPress={() => goTo(SLIDES.length - 1)}
+                style={({ pressed }) => [styles.skip, pressed && styles.skipPressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Saltar la bienvenida"
+              >
+                <AppText variant="body" weight="semibold">
+                  Saltar
+                </AppText>
+              </Pressable>
+              <PrimaryButton title="Siguiente" onPress={() => goTo(page + 1)} style={[styles.flex, styles.cta]} />
+            </View>
+          )}
+        </View>
+        {dialogEl}
+      </View>
     );
   }
 
-  // ─── Estado 3: Formulario de Autenticación (Login / Registro) ──────────────
+  // ── Formulario ──
+  const register_ = mode === 'register';
   return (
-    <AppScreen style={styles.screen}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.form, { paddingTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 12) + 20 }]}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* Navegación Superior Retorno a Bienvenida */}
-          <View style={styles.formTopNav}>
-            <Pressable
-              onPress={() => setScreenView('welcome')}
-              style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
-              accessibilityRole="button"
-              accessibilityLabel="Volver al menú de bienvenida"
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-            </Pressable>
-            <Text style={styles.formNavTitle}>
-              {mode === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}
-            </Text>
-            <View style={{ width: 24 }} />
-          </View>
+        <IconButton iconName="chevron-back" variant="white" accessibilityLabel="Volver a la bienvenida" onPress={() => setScreenView('welcome')} />
+        <AppText weight="light" style={styles.formTitle} accessibilityRole="header">
+          {register_ ? 'Crea tu ' : 'Inicia '}
+          <AppText weight="semibold">{register_ ? 'cuenta' : 'sesión'}</AppText>
+        </AppText>
 
-          {/* Selector de Modo (Login / Registro) con Píldora Animada */}
-          <View
-            style={styles.tabsContainer}
-            onLayout={(e) => setTabsWidth(e.nativeEvent.layout.width)}
+        <SegmentedControl
+          role="tab"
+          rail="container"
+          accessibilityLabel="Modo de acceso"
+          value={mode}
+          onChange={changeMode}
+          options={[
+            { value: 'login', label: 'Iniciar sesión' },
+            { value: 'register', label: 'Crear cuenta' },
+          ]}
+        />
+
+        {error ? (
+          <View style={styles.errorBox} accessibilityRole="alert">
+            <Ionicons name="alert-circle-outline" size={18} color={colors.m3.onErrorContainer} />
+            <AppText variant="metadata" weight="regular" color={colors.m3.onErrorContainer} style={styles.flex}>
+              {error}
+            </AppText>
+          </View>
+        ) : null}
+
+        {register_ && (
+          <Animated.View
+            style={{ opacity: nameAnim, transform: [{ translateY: nameAnim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) }] }}
           >
-            {tabsWidth > 0 && (
-              <Animated.View
-                style={[
-                  styles.tabIndicator,
-                  {
-                    width: (tabsWidth - 8) / 2,
-                    transform: [
-                      {
-                        translateX: indicatorAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0, (tabsWidth - 8) / 2],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              />
-            )}
-            <Pressable
-              onPress={() => handleModeChange('login')}
-              style={styles.tabButton}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: mode === 'login' }}
-              accessibilityLabel="Iniciar Sesión"
-            >
-              <Text style={[styles.tabButtonText, mode === 'login' && styles.tabButtonTextActive]}>
-                Iniciar Sesión
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => handleModeChange('register')}
-              style={styles.tabButton}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: mode === 'register' }}
-              accessibilityLabel="Crear Cuenta"
-            >
-              <Text style={[styles.tabButtonText, mode === 'register' && styles.tabButtonTextActive]}>
-                Crear Cuenta
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Formulario */}
-          <View style={styles.formCard}>
-            {error && (
-              <View style={styles.errorBanner}>
-                <Ionicons name="alert-circle" size={18} color={colors.error.text} style={{ marginRight: 6 }} />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-
-            {/* Campo "Tu Nombre" en modo Registro */}
-            <Animated.View
-              style={[
-                styles.inputGroup,
-                {
-                  height: mode === 'register' ? undefined : 0,
-                  overflow: 'hidden',
-                  opacity: formAnim,
-                  transform: [
-                    {
-                      translateY: formAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [-8, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-              pointerEvents={mode === 'register' ? 'auto' : 'none'}
-            >
-              <Text style={styles.inputLabel}>Tu Nombre</Text>
-              <View style={[styles.inputWrapper, focusedField === 'name' && styles.inputWrapperFocused]}>
-                <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color={focusedField === 'name' ? colors.primary : colors.textSecondary}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  ref={nameInputRef}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Ej. Chef Carlos"
-                  placeholderTextColor={colors.textMuted}
-                  maxLength={50}
-                  style={styles.textInput}
-                  editable={mode === 'register'}
-                  onFocus={() => setFocusedField('name')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              </View>
-            </Animated.View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Correo Electrónico</Text>
-              <View style={[styles.inputWrapper, focusedField === 'email' && styles.inputWrapperFocused]}>
-                <Ionicons
-                  name="mail-outline"
-                  size={20}
-                  color={focusedField === 'email' ? colors.primary : colors.textSecondary}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="tu@correo.com"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  maxLength={100}
-                  style={styles.textInput}
-                  onFocus={() => setFocusedField('email')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Contraseña</Text>
-              <View style={[styles.inputWrapper, focusedField === 'password' && styles.inputWrapperFocused]}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={20}
-                  color={focusedField === 'password' ? colors.primary : colors.textSecondary}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Mínimo 6 caracteres"
-                  placeholderTextColor={colors.textMuted}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  maxLength={128}
-                  style={styles.textInput}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                />
-                <Pressable
-                  onPress={() => setShowPassword(!showPassword)}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={20}
-                    color={focusedField === 'password' ? colors.primary : colors.textSecondary}
-                  />
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.cryptoNotice}>
-              <Ionicons name="shield-checkmark" size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
-              <Text style={styles.cryptoNoticeText}>
-                Tus datos viajan cifrados y protegidos.
-              </Text>
-            </View>
-
-            <View style={{ height: 16 }} />
-
-            <PrimaryButton
-              title={mode === 'login' ? 'Iniciar Sesión' : 'Registrar Cuenta'}
-              onPress={handleSubmit}
-              isLoading={status === 'loading'}
-              iconName={mode === 'login' ? 'log-in-outline' : 'person-add-outline'}
+            <IconTextField
+              ref={nameRef}
+              label="Tu nombre"
+              iconName="person-outline"
+              value={name}
+              onChangeText={setName}
+              placeholder="Ej. Chef Carlos"
+              maxLength={50}
+              autoCapitalize="words"
+              returnKeyType="next"
             />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </Animated.View>
+        )}
+        <IconTextField
+          label="Correo electrónico"
+          iconName="mail-outline"
+          value={email}
+          onChangeText={setEmail}
+          placeholder="tu@correo.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          maxLength={100}
+          returnKeyType="next"
+        />
+        <IconTextField
+          label="Contraseña"
+          iconName="lock-closed-outline"
+          secure
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Mínimo 6 caracteres"
+          autoCapitalize="none"
+          maxLength={128}
+          returnKeyType="done"
+          onSubmitEditing={handleSubmit}
+        />
 
-      <M3Dialog
-        visible={dialogConfig.visible}
-        title={dialogConfig.title}
-        message={dialogConfig.message}
-        type={dialogConfig.type}
-        onConfirm={dialogConfig.onConfirm}
-      />
-    </AppScreen>
+        <View style={styles.secure}>
+          <Ionicons name="shield-checkmark-outline" size={18} color={colors.functional.fresh.text} />
+          <AppText variant="metadata" weight="regular" color={colors.functional.fresh.text}>
+            Tus datos viajan cifrados y protegidos.
+          </AppText>
+        </View>
+
+        <View style={styles.flex} />
+        <PrimaryButton
+          title={register_ ? 'Registrar cuenta' : 'Iniciar sesión'}
+          onPress={handleSubmit}
+          isLoading={status === 'loading'}
+          style={styles.cta}
+        />
+      </ScrollView>
+      {dialogEl}
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.background },
-  welcomeScrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.section,
-    alignItems: 'center',
+  flex: { flex: 1 },
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
-  welcomeHero: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    paddingTop: spacing.md,
+  pager: {
+    flex: 1,
   },
-  brandIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-    ...elevations.sm,
+  slideText: {
+    paddingHorizontal: 24,
+    gap: 12,
   },
-  brandTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
+  slideTitle: {
+    marginTop: 6,
+    fontSize: 34,
+    lineHeight: 40,
   },
-  brandTagline: {
-    fontSize: typography.sizes.cardTitle,
-    fontWeight: '700',
-    color: colors.primary,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  brandDescription: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    lineHeight: 20,
-    maxWidth: 320,
-  },
-  featuresList: {
-    width: '100%',
-    backgroundColor: colors.surface,
-    borderRadius: radii.containers,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.lg,
-    marginBottom: spacing.xl,
-    ...elevations.sm,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  featureIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.buttons,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureTitle: {
-    fontSize: typography.sizes.body,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  featureDesc: {
-    fontSize: typography.sizes.caption,
-    color: colors.textSecondary,
-    marginTop: 2,
-    lineHeight: 16,
+  slideBody: {
+    fontSize: 16,
+    lineHeight: 23,
   },
   welcomeActions: {
-    width: '100%',
-    gap: spacing.md,
-    alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 10,
   },
-  legalDisclaimer: {
-    fontSize: 11,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.md,
-    lineHeight: 16,
-    paddingHorizontal: spacing.lg,
-  },
-  legalLink: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  formTopNav: {
+  row: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
+    gap: 10,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  skip: {
+    height: 56,
+    paddingHorizontal: 22,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  formNavTitle: {
-    fontSize: typography.sizes.cardTitle,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.section,
-  },
-  profileScrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.section,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
+  skipPressed: {
     backgroundColor: colors.surfaceVariant,
-    borderRadius: radii.buttons,
-    padding: 4,
-    marginBottom: spacing.xl,
-    position: 'relative',
-    height: 48,
-    alignItems: 'center',
   },
-  tabIndicator: {
-    position: 'absolute',
-    top: 4,
-    bottom: 4,
-    left: 4,
-    backgroundColor: colors.surface,
-    borderRadius: radii.buttons - 2,
-    ...elevations.sm,
+  cta: {
+    minHeight: 56,
   },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    zIndex: 1,
+  legal: {
+    lineHeight: 18,
   },
-  tabButtonText: {
-    fontSize: typography.sizes.bodySmall,
-    fontWeight: '700',
-    color: colors.textSecondary,
+  form: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    gap: 18,
   },
-  tabButtonTextActive: {
-    color: colors.textPrimary,
+  formTitle: {
+    fontSize: 32,
+    lineHeight: 40,
   },
-  formCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.containers,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xl,
-    ...elevations.md,
-  },
-  errorBanner: {
+  errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.error.background,
-    borderRadius: radii.buttons,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
+    gap: 8,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: colors.m3.errorContainer,
   },
-  errorText: {
-    color: colors.error.text,
-    fontSize: typography.sizes.bodySmall,
-    flex: 1,
-    fontWeight: '600',
-  },
-  inputGroup: {
-    marginBottom: spacing.lg,
-  },
-  inputLabel: {
-    fontSize: typography.sizes.bodySmall,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  inputWrapper: {
+  secure: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: radii.buttons,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    height: 52,
-  },
-  inputWrapperFocused: {
-    borderColor: colors.primary,
-    backgroundColor: colors.surface,
-  },
-  inputIcon: {
-    marginRight: spacing.sm,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: typography.sizes.body,
-    color: colors.textPrimary,
-    height: '100%',
-  },
-  cryptoNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  cryptoNoticeText: {
-    fontSize: typography.sizes.label,
-    color: colors.textSecondary,
+    gap: 8,
   },
 });
+
