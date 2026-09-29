@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Switch, Linking } from 'react-native';
+import { View, StyleSheet, Pressable, Switch, Linking } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { AppScreen, Chip, SecondaryButton } from '../src/components';
+import { AppScreen, Chip, SecondaryButton, Text } from '../src/components';
 import { colors, typography, spacing, radii } from '../src/theme';
 import { loadAppSettings, saveAppSettings, type AppSettings, DEFAULT_APP_SETTINGS } from '../src/storage/app-settings';
 import {
@@ -186,6 +186,12 @@ export default function SettingsScreen() {
             </Text>
           )}
           <Text style={styles.rowSub}>Avisos reales programados: {scheduledCount}</Text>
+          <SecondaryButton
+            title="Ver catálogo de diseño"
+            iconName="color-palette-outline"
+            variant="outline"
+            onPress={() => router.push('/design-catalog')}
+          />
         </View>
       </View>
 
