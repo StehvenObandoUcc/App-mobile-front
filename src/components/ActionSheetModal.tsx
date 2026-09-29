@@ -23,6 +23,9 @@ export interface ActionSheetOption {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   isDestructive?: boolean;
+  /** Solo en variant="choices": segunda línea y color del cuadro del icono. */
+  description?: string;
+  tone?: { background: string; text: string };
 }
 
 export interface ActionSheetModalProps {
@@ -30,7 +33,8 @@ export interface ActionSheetModalProps {
   onClose: () => void;
   title: string;
   description?: string;
-  variant?: 'action_sheet' | 'confirmation';
+  /** 'choices' = Compras-Agregar: título 300 + 600, subtítulo y tarjetas de opción de 72 dp con «Cancelar». */
+  variant?: 'action_sheet' | 'confirmation' | 'choices';
   actions?: ActionSheetOption[];
   confirmText?: string;
   confirmDestructive?: boolean;
@@ -76,7 +80,10 @@ export function ActionSheetModal({
       Animated.parallel([
         Animated.timing(slideAnim, { toValue: 400, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }),
         Animated.timing(backdropOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start(() => setIsMounted(false));
+      ]).start(({ finished }) => {
+        // Si se reabrió antes de terminar de cerrar, no se desmonta.
+        if (finished) setIsMounted(false);
+      });
     }
   }, [visible]);
 
@@ -137,7 +144,51 @@ export function ActionSheetModal({
         >
           <View style={styles.handle} />
 
-          {variant === 'action_sheet' ? (
+          {variant === 'choices' ? (
+            <View style={styles.choices}>
+              <DialogTitle title={title} emphasis={titleEmphasis} size={24} lineHeight={30} />
+              {!!description && (
+                <AppText variant="bodySmall" color={colors.textSecondary} style={styles.choicesSubtitle}>
+                  {description}
+                </AppText>
+              )}
+              {actions.map((a, i) => (
+                <Pressable
+                  key={`c${i}`}
+                  onPress={() => {
+                    onClose();
+                    a.onPress();
+                  }}
+                  style={({ pressed }) => [styles.choice, pressed && styles.choicePressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={a.description ? `${a.label}. ${a.description}` : a.label}
+                >
+                  <View style={[styles.choiceIcon, { backgroundColor: a.tone?.background ?? colors.primaryContainer }]}>
+                    <Ionicons name={a.icon} size={22} color={a.tone?.text ?? colors.onPrimaryContainer} />
+                  </View>
+                  <View style={styles.choiceTexts}>
+                    <AppText variant="body" weight="semibold">
+                      {a.label}
+                    </AppText>
+                    {!!a.description && (
+                      <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
+                        {a.description}
+                      </AppText>
+                    )}
+                  </View>
+                </Pressable>
+              ))}
+              <Pressable
+                onPress={onClose}
+                style={({ pressed }) => [styles.choiceCancel, pressed && styles.rowPressed]}
+                accessibilityRole="button"
+              >
+                <AppText variant="body" weight="semibold" style={styles.choiceCancelText}>
+                  {cancelText}
+                </AppText>
+              </Pressable>
+            </View>
+          ) : variant === 'action_sheet' ? (
             <>
               <View style={styles.header}>
                 {headerIconName && (
@@ -246,6 +297,47 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.m3.surfaceContainer,
     marginVertical: 4,
+  },
+  choices: {
+    gap: 12,
+    paddingHorizontal: 4, // 16 + 4 = 20 como el mockup
+  },
+  choicesSubtitle: {
+    fontSize: 14,
+    marginTop: -6,
+  },
+  choice: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceVariant,
+  },
+  choicePressed: {
+    backgroundColor: colors.m3.surfaceContainer,
+  },
+  choiceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  choiceTexts: {
+    flex: 1,
+    gap: 2,
+  },
+  choiceCancel: {
+    height: 48,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  choiceCancelText: {
+    fontSize: 15,
   },
   confirm: {
     gap: spacing.md,

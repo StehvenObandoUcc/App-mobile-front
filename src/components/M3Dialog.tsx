@@ -28,6 +28,10 @@ export interface M3DialogProps {
   onCancel?: () => void;
   /** Tocar fuera o «atrás»: por defecto onCancel (o onConfirm). Útil cuando «cancelar» es una acción real. */
   onDismiss?: () => void;
+  /** 'row' (defecto): Cancelar | Confirmar. 'stacked': Confirmar a lo ancho y debajo un botón de texto (Compras/Escaneo). */
+  actionsLayout?: 'row' | 'stacked';
+  /** Icono 56 y título 26/32 (diálogos de éxito de Escaneo y Compras). */
+  hero?: boolean;
   /** Contenido extra bajo el mensaje (p. ej. desglose «3 alimentos nuevos»). */
   children?: React.ReactNode;
 }
@@ -52,6 +56,8 @@ export function M3Dialog({
   cancelText,
   onCancel,
   onDismiss,
+  actionsLayout = 'row',
+  hero = false,
   children,
 }: M3DialogProps) {
   const scaleAnim = useRef(new Animated.Value(0.92)).current;
@@ -81,22 +87,39 @@ export function M3Dialog({
           accessibilityViewIsModal
           accessibilityRole={type === 'error' || type === 'warning' ? 'alert' : undefined}
         >
-          <View style={[styles.icon, { backgroundColor: t.bg }]}>
+          <View style={[styles.icon, hero && styles.iconHero, { backgroundColor: t.bg }]}>
             <Ionicons name={iconName ?? t.icon} size={26} color={t.fg} />
           </View>
-          <DialogTitle title={title} emphasis={titleEmphasis} />
+          <DialogTitle title={title} emphasis={titleEmphasis} size={hero ? 26 : 22} lineHeight={hero ? 32 : 28} />
           {!!message && (
             <AppText variant="body" color={colors.textSecondary} style={styles.message}>
               {message}
             </AppText>
           )}
           {children}
-          <View style={styles.actions}>
-            {hasCancel && (
-              <SecondaryButton title={cancelText!} variant="outline" onPress={onCancel!} style={styles.actionBtn} />
-            )}
-            <PrimaryButton title={confirmText} tone={confirmTone} onPress={onConfirm} style={styles.actionBtn} />
-          </View>
+          {actionsLayout === 'stacked' ? (
+            <View style={styles.stacked}>
+              <PrimaryButton title={confirmText} tone={confirmTone} onPress={onConfirm} />
+              {hasCancel && (
+                <Pressable
+                  onPress={onCancel}
+                  style={({ pressed }) => [styles.textBtn, pressed && styles.textBtnPressed]}
+                  accessibilityRole="button"
+                >
+                  <AppText variant="body" weight="semibold" style={styles.textBtnLabel}>
+                    {cancelText}
+                  </AppText>
+                </Pressable>
+              )}
+            </View>
+          ) : (
+            <View style={styles.actions}>
+              {hasCancel && (
+                <SecondaryButton title={cancelText!} variant="outline" onPress={onCancel!} style={styles.actionBtn} />
+              )}
+              <PrimaryButton title={confirmText} tone={confirmTone} onPress={onConfirm} style={styles.actionBtn} />
+            </View>
+          )}
         </Animated.View>
       </View>
     </Modal>
@@ -123,6 +146,26 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconHero: {
+    width: 56,
+    height: 56,
+  },
+  stacked: {
+    gap: 4,
+    marginTop: 6,
+  },
+  textBtn: {
+    height: 48,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textBtnPressed: {
+    backgroundColor: colors.surfaceVariant,
+  },
+  textBtnLabel: {
+    fontSize: 15,
   },
   message: {
     fontSize: 15,
