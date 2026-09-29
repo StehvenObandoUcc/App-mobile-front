@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { ShoppingItem, RecipeIngredient, IngredientUnit, IngredientCategory, OutboxMutation } from '../types';
 import { LocalStorage } from '../storage/local-storage';
 import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
+import { convertQuantity } from '../utils/consumption';
 import {
   fetchShoppingListFromApi,
 } from '../services/api-client';
 import { AuthService } from '../services/auth-service';
 import { generateOperationId } from '../utils/uuid';
+import { loadAppSettings } from '../storage/app-settings';
 import { flushOutbox } from '../services/outbox-dispatcher';
 
 let memoryShoppingList: ShoppingItem[] | null = null;
@@ -216,9 +218,9 @@ export function useShoppingList() {
     if (!startUserId) throw new Error('No hay usuario autenticado');
 
     await LocalStorage.updateShoppingItem(item);
-    await loadItems();
-
+    // Encolar ANTES de recargar: así la sincronización protege el cambio y no lo revierte.
     await queueOrCompactShoppingUpdate(item.id, item, startUserId);
+    await loadItems();
     flushOutbox().catch(() => {});
   };
 
@@ -241,15 +243,21 @@ export function useShoppingList() {
       const pending = currentList.filter((item) => !item.isBought);
       const match = findSimilarItem(missing.name, pending);
 
-      if (match && match.isExact) {
-        // Coincidencia exacta: fusionar sumando cantidades
+      // Solo se suma si las unidades son compatibles (g↔kg, ml↔L); si no, va como producto aparte.
+      const extra =
+        match && match.isExact && match.item.quantity !== null && cleanQty !== null
+          ? convertQuantity(cleanQty, cleanUnit, match.item.unit)
+          : null;
+      const canMerge = Boolean(match && match.isExact) && (match!.item.quantity === null || cleanQty === null || extra !== null);
+
+      if (match && canMerge) {
         const target = match.item;
-        if (target.quantity !== null && cleanQty !== null) {
-          target.quantity = Math.round((target.quantity + cleanQty) * 10) / 10;
-        } else if (cleanQty !== null) {
+        if (target.quantity !== null && extra !== null) {
+          target.quantity = Math.round((target.quantity + extra) * 1000) / 1000;
+        } else if (target.quantity === null && cleanQty !== null) {
           target.quantity = cleanQty;
+          target.unit = cleanUnit;
         }
-        target.unit = cleanUnit;
         await LocalStorage.updateShoppingItem(target);
 
         await queueOrCompactShoppingUpdate(target.id, target, startUserId);
@@ -301,9 +309,9 @@ export function useShoppingList() {
 
     const nextBought = !item.isBought;
     await LocalStorage.toggleBoughtItem(id);
-    await loadItems();
-
+    // Encolar ANTES de recargar: si no, el GET remoto desmarca el check al instante.
     await queueOrCompactShoppingUpdate(id, { isBought: nextBought }, startUserId);
+    await loadItems();
     flushOutbox().catch(() => {});
   };
 
@@ -408,17 +416,14 @@ async function queueOrCompactShoppingDelete(id: string, userId: string): Promise
       const boughtIds = currentList.filter((i) => i.isBought).map((i) => i.id);
       if (boughtIds.length === 0) return 0;
 
-      // 1. Transferencia atómica local compras -> inventario (preserva snapshot e idempotencia)
-      const moved = await LocalStorage.moveBoughtToInventory();
-      await loadItems();
+      // 1. Traspaso atómico compras -> despensa. En la misma escritura quedan encolados en el Outbox
+      //    los alimentos nuevos/repuestos y el borrado de los comprados (nada se pierde si la app se cierra).
+      const { shoppingShelfDays } = await loadAppSettings();
+      const moved = await LocalStorage.moveBoughtToInventory(shoppingShelfDays);
 
-      // 2. Encolar mutación DELETE individual por cada artículo de compras transferido
-      for (const bid of boughtIds) {
-        await queueOrCompactShoppingDelete(bid, startUserId);
-      }
-
-      // 3. Despacho único en segundo plano
+      // 2. Despacho en segundo plano y refresco de la lista
       flushOutbox().catch(() => {});
+      await loadItems();
 
       return moved;
     } catch (err: any) {
