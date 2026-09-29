@@ -29,6 +29,7 @@ import {
   Chip,
   M3Dialog,
   ScreenHeader,
+  OfflineBanner,
   Fab,
   ChefIaSheet,
   ChefIaValues,
@@ -40,6 +41,10 @@ import {
 import { sortRecipes } from '../src/utils/recipe-sorter';
 import { getValidTimeOptionsForFocus, checkIngredientSelectionCoherence } from '../src/utils/recipe-validation';
 import { daysUntil } from '../src/utils/dates';
+import { loadAppSettings } from '../src/storage/app-settings';
+import { isServerReachable } from '../src/services/api-client';
+import { isNetworkErrorMessage } from '../src/utils/error-messages';
+import { useOutboxStatus } from '../src/hooks/useOutboxStatus';
 import { colors, spacing } from '../src/theme';
 
 type FilterTab = 'all' | 'high_match' | 'quick' | 'saved';
@@ -88,6 +93,9 @@ export default function RecipesScreen() {
   // ── Lista: búsqueda, filtros y orden ──
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  // Recetas-Estados · B: el Chef IA necesita red (lo guardado sigue disponible sin internet).
+  const [aiOffline, setAiOffline] = useState(false);
+  const outbox = useOutboxStatus();
   const [sortBy, setSortBy] = useState<RecipeSortOption>('createdAt_desc');
   const [difficultyFilter, setDifficultyFilter] = useState<RecipeDifficultyFilter>('all');
   const [picker, setPicker] = useState<'sort' | 'difficulty' | null>(null);
@@ -126,13 +134,21 @@ export default function RecipesScreen() {
 
   // Al abrir el Chef IA: los que vencen pronto (≤ 3 días o vencidos) ya vienen marcados.
   // Si nada vence pronto, se marcan todos para poder generar de inmediato.
-  const handleOpenAiModal = () => {
+  const handleOpenAiModal = async () => {
     const urgent = stocked.filter((i) => {
       const d = daysUntil(i.expirationDate);
       return d !== null && d <= 3;
     });
     const initial = urgent.length > 0 ? urgent : stocked;
-    setChef((prev) => ({ ...prev, ingredientIds: new Set(initial.map((i) => i.id)), styleTag: null, note: '' }));
+    // Dieta por defecto de Configuración (se lee antes de abrir para no pisar lo que el usuario cambie).
+    const prefs = await loadAppSettings().catch(() => null);
+    setChef((prev) => ({
+      ...prev,
+      ingredientIds: new Set(initial.map((i) => i.id)),
+      styleTag: null,
+      note: '',
+      diet: prefs?.defaultDiet ?? prev.diet,
+    }));
     setIsAiModalOpen(true);
   };
 
@@ -193,19 +209,27 @@ export default function RecipesScreen() {
 
     cancelledRef.current = false;
     setIsGenerating(true);
+    if (!(await isServerReachable())) {
+      setIsGenerating(false);
+      setIsAiModalOpen(false);
+      setAiOffline(true);
+      return;
+    }
     try {
       let effectiveFocus: string = chef.focus;
       if (chef.focus === 'custom') {
         const parts = [chef.styleTag, chef.note.trim()].filter(Boolean);
         effectiveFocus = parts.length > 0 ? `custom: ${parts.join(', ')}` : 'custom';
       }
+      const prefs = await loadAppSettings();
       const generated = await generateWithAi(
         chosenIngredients,
         chef.time,
         effectiveFocus,
         chef.count,
         chef.difficulty,
-        chef.diet
+        chef.diet,
+        { servings: prefs.defaultServings, avoid: prefs.avoidIngredients }
       );
       if (cancelledRef.current) return; // el usuario dejó de esperar: las recetas igual quedan guardadas
       const n = generated.length;
@@ -225,6 +249,10 @@ export default function RecipesScreen() {
     } catch (err: any) {
       if (cancelledRef.current) return;
       setIsAiModalOpen(false);
+      if (isNetworkErrorMessage(err?.message)) {
+        setAiOffline(true);
+        return;
+      }
       setTimeout(() => {
         setDialogConfig({
           visible: true,
@@ -367,6 +395,19 @@ export default function RecipesScreen() {
             }
           />
 
+          <OfflineBanner
+            state={outbox.state !== 'hidden' ? outbox.state : aiOffline ? 'offline' : 'hidden'}
+            pendingCount={outbox.pendingCount}
+            stuckCount={outbox.stuckCount}
+            isRetrying={outbox.isRetrying}
+            onRetry={async () => {
+              await outbox.retryNow();
+              if (aiOffline && (await isServerReachable())) setAiOffline(false);
+            }}
+          />
+
+          {!aiOffline && (
+          <>
           <SearchInput
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -410,6 +451,8 @@ export default function RecipesScreen() {
               <AppText variant="bodySmall" weight="semibold">{diffFilter.label}</AppText>
             </Pressable>
           </View>
+          </>
+          )}
         </>
       )}
     </View>
@@ -436,7 +479,28 @@ export default function RecipesScreen() {
         />
       )}
 
-      {status === 'success' && (
+      {status === 'success' && aiOffline && (
+        <View style={[styles.list, styles.offlineWrap, { paddingBottom: getBottomContentPadding(insets.bottom) }]}>
+          {listHeader}
+          <View style={styles.offlineState}>
+            <EmptyState
+              title="El Chef IA necesita"
+              titleEmphasis="conexión"
+              description="Tus recetas guardadas y tu despensa siguen disponibles sin internet."
+              iconName="cloud-offline-outline"
+              tone="ai"
+              blobSize="md"
+              secondaryActionLabel="Ver recetas guardadas"
+              onSecondaryAction={() => {
+                setAiOffline(false);
+                setActiveTab('saved');
+              }}
+            />
+          </View>
+        </View>
+      )}
+
+      {status === 'success' && !aiOffline && (
         <FlatList
           data={filteredRecipes}
           keyExtractor={(item) => item.id}
@@ -456,7 +520,8 @@ export default function RecipesScreen() {
                 titleEmphasis="recetas"
                 description="Genera tus primeras recetas con el Chef IA a partir de lo que hay en tu despensa."
                 iconName="restaurant-outline"
-                tone="ai"
+                tone="brand"
+                blobDotColors={[colors.tertiaryContainer, 'transparent']}
                 actionLabel="Generar con IA"
                 actionTone="ai"
                 actionIconName="sparkles"
@@ -588,6 +653,13 @@ export default function RecipesScreen() {
 
 // Recetas.dc.html: margen 20, 16 entre bloques del encabezado, 14 entre tarjetas.
 const styles = StyleSheet.create({
+  offlineWrap: {
+    flex: 1,
+  },
+  offlineState: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   screen: {
     backgroundColor: colors.background,
   },
