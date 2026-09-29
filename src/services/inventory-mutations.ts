@@ -14,7 +14,7 @@ function requireUser(): string {
   return userId;
 }
 
-function baseMutation<T>(userId: string, action: 'update' | 'delete', entityId: string, payload: T): OutboxMutation<T> {
+function baseMutation<T>(userId: string, action: 'create' | 'update' | 'delete', entityId: string, payload: T): OutboxMutation<T> {
   return {
     operationId: generateOperationId(),
     userId,
@@ -71,3 +71,4 @@ export async function deleteIngredientSynced(id: string, options: { flush?: bool
   }
   if (options.flush !== false) flushOutbox().catch(() => {});
 }
+
