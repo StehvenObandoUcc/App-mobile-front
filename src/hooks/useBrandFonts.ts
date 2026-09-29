@@ -1,16 +1,7 @@
 /**
- * Carga de la fuente de marca Outfit (OFL) — Despensa Tonal.
- *
- * PASO PENDIENTE: copiar estos 4 archivos TTF estáticos en mobile/assets/fonts/
- *   Outfit-Light.ttf · Outfit-Regular.ttf · Outfit-Medium.ttf · Outfit-SemiBold.ttf
- * (descarga: https://fonts.google.com/specimen/Outfit → "Get font" → carpeta static/).
- *
- * Luego, en app/_layout.tsx, importar `useBrandFonts` desde src/hooks y usarlo (ver comentario allí).
- * Este módulo no se importa en ningún lado hasta entonces: Metro solo empaqueta
- * lo que se importa, así que su ausencia no rompe el bundle.
- *
- * `expo-font` ya viene con Expo SDK 57 (node_modules/expo-font 57.0.4). Para declararlo
- * explícitamente: `npx expo install expo-font` (no agrega peso: ya está en el árbol).
+ * Carga de la fuente de marca Outfit (OFL, Google Fonts) — Despensa Tonal.
+ * Los 5 TTF estáticos viven en assets/fonts/ (generados desde la fuente variable oficial).
+ * Se usa en app/_layout.tsx: el splash espera a que carguen (máx. 3 s; si fallan, fuente del sistema).
  */
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
@@ -22,6 +13,7 @@ export const BRAND_FONT_SOURCES = {
   [typography.families.regular]: require('../../assets/fonts/Outfit-Regular.ttf'),
   [typography.families.medium]: require('../../assets/fonts/Outfit-Medium.ttf'),
   [typography.families.semibold]: require('../../assets/fonts/Outfit-SemiBold.ttf'),
+  [typography.families.bold]: require('../../assets/fonts/Outfit-Bold.ttf'),
 };
 
 /** Devuelve true cuando Outfit terminó de cargar (o falló: en ese caso se usa la del sistema). */

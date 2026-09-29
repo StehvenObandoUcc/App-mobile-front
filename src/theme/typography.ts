@@ -13,6 +13,7 @@ export const typography = {
     regular: 'Outfit-Regular',
     medium: 'Outfit-Medium',
     semibold: 'Outfit-SemiBold',
+    bold: 'Outfit-Bold',
   },
   sizes: {
     displayNumber: 44, // NUEVO: cifras grandes (días, métricas del Inicio)

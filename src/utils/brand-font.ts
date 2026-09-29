@@ -18,6 +18,11 @@ export function setBrandFontReady(ready: boolean) {
  * fontWeight, por eso cada peso es un archivo distinto. Sin fuente cargada devuelve
  * undefined y React Native usa la fuente del sistema.
  */
+/** true cuando Outfit está cargada (para decidir si mandar fontWeight como respaldo). */
+export function isBrandFontReady(): boolean {
+  return brandFontReady;
+}
+
 export function fontFamilyFor(weight: WeightKey = 'regular'): string | undefined {
   if (!brandFontReady) return undefined;
   switch (weight) {
@@ -26,9 +31,10 @@ export function fontFamilyFor(weight: WeightKey = 'regular'): string | undefined
     case 'medium':
       return typography.families.medium;
     case 'semibold':
+      return typography.families.semibold;
     case 'bold':
     case 'heavy':
-      return typography.families.semibold;
+      return typography.families.bold;
     default:
       return typography.families.regular;
   }

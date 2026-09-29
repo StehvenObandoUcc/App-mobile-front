@@ -59,7 +59,8 @@
           "icon": "./assets/android-icon-monochrome.png",
           "color": "#B3432A"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},
