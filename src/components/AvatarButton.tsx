@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
   button: {
     width: spacing.touchTargetMin,
     height: spacing.touchTargetMin,
-    borderRadius: radii.circular,
+    borderRadius: spacing.touchTargetMin / 2,
     backgroundColor: colors.tertiaryContainer,
     alignItems: 'center',
     justifyContent: 'center',

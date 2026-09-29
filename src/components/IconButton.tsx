@@ -9,7 +9,7 @@ import { colors, spacing, radii } from '../theme';
  * 48 × 48 dp siempre (touchTargetMin). accessibilityLabel obligatorio.
  * variant: surface (blanco + filete) · ink (cacao) · tonal (durazno) · neutral (avena) · ghost (sin fondo)
  */
-export type IconButtonVariant = 'surface' | 'ink' | 'tonal' | 'neutral' | 'ghost';
+export type IconButtonVariant = 'surface' | 'white' | 'ink' | 'tonal' | 'neutral' | 'ghost';
 
 export type IconButtonProps = {
   iconName: keyof typeof Ionicons.glyphMap;
@@ -28,6 +28,8 @@ export type IconButtonProps = {
 
 const VARIANTS: Record<IconButtonVariant, { bg: string; pressed: string; fg: string; border?: string }> = {
   surface: { bg: colors.surface, pressed: colors.m3.surfaceContainerLow, fg: colors.textPrimary, border: colors.border },
+  // Blanco sin filete: botón «volver» de las pantallas (mockups: círculo blanco de 48 sin borde).
+  white: { bg: colors.surface, pressed: colors.m3.surfaceContainerLow, fg: colors.textPrimary },
   ink: { bg: colors.ink, pressed: colors.inkPressed, fg: colors.onInk },
   tonal: { bg: colors.primaryContainer, pressed: colors.m3.inversePrimary, fg: colors.onPrimaryContainer },
   neutral: { bg: colors.m3.surfaceContainer, pressed: colors.m3.surfaceContainerHigh, fg: colors.textPrimary },
@@ -78,7 +80,7 @@ const styles = StyleSheet.create({
   button: {
     width: spacing.touchTargetMin,
     height: spacing.touchTargetMin,
-    borderRadius: radii.circular,
+    borderRadius: spacing.touchTargetMin / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

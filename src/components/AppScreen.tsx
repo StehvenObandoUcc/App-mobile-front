@@ -6,7 +6,9 @@ import {
   PanResponder,
   Animated,
   Easing,
+  useWindowDimensions,
 } from 'react-native';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, usePathname } from 'expo-router';
@@ -16,6 +18,8 @@ import {
   setSwipeNavigation,
   getSwipeTransition,
 } from '../utils/tabSwipeState';
+
+const ENTER_MS = 260;
 
 export type AppScreenProps = {
   children: React.ReactNode;
@@ -50,80 +54,46 @@ export function AppScreen({
   const canSwipeRef = useRef(canSwipe);
   canSwipeRef.current = canSwipe;
 
-  // ── Mini-transición de entrada con inclinación orgánica (tilt) a 60 fps ───
-  const entranceX = useRef(new Animated.Value(0)).current;
-  const entranceTiltNum = useRef(new Animated.Value(0)).current;
-  const entranceOpacity = useRef(new Animated.Value(1)).current;
-  const entranceScale = useRef(new Animated.Value(1)).current;
+  // ── Swipe entre pestañas (Etapa 6) ─────────────────────────────────────────
+  // La pantalla sigue al dedo 1:1; al soltar con intención sale deslizándose y la nueva entra
+  // desde el mismo lado. Todo transform/opacity en el hilo nativo. Sin inclinaciones.
+  const { width } = useWindowDimensions();
+  const widthRef = useRef(width);
+  widthRef.current = width;
+  const reduceMotion = useReduceMotion();
+  const reduceMotionRef = useRef(reduceMotion);
+  reduceMotionRef.current = reduceMotion;
 
-  // ── Arrastre interactivo en tiempo real con inclinación física suave ──────
-  const dragX = useRef(new Animated.Value(0)).current;
-
-  const dragTilt = dragX.interpolate({
-    inputRange: [-100, 0, 100],
-    outputRange: ['-2.2deg', '0deg', '2.2deg'],
+  const dragX = useRef(new Animated.Value(0)).current; // arrastre / salida
+  const enterX = useRef(new Animated.Value(0)).current; // entrada de la pantalla nueva
+  const dragOpacity = dragX.interpolate({
+    inputRange: [-width, 0, width],
+    outputRange: [0.4, 1, 0.4],
     extrapolate: 'clamp',
   });
-
-  const dragScale = dragX.interpolate({
-    inputRange: [-100, 0, 100],
-    outputRange: [0.982, 1, 0.982],
+  const enterOpacity = enterX.interpolate({
+    inputRange: [-width * 0.3, 0, width * 0.3],
+    outputRange: [0, 1, 0],
     extrapolate: 'clamp',
-  });
-
-  const entranceTilt = entranceTiltNum.interpolate({
-    inputRange: [-10, 0, 10],
-    outputRange: ['-10deg', '0deg', '10deg'],
   });
 
   useEffect(() => {
     isNavigatingRef.current = false;
     dragX.setValue(0);
-
     const { isSwipe, direction } = getSwipeTransition();
-
-    // Solo anima si la navegación fue activada por un gesto de deslizamiento (swipe).
-    // Si fue una pulsación directa en la barra de navegación (ej. Inicio a Recetas),
-    // se coloca inmediatamente sin animación respetando el requerimiento de UX.
-    if (isSwipe && currentTabIndex !== -1) {
-      entranceX.setValue(direction * 22);
-      entranceTiltNum.setValue(direction * 1.8);
-      entranceOpacity.setValue(0.88);
-      entranceScale.setValue(0.988);
-
-      Animated.parallel([
-        Animated.timing(entranceX, {
-          toValue: 0,
-          duration: 170,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(entranceTiltNum, {
-          toValue: 0,
-          duration: 170,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(entranceOpacity, {
-          toValue: 1,
-          duration: 170,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(entranceScale, {
-          toValue: 1,
-          duration: 170,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
+    // Solo el swipe anima la entrada; un toque en la barra cambia al instante (decisión de UX).
+    if (isSwipe && currentTabIndex !== -1 && !reduceMotionRef.current) {
+      enterX.setValue(direction * widthRef.current * 0.3);
+      Animated.timing(enterX, {
+        toValue: 0,
+        duration: ENTER_MS,
+        easing: Easing.bezier(0.05, 0.7, 0.1, 1), // M3 emphasized decelerate
+        useNativeDriver: true,
+      }).start();
     } else {
-      entranceX.setValue(0);
-      entranceTiltNum.setValue(0);
-      entranceOpacity.setValue(1);
-      entranceScale.setValue(1);
+      enterX.setValue(0);
     }
-  }, [pathname, currentTabIndex, entranceX, entranceTiltNum, entranceOpacity, entranceScale, dragX]);
+  }, [pathname, currentTabIndex, dragX, enterX]);
 
   const navigateToTab = (targetIndex: number) => {
     const curr = currentTabIndexRef.current;
@@ -132,98 +102,66 @@ export function AppScreen({
     if (isNavigatingRef.current) return;
 
     isNavigatingRef.current = true;
-    router.push(MAIN_TABS[targetIndex] as any);
+    // navigate (no push): si la pestaña ya está en la pila vuelve a ella; la pila no crece sin fin.
+    router.navigate(MAIN_TABS[targetIndex] as any);
 
-    // Timeout de seguridad que garantiza el desbloqueo bajo cualquier escenario
+    // Desbloqueo de seguridad
     setTimeout(() => {
       isNavigatingRef.current = false;
       dragX.setValue(0);
-    }, 280);
+    }, 400);
   };
 
-  // Detector de deslizamiento horizontal con arco natural para el pulgar
-  // Permite desviaciones diagonales normales sin perder el gesto ni bloquear el scroll vertical ni componentes horizontales hijos
+  const springBack = () =>
+    Animated.spring(dragX, { toValue: 0, tension: 170, friction: 20, useNativeDriver: true }).start();
+
+  // Detector de deslizamiento horizontal: no roba el scroll vertical ni el de carruseles/chips hijos
+  // (no captura en fase de captura: los ScrollView horizontales responden primero).
   const screenPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onStartShouldSetPanResponderCapture: () => false,
-      // NUNCA capturar en capture phase para permitir que ScrollViews horizontales hijas
-      // (chips de categorías, filtros, selectores de unidad) procesen sus propios desplazamientos
       onMoveShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
+      onMoveShouldSetPanResponder: (_, g) => {
         if (!canSwipeRef.current || isNavigatingRef.current) return false;
-        const { dx, dy } = gestureState;
-        // Gesto horizontal claro y deliberado: umbral de al menos 35px y ángulo marcadamente horizontal (> 1.8x que dy)
-        return Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy) * 1.8;
+        return Math.abs(g.dx) > 18 && Math.abs(g.dx) > Math.abs(g.dy) * 1.6;
       },
       onPanResponderGrant: () => {
         dragX.stopAnimation();
+        enterX.stopAnimation();
+        enterX.setValue(0);
       },
-      onPanResponderMove: (_, gestureState) => {
+      onPanResponderMove: (_, g) => {
         if (!canSwipeRef.current || isNavigatingRef.current) return;
-        const rawDx = gestureState.dx;
         const curr = currentTabIndexRef.current;
-        // Resistencia suave en los bordes para no intentar deslizar más allá de las pestañas límite
-        if (curr === 0 && rawDx > 0) {
-          dragX.setValue(Math.min(rawDx * 0.15, 20));
-          return;
-        }
-        if (curr === MAIN_TABS.length - 1 && rawDx < 0) {
-          dragX.setValue(Math.max(rawDx * 0.15, -20));
-          return;
-        }
-        // Respuesta elástica en tiempo real: traslación e inclinación física suave
-        const clamped = Math.max(Math.min(rawDx * 0.45, 95), -95);
-        dragX.setValue(clamped);
+        const atEdge = (curr === 0 && g.dx > 0) || (curr === MAIN_TABS.length - 1 && g.dx < 0);
+        // En los extremos hay resistencia elástica; en el resto sigue al dedo 1:1.
+        dragX.setValue(atEdge ? g.dx * 0.18 : g.dx);
       },
       onPanResponderTerminationRequest: () => true,
-      onPanResponderTerminate: () => {
-        Animated.spring(dragX, {
-          toValue: 0,
-          tension: 180,
-          friction: 12,
-          useNativeDriver: true,
-        }).start();
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (!canSwipeRef.current || isNavigatingRef.current) return;
-        const { dx, vx } = gestureState;
+      onPanResponderTerminate: springBack,
+      onPanResponderRelease: (_, g) => {
+        if (!canSwipeRef.current || isNavigatingRef.current) return springBack();
         const curr = currentTabIndexRef.current;
+        const w = widthRef.current;
+        // Intención: pasar un cuarto de pantalla o un gesto rápido.
+        const goNext = (g.dx < -w * 0.25 || (g.dx < -40 && g.vx < -0.3)) && curr < MAIN_TABS.length - 1;
+        const goPrev = (g.dx > w * 0.25 || (g.dx > 40 && g.vx > 0.3)) && curr > 0;
+        if (!goNext && !goPrev) return springBack();
 
-        // Deslizar con intención clara hacia la izquierda -> Pestaña siguiente
-        if ((dx < -60 || (dx < -30 && vx < -0.4)) && curr < MAIN_TABS.length - 1) {
-          setSwipeNavigation(1);
-          navigateToTab(curr + 1);
-          Animated.timing(dragX, {
-            toValue: -100,
-            duration: 130,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }).start(() => {
-            dragX.setValue(0);
-          });
+        const dir: 1 | -1 = goNext ? 1 : -1;
+        setSwipeNavigation(dir);
+        if (reduceMotionRef.current) {
+          navigateToTab(curr + dir);
+          return;
         }
-        // Deslizar con intención clara hacia la derecha -> Pestaña anterior
-        else if ((dx > 60 || (dx > 30 && vx > 0.4)) && curr > 0) {
-          setSwipeNavigation(-1);
-          navigateToTab(curr - 1);
-          Animated.timing(dragX, {
-            toValue: 100,
-            duration: 130,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }).start(() => {
-            dragX.setValue(0);
-          });
-        } else {
-          // Rebote elástico si no superó el umbral
-          Animated.spring(dragX, {
-            toValue: 0,
-            tension: 180,
-            friction: 12,
-            useNativeDriver: true,
-          }).start();
-        }
+        // Sale deslizándose hacia el lado del gesto y entonces navega.
+        Animated.timing(dragX, {
+          toValue: -dir * w,
+          duration: Math.max(120, Math.min(220, (w - Math.abs(g.dx)) / Math.max(Math.abs(g.vx), 1.2))),
+          easing: Easing.bezier(0.3, 0, 0.8, 0.15), // M3 emphasized accelerate
+          useNativeDriver: true,
+        }).start(() => navigateToTab(curr + dir));
       },
     })
   ).current;
@@ -235,31 +173,10 @@ export function AppScreen({
     >
       <StatusBar style="dark" />
       <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: entranceOpacity,
-            transform: [
-              { translateX: entranceX },
-              { rotate: entranceTilt },
-              { scale: entranceScale },
-            ],
-          },
-        ]}
+        style={[styles.container, { opacity: enterOpacity, transform: [{ translateX: enterX }] }]}
         {...(canSwipe ? screenPanResponder.panHandlers : {})}
       >
-        <Animated.View
-          style={[
-            styles.container,
-            {
-              transform: [
-                { translateX: dragX },
-                { rotate: dragTilt },
-                { scale: dragScale },
-              ],
-            },
-          ]}
-        >
+        <Animated.View style={[styles.container, { opacity: dragOpacity, transform: [{ translateX: dragX }] }]}>
           {scrollable ? (
             <ScrollView
               style={styles.container}
