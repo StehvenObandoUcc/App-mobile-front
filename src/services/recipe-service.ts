@@ -8,6 +8,7 @@ import {
   deleteRecipeWithApi,
   batchDeleteRecipesWithApi,
   executeDeleteWithPendingResolution,
+  RecipeGenerationExtras,
 } from './api-client';
 import { AuthService } from './auth-service';
 import { getFriendlyErrorMessage } from '../utils/error-messages';
@@ -33,7 +34,8 @@ export interface RecipeService {
     focus?: string,
     count?: number,
     difficulty?: string,
-    dietaryPreference?: DietaryPreference
+    dietaryPreference?: DietaryPreference,
+    extras?: RecipeGenerationExtras
   ): Promise<Recipe[]>;
 }
 
@@ -197,10 +199,11 @@ export const mockRecipeService: RecipeService = {
     focus: string = 'waste_reduction',
     count: number = 2,
     difficulty: string = 'any',
-    dietaryPreference: DietaryPreference = 'any'
+    dietaryPreference: DietaryPreference = 'any',
+    extras: RecipeGenerationExtras = {}
   ): Promise<Recipe[]> {
     try {
-      const generated = await generateRecipesWithApi(ingredients, maxPrepTime, focus, count, difficulty, dietaryPreference);
+      const generated = await generateRecipesWithApi(ingredients, maxPrepTime, focus, count, difficulty, dietaryPreference, extras);
       if (!Array.isArray(generated) || generated.length === 0) {
         throw new Error('No pudimos generar tus recetas en este momento. Intenta con menos recetas o vuelve a intentarlo.');
       }
