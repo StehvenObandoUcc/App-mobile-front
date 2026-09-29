@@ -108,7 +108,8 @@ export default function ScanResultScreen() {
     const map = new Map<string, Ingredient>();
     for (const item of detectedItems) {
       const match = findSimilarItem(item.name, inventoryItems);
-      if (match) map.set(item.id, match.item);
+      // Solo se ofrece «Sumar» con coincidencias exactas; las parecidas se guardan aparte.
+      if (match && match.isExact) map.set(item.id, match.item);
     }
     return map;
   }, [detectedItems, inventoryItems]);
@@ -189,25 +190,36 @@ export default function ScanResultScreen() {
     let added = 0;
     let merged = 0;
     try {
+      // Estado acumulado por alimento de la despensa: si dos detectados caen en el mismo, se suman ambos.
+      const mergedById = new Map<string, Ingredient>();
       for (const item of selected) {
-        const existing = matchedInventoryMap.get(item.id);
-        const wantsMerge = existing && mergeOptions[item.id] !== false;
+        const original = matchedInventoryMap.get(item.id);
+        const existing = original ? mergedById.get(original.id) ?? original : undefined;
+        const wantsMerge = Boolean(existing) && mergeOptions[item.id] !== false;
+        // Agotado (0) o sin cantidad: se repone con la cantidad, unidad y fecha nuevas.
+        const restocking = Boolean(existing) && (existing!.quantity === 0 || existing!.quantity === null);
         // Se suma en la unidad de la despensa (g↔kg, ml↔L). Si las unidades no son compatibles, se guarda aparte.
         const extra =
-          wantsMerge && existing
-            ? convertQuantity(item.quantity ?? 1, item.unit, existing.unit)
+          wantsMerge && existing && !restocking && item.quantity !== null
+            ? convertQuantity(item.quantity, item.unit, existing.unit)
             : null;
-        if (wantsMerge && existing && extra !== null) {
-          await updateItem({
-            ...existing,
-            quantity: round((existing.quantity ?? 1) + extra),
-            expirationDate: earliestISODate(existing.expirationDate, item.expirationDate),
-          });
+        if (wantsMerge && existing && (restocking || extra !== null || item.quantity === null)) {
+          const next: Ingredient = restocking
+            ? { ...existing, quantity: item.quantity, unit: item.unit, expirationDate: item.expirationDate ?? null }
+            : {
+                ...existing,
+                quantity: extra !== null && existing.quantity !== null ? round(existing.quantity + extra) : existing.quantity,
+                expirationDate: earliestISODate(existing.expirationDate, item.expirationDate),
+              };
+          mergedById.set(existing.id, next);
           merged += 1;
         } else {
           await addItem({ ...item, id: `ing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` });
           added += 1;
         }
+      }
+      for (const next of mergedById.values()) {
+        await updateItem(next);
       }
       hasConfirmedRef.current = true;
       setDialog({
@@ -267,6 +279,7 @@ export default function ScanResultScreen() {
         cancelText={dialog.cancelText}
         onConfirm={dialog.onConfirm}
         onCancel={dialog.onCancel}
+        hero={Boolean(dialog.summary)}
       >
         {dialog.summary && dialog.summary.length > 0 ? (
           <View style={styles.summary}>
@@ -283,7 +296,7 @@ export default function ScanResultScreen() {
   if (detectedItems.length === 0) {
     return (
       <View style={[styles.screen, styles.emptyScreen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }]}>
-        <IconButton iconName="chevron-back" accessibilityLabel="Volver a la cámara" onPress={() => router.back()} />
+        <IconButton iconName="chevron-back" variant="white" accessibilityLabel="Volver a la cámara" onPress={() => router.back()} />
         <View style={styles.empty}>
           <IllustrationBlob iconName="scan-outline" tone="ai" size="lg" />
           <AppText weight="light" align="center" style={styles.emptyTitle} accessibilityRole="header">
@@ -311,7 +324,7 @@ export default function ScanResultScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: 170 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        <IconButton iconName="chevron-back" accessibilityLabel="Volver a la cámara" onPress={() => router.back()} />
+        <IconButton iconName="chevron-back" variant="white" accessibilityLabel="Volver a la cámara" onPress={() => router.back()} />
 
         <View style={styles.header}>
           <AiBadge label="Análisis de IA completado" />
@@ -349,6 +362,11 @@ export default function ScanResultScreen() {
               item={item}
               existing={matchedInventoryMap.get(item.id)}
               mergeChecked={mergeOptions[item.id] !== false}
+              mergeCompatible={(() => {
+                const ex = matchedInventoryMap.get(item.id);
+                if (!ex || ex.quantity === null || ex.quantity === 0 || item.quantity === null) return true;
+                return convertQuantity(item.quantity, item.unit, ex.unit) !== null;
+              })()}
               onToggleMerge={() => toggleMerge(item.id)}
               onToggle={() => toggleConfirm(item.id)}
               onEdit={() => openEdit(item)}
