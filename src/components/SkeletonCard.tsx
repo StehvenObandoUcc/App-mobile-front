@@ -59,20 +59,20 @@ export function SkeletonCard({ variant = 'ingredient' }: SkeletonCardProps) {
 }
 
 const styles = StyleSheet.create({
+  // Forma del ticket de IngredientCard (Despensa-Estados.dc.html): 84 dp, icono 52, bloque 60.
   ingredientCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 84,
     backgroundColor: colors.surface,
-    padding: 14,
+    paddingHorizontal: 14,
     borderRadius: radii.cards,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginBottom: 10,
   },
   avatarPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.containers,
+    width: 52,
+    height: 52,
+    borderRadius: 17,
     backgroundColor: colors.skeleton.background,
   },
   ingredientBody: {
@@ -84,21 +84,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.skeleton.background,
   },
   badgePlaceholder: {
-    width: 72,
-    height: 24,
-    borderRadius: radii.circular,
+    width: 60,
+    height: 60,
+    borderRadius: 16,
     backgroundColor: colors.skeleton.background,
   },
   recipeCard: {
     backgroundColor: colors.surface,
-    borderRadius: radii.cards,
-    marginBottom: spacing.lg,
+    borderRadius: radii.tiles,
+    marginBottom: spacing.md,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   recipeImagePlaceholder: {
-    height: 140,
+    height: 150,
     backgroundColor: colors.skeleton.background,
   },
   recipeBody: {

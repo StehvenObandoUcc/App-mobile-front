@@ -1,29 +1,37 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { PrimaryButton } from './PrimaryButton';
-import { colors, typography, spacing, radii } from '../theme';
+import { View, StyleSheet } from 'react-native';
+import { AppText } from './AppText';
+import { SecondaryButton } from './SecondaryButton';
+import { IllustrationBlob } from './IllustrationBlob';
+import { colors, spacing } from '../theme';
 
+/**
+ * ErrorState — Componentes.dc.html / Despensa-Estados.dc.html
+ * Mancha chile + alerta, título 300 con énfasis 600, mensaje y «Reintentar» con borde.
+ */
 export type ErrorStateProps = {
   title?: string;
+  titleEmphasis?: string;
   message: string;
   onRetry: () => void;
 };
 
-export function ErrorState({
-  title = 'Algo salió mal',
-  message,
-  onRetry,
-}: ErrorStateProps) {
+export function ErrorState({ title: titleProp, titleEmphasis: emphasisProp, message, onRetry }: ErrorStateProps) {
+  // Si la pantalla pasa su propio título, no se le agrega el énfasis por defecto.
+  const title = titleProp ?? 'Algo salió';
+  const titleEmphasis = titleProp === undefined ? emphasisProp ?? 'mal' : emphasisProp;
   return (
-    <View style={styles.container}>
-      <View style={styles.iconCircle}>
-        <Ionicons name="cloud-offline-outline" size={44} color={colors.error.text} />
-      </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
-      <View style={styles.buttonWrap}>
-        <PrimaryButton title="Reintentar" onPress={onRetry} iconName="refresh-outline" />
+    <View style={styles.container} accessibilityRole="alert">
+      <IllustrationBlob iconName="alert-circle-outline" tone="error" size="md" />
+      <AppText variant="headline" weight="light" align="center">
+        {title}
+        {titleEmphasis ? <AppText weight="semibold">{` ${titleEmphasis}`}</AppText> : null}
+      </AppText>
+      <AppText variant="body" color={colors.textSecondary} align="center" style={styles.message}>
+        {message}
+      </AppText>
+      <View style={styles.actions}>
+        <SecondaryButton title="Reintentar" iconName="refresh-outline" variant="outline" onPress={onRetry} />
       </View>
     </View>
   );
@@ -33,34 +41,16 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xxxl,
-    paddingVertical: 48,
-  },
-  iconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: radii.circular,
-    backgroundColor: colors.error.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xl,
-  },
-  title: {
-    fontSize: typography.sizes.sectionTitle,
-    fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xxxl,
   },
   message: {
-    fontSize: typography.sizes.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
+    fontSize: 15,
     lineHeight: 22,
-    marginBottom: spacing.xxl,
   },
-  buttonWrap: {
-    width: '100%',
-    maxWidth: 220,
+  actions: {
+    alignSelf: 'stretch',
+    marginTop: 6,
   },
 });

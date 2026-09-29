@@ -5,7 +5,6 @@ import {
   Animated,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +12,7 @@ import { colors, typography, spacing, radii } from '../theme';
 import { fontFamilyFor } from '../utils/brand-font';
 import type { OutboxBannerState } from '../types';
 
+import { Text } from './Text';
 export type OfflineBannerProps = {
   state: OutboxBannerState;
   pendingCount: number;

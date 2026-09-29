@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
+import { View, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from './PrimaryButton';
 import { colors, radii, spacing, typography, elevations } from '../theme';
 
+import { Text } from './Text';
 export interface ProfileCardProps {
   user: {
     name: string;
