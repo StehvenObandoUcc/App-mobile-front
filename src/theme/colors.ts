@@ -65,6 +65,10 @@ const extended = {
   navIconIdle: '#D9C3B8', // 7.57:1 sobre cacao
   textMuted: '#6F635B', // 5.31:1 sobre surface · 5.04:1 sobre surfaceContainerLow
   inkPressed: '#5E382C', // blanco encima 10.11:1
+  // Cámara (Escaneo.dc.html): velos sobre la vista en vivo y texto secundario claro
+  cameraScrim: '#1E1714',
+  onCameraMuted: '#F2E6DE',
+  quotaDotIdle: '#7A5A4F', // punto de foto sin usar sobre cacao
 } as const;
 
 export const colors = {
