@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ingredient, Recipe, ShoppingItem, IngredientCategory, OutboxMutation } from '../types';
 import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
+import { addDaysISO } from '../utils/dates';
 
 export const DEFAULT_SHELF_LIFE_DAYS: Record<IngredientCategory, number> = {
   fruit: 7,
@@ -524,35 +525,6 @@ export const LocalStorage = {
     schedulePersist('pending_deleted_recipes');
   },
 
-  async consumeIngredients(consumed: { name: string; quantity: number }[]): Promise<string[]> {
-    ensureActiveUser();
-    const consumedNames: string[] = [];
-
-    consumed.forEach((req) => {
-      const target = req.name.toLowerCase().trim();
-      const match = memoryInventory.find((item) => {
-        const current = item.name.toLowerCase().trim();
-        return current.includes(target) || target.includes(current);
-      });
-
-      if (match) {
-        consumedNames.push(match.name);
-        const currentQty = match.quantity ?? 1;
-        const toDeduct = req.quantity;
-
-        if (currentQty > toDeduct) {
-          match.quantity = Math.round((currentQty - toDeduct) * 10) / 10;
-        } else {
-          memoryInventory = memoryInventory.filter((item) => item.id !== match.id);
-        }
-      }
-    });
-
-    emitChange();
-    schedulePersist('inventory');
-    return consumedNames;
-  },
-
   // ─── Lista de Compras ────────────────────────────────────────────────────────
   async getShoppingList(): Promise<ShoppingItem[]> {
     return [...memoryShoppingList];
@@ -648,9 +620,8 @@ export const LocalStorage = {
       const match = findSimilarItem(bought.name, nextInventory);
 
       const days = DEFAULT_SHELF_LIFE_DAYS[bought.category] || 14;
-      const estimatedExp = new Date(Date.now() + days * 86400000)
-        .toISOString()
-        .split('T')[0];
+      // Día local (no UTC): con toISOString() después de las 7 p. m. en Colombia salía un día adelantado.
+      const estimatedExp = addDaysISO(days);
 
       const { unit: cleanUnit, quantity: cleanQty } = normalizeItemUnitAndQty(bought.unit, bought.quantity);
 
