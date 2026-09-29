@@ -1,19 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRecipes } from '../src/hooks/useRecipes';
-import { Recipe } from '../src/types';
-import { AppScreen, PrimaryButton, SecondaryButton, M3Dialog } from '../src/components';
-
-import { validateRecipeIngredients } from '../src/utils/recipe-validation';
+import { useInventory } from '../src/hooks/useInventory';
 import { useShoppingList } from '../src/hooks/useShoppingList';
-import { colors, radii, spacing, typography } from '../src/theme';
+import { Recipe, RecipeIngredient } from '../src/types';
+import {
+  AppText,
+  PrimaryButton,
+  M3Dialog,
+  ErrorState,
+  AiBadge,
+  RecipeCover,
+  StatTile,
+  RecipeIngredientsCard,
+  MissingIngredientsCard,
+  StepItem,
+  StickyActionBar,
+  DifficultyMeter,
+} from '../src/components';
+import { validateRecipeIngredients } from '../src/utils/recipe-validation';
+import { recipeBanner, DIFFICULTY_LABELS, splitRecipeTitle, cleanStepText } from '../src/utils/recipe-visuals';
+import { formatQuantity } from '../src/utils/units';
+import { daysUntil } from '../src/utils/dates';
+import { colors, spacing } from '../src/theme';
 
+type DialogState = {
+  visible: boolean;
+  title: string;
+  titleEmphasis?: string;
+  message: string;
+  type?: 'success' | 'info' | 'warning' | 'error';
+  iconName?: keyof typeof Ionicons.glyphMap;
+  confirmText?: string;
+  cancelText?: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+};
+
+const qty = (i: RecipeIngredient) => (i.quantity !== null ? formatQuantity(i.quantity, i.unit, { long: true }) : 'Al gusto');
+
+/**
+ * Detalle de receta — Receta-Detalle.dc.html.
+ * Portada pastel con volver/guardar · coincidencia (IA) · título 300 + 600 · 3 fichas ·
+ * ingredientes con progreso y «vence en N d» · faltantes con sustitutos · pasos con progreso
+ * (hechos en salvia, el actual con anillo cacao) · barra fija «Preparar receta».
+ * Sin «Volver a recetas» (decisión aprobada): se vuelve con la flecha de la portada.
+ */
 export default function RecipeDetailScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { recipeId } = useLocalSearchParams<{ recipeId?: string }>();
-  const { getRecipeById, prepareRecipe, getRecipeSteps } = useRecipes();
+  const { getRecipeById, prepareRecipe, getRecipeSteps, toggleSave } = useRecipes();
+  const { items } = useInventory();
   const { addFromRecipe } = useShoppingList();
 
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -21,591 +62,357 @@ export default function RecipeDetailScreen() {
   const [isFinishing, setIsFinishing] = useState(false);
   const [isLoadingSteps, setIsLoadingSteps] = useState(false);
   const [stepsError, setStepsError] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<DialogState>({ visible: false, title: '', message: '', onConfirm: () => {} });
+  const closeDialog = () => setDialog((d) => ({ ...d, visible: false }));
 
-  const [dialogConfig, setDialogConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type?: 'success' | 'info' | 'warning' | 'error';
-    iconName?: keyof typeof Ionicons.glyphMap;
-    confirmText?: string;
-    cancelText?: string;
-    onConfirm: () => void;
-    onCancel?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-    confirmText: 'Entendido',
-    onConfirm: () => {},
-  });
+  const loadSteps = useCallback(
+    async (rec: Recipe) => {
+      setIsLoadingSteps(true);
+      setStepsError(null);
+      try {
+        const loaded = await getRecipeSteps(rec);
+        setRecipe((prev) => (prev ? { ...prev, steps: loaded } : prev));
+      } catch (err: any) {
+        setStepsError(err?.message || 'No pudimos cargar los pasos en este momento.');
+      } finally {
+        setIsLoadingSteps(false);
+      }
+    },
+    [getRecipeSteps]
+  );
 
   useEffect(() => {
-    if (recipeId) {
-      getRecipeById(recipeId).then(async (rec) => {
-        setRecipe(rec);
-        // Si la receta no tiene pasos generados aún (Fase 2 bajo demanda), solicitarlos a la IA
-        if (rec && (!rec.steps || rec.steps.length === 0)) {
-          setIsLoadingSteps(true);
-          setStepsError(null);
-          try {
-            const loadedSteps = await getRecipeSteps(rec);
-            setRecipe((prev) => (prev ? { ...prev, steps: loadedSteps } : prev));
-          } catch (err: any) {
-            setStepsError(err?.message || 'No pudimos cargar los pasos en este momento.');
-          } finally {
-            setIsLoadingSteps(false);
-          }
-        }
-      });
-    }
-  }, [recipeId, getRecipeById, getRecipeSteps]);
+    if (!recipeId) return;
+    getRecipeById(recipeId).then((rec) => {
+      setRecipe(rec);
+      // Pasos bajo demanda: si la receta aún no los tiene, se piden a la IA.
+      if (rec && (!rec.steps || rec.steps.length === 0)) loadSteps(rec);
+    });
+  }, [recipeId, getRecipeById, loadSteps]);
+
+  // «vence en N d» para ingredientes que tienes y vencen pronto (según tu despensa).
+  const expiryFor = useCallback(
+    (ing: RecipeIngredient) => {
+      const match =
+        items.find((i) => i.id === ing.inventoryIngredientId) ??
+        items.find((i) => i.name.trim().toLowerCase() === ing.name.trim().toLowerCase());
+      const d = match ? daysUntil(match.expirationDate) : null;
+      if (d === null || d > 3) return undefined;
+      if (d < 0) return { label: 'vencido', tone: colors.functional.expired };
+      return { label: d === 0 ? 'vence hoy' : `vence en ${d} d`, tone: colors.functional.expiringSoon };
+    },
+    [items]
+  );
+
+  const steps = useMemo(() => (recipe?.steps ?? []).map(cleanStepText), [recipe?.steps]);
 
   if (!recipe) {
     return (
-      <AppScreen style={styles.centerContainer}>
-        <Text style={styles.loadingText}>Cargando detalle de la receta...</Text>
-      </AppScreen>
+      <View style={[styles.loading, { paddingTop: insets.top }]}>
+        <ActivityIndicator color={colors.ink} />
+        <AppText variant="bodySmall" color={colors.textSecondary}>
+          Cargando receta…
+        </AppText>
+      </View>
     );
   }
 
   const validation = validateRecipeIngredients(recipe);
+  const banner = recipeBanner(recipe.id);
+  const { lead, emphasis } = splitRecipeTitle(recipe.title);
+  const available = recipe.availableIngredients.length;
+  const total = available + recipe.missingIngredients.length;
+  const diff = colors.difficulty[recipe.difficulty] ?? colors.difficulty.easy;
+  const currentStep = steps.findIndex((_, i) => !completedSteps.includes(i));
 
-  const toggleStep = (index: number) => {
-    setCompletedSteps((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-    );
+  const toggleStep = (index: number) =>
+    setCompletedSteps((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
+
+  const handleAddMissing = async () => {
+    const res = await addFromRecipe(recipe.missingIngredients, recipe.title);
+    setDialog({
+      visible: true,
+      title: '¡Listo! Faltantes en tu',
+      titleEmphasis: 'lista de compras',
+      message: `${res.addedCount} ${res.addedCount === 1 ? 'agregado' : 'agregados'}${res.mergedCount ? ` y ${res.mergedCount} sumados a lo que ya tenías` : ''}.`,
+      type: 'success',
+      iconName: 'cart-outline',
+      confirmText: 'Ir a compras',
+      cancelText: 'Seguir aquí',
+      onConfirm: () => {
+        closeDialog();
+        router.push('/shopping-list');
+      },
+      onCancel: closeDialog,
+    });
+  };
+
+  /** Descuenta de la despensa lo que la receta usa y muestra el resultado. */
+  const runPrepare = async () => {
+    closeDialog();
+    setIsFinishing(true);
+    try {
+      const { consumed, skipped } = await prepareRecipe(recipe.id);
+      const parts = [
+        consumed.length > 0
+          ? `Se descontaron de tu despensa: ${consumed.join(', ')}.`
+          : 'No se descontó nada de tu despensa.',
+        skipped.length > 0
+          ? `Revisa a mano ${skipped.join(', ')}: la receta usa otra unidad o no indica cantidad.`
+          : '',
+      ].filter(Boolean);
+      setDialog({
+        visible: true,
+        title: '¡Buen',
+        titleEmphasis: 'provecho!',
+        message: parts.join('\n\n'),
+        type: 'success',
+        iconName: 'checkmark-circle-outline',
+        confirmText: 'Ver despensa',
+        onConfirm: () => {
+          closeDialog();
+          router.replace('/inventory');
+        },
+      });
+    } catch {
+      setDialog({
+        visible: true,
+        title: 'No se pudo',
+        titleEmphasis: 'descontar',
+        message: 'Tus ingredientes siguen en la despensa. Inténtalo de nuevo.',
+        type: 'error',
+        confirmText: 'Entendido',
+        onConfirm: closeDialog,
+      });
+    } finally {
+      setIsFinishing(false);
+    }
   };
 
   const handleFinishCooking = () => {
-    if (!validation.canPrepare) {
-      setDialogConfig({
+    // Nada que descontar: no tienes ninguno de los ingredientes.
+    if (!validation.willDeductFromInventory) {
+      setDialog({
         visible: true,
-        title: 'Preparar receta',
-        message:
-          'No cuentas con todos los ingredientes necesarios en tu inventario. ¿Deseas preparar la receta de todos modos? (No se descontará ningún ingrediente de tu despensa).',
-        type: 'warning',
-        iconName: 'warning-outline',
-        confirmText: 'Preparar de todos modos',
-        cancelText: 'Cancelar',
-        onCancel: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
+        title: '¡Buen',
+        titleEmphasis: 'provecho!',
+        message: validation.inventoryDeductionNotice,
+        type: 'success',
+        iconName: 'restaurant-outline',
+        confirmText: 'Ver recetas',
         onConfirm: () => {
-          setDialogConfig({
-            visible: true,
-            title: '¡Buen provecho!',
-            message:
-              'Has preparado esta receta. Tu inventario se mantiene intacto ya que faltaban algunos ingredientes.',
-            type: 'success',
-            iconName: 'restaurant-outline',
-            confirmText: 'Ver recetas',
-            cancelText: undefined,
-            onCancel: undefined,
-            onConfirm: () => {
-              setDialogConfig((prev) => ({ ...prev, visible: false }));
-              router.replace('/recipes');
-            },
-          });
+          closeDialog();
+          router.replace('/recipes');
         },
       });
       return;
     }
 
-    setDialogConfig({
+    const partial = !validation.canPrepare;
+    setDialog({
       visible: true,
-      title: '¿Finalizar preparación?',
+      title: partial ? '¿Preparar sin todos los' : '¿Terminaste de',
+      titleEmphasis: partial ? 'ingredientes?' : 'cocinar?',
       message: validation.inventoryDeductionNotice,
-      type: 'info',
-      iconName: 'restaurant-outline',
-      confirmText: 'Sí, finalizar y descontar',
-      cancelText: 'Cancelar',
-      onCancel: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
-      onConfirm: async () => {
-        setDialogConfig((prev) => ({ ...prev, visible: false }));
-        setIsFinishing(true);
-        try {
-          const consumed = await prepareRecipe(recipe.id);
-          setDialogConfig({
-            visible: true,
-            title: 'Preparación completada',
-            message: `Receta preparada con éxito. Se descontaron: ${
-              consumed.join(', ') || 'los ingredientes utilizados'
-            }.`,
-            type: 'success',
-            iconName: 'checkmark-circle-outline',
-            confirmText: 'Ver inventario',
-            cancelText: undefined,
-            onCancel: undefined,
-            onConfirm: () => {
-              setDialogConfig((prev) => ({ ...prev, visible: false }));
-              router.replace('/inventory');
-            },
-          });
-        } catch {
-          setDialogConfig({
-            visible: true,
-            title: 'Aviso',
-            message: 'No se pudieron descontar los ingredientes.',
-            type: 'error',
-            iconName: 'alert-circle-outline',
-            confirmText: 'Entendido',
-            cancelText: undefined,
-            onCancel: undefined,
-            onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
-          });
-        } finally {
-          setIsFinishing(false);
-        }
-      },
+      type: partial ? 'warning' : 'info',
+      iconName: partial ? undefined : 'restaurant-outline',
+      confirmText: partial ? 'Preparar y descontar' : 'Sí, descontar',
+      cancelText: 'Todavía no',
+      onCancel: closeDialog,
+      onConfirm: runPrepare,
     });
   };
 
+  const note = validation.willDeductFromInventory
+    ? `Al terminar se descontarán ${available} ${available === 1 ? 'ingrediente' : 'ingredientes'} de tu despensa`
+    : 'No tienes estos ingredientes: no se descontará nada';
+
   return (
-    <AppScreen scrollable style={styles.screen}>
-      {/* ── Banner Superior ── */}
-      <View style={styles.heroCard}>
-        <View style={styles.matchBadge}>
-          <Ionicons name="sparkles" size={14} color={colors.surface} style={{ marginRight: spacing.xs }} />
-          <Text style={styles.matchText}>{recipe.matchScore}% Coincidencia con tu inventario</Text>
-        </View>
-
-        <Text style={styles.title}>{recipe.title}</Text>
-        <Text style={styles.description}>{recipe.description}</Text>
-
-        {/* Metadatos en píldoras */}
-        <View style={styles.metaRow}>
-          {recipe.prepTimeMinutes && (
-            <View style={styles.metaPill}>
-              <Ionicons name="time-outline" size={14} color={colors.primaryDark} style={{ marginRight: spacing.xs }} />
-              <Text style={styles.metaText}>{recipe.prepTimeMinutes} min</Text>
-            </View>
-          )}
-          {recipe.servings && (
-            <View style={styles.metaPill}>
-              <Ionicons name="people-outline" size={14} color={colors.primaryDark} style={{ marginRight: spacing.xs }} />
-              <Text style={styles.metaText}>{recipe.servings} porciones</Text>
-            </View>
-          )}
-          <View style={styles.metaPill}>
-            <Ionicons name="flame-outline" size={14} color={colors.primaryDark} style={{ marginRight: spacing.xs }} />
-            <Text style={styles.metaText}>Dificultad {recipe.difficulty}</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* ── Sección de Ingredientes Disponibles ── */}
-      <View style={styles.section}>
-        <View style={styles.sectionTitleRow}>
-          <Ionicons name="checkmark-circle" size={20} color={colors.functional.fresh.text} style={{ marginRight: 6 }} />
-          <Text style={styles.sectionTitle}>
-            Ingredientes en tu cocina ({recipe.availableIngredients.length})
-          </Text>
-        </View>
-
-        {recipe.availableIngredients.map((ing) => (
-          <View key={ing.id} style={styles.ingredientRow}>
-            <Ionicons name="checkmark-outline" size={16} color={colors.functional.fresh.text} style={{ marginRight: spacing.sm }} />
-            <Text style={styles.ingName}>{ing.name}</Text>
-            <Text style={styles.ingQty}>
-              {ing.quantity !== null ? `${ing.quantity} ${ing.unit}` : 'Al gusto'}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      {/* ── Sección de Ingredientes Faltantes (con sustituciones) ── */}
-      {recipe.missingIngredients.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionTitleRow}>
-            <Ionicons name="alert-circle-outline" size={20} color={colors.functional.expiringSoon.text} style={{ marginRight: 6 }} />
-            <Text style={styles.sectionTitle}>
-              Ingredientes que te faltan ({recipe.missingIngredients.length})
-            </Text>
-          </View>
-
-          {recipe.missingIngredients.map((ing) => (
-            <View key={ing.id} style={styles.missingRow}>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={styles.missingName}>{ing.name}</Text>
-                  {ing.isOptional && <Text style={styles.optionalTag}> (Opcional)</Text>}
-                </View>
-                {ing.substitutions.length > 0 && (
-                  <Text style={styles.subText}>
-                    Puedes sustituir por: {ing.substitutions.join(', ')}
-                  </Text>
-                )}
-              </View>
-              <Text style={styles.missingQty}>
-                {ing.quantity !== null ? `${ing.quantity} ${ing.unit}` : ''}
-              </Text>
-            </View>
-          ))}
-
-          <Pressable
-            style={styles.addMissingButton}
-            onPress={async () => {
-              const res = await addFromRecipe(recipe.missingIngredients, recipe.title);
-              setDialogConfig({
-                visible: true,
-                title: 'Lista de compras',
-                message: `Se procesaron ${recipe.missingIngredients.length} ingredientes: ${res.addedCount} agregados y ${res.mergedCount} fusionados sin duplicados.`,
-                type: 'success',
-                iconName: 'cart-outline',
-                confirmText: 'Ir a la lista',
-                cancelText: 'Entendido',
-                onConfirm: () => {
-                  setDialogConfig((prev) => ({ ...prev, visible: false }));
-                  router.push('/shopping-list');
-                },
-                onCancel: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
-              });
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Añadir ingredientes faltantes a la lista de compras"
-          >
-            <Ionicons name="cart-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.addMissingButtonText}>Añadir faltantes a Lista de Compras</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {/* ── Sección de Pasos Interactivos (Cooking Checklist) ── */}
-      <View style={styles.section}>
-        <View style={styles.sectionTitleRow}>
-          <Ionicons name="list-outline" size={20} color={colors.textPrimary} style={{ marginRight: 6 }} />
-          <Text style={styles.sectionTitle}>
-            Pasos de preparación {(recipe.steps?.length || 0) > 0 ? `(${completedSteps.length}/${recipe.steps?.length})` : ''}
-          </Text>
-        </View>
-
-        {isLoadingSteps && (
-          <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={{ marginTop: spacing.sm, fontSize: typography.sizes.metadata, color: colors.textSecondary }}>
-              El Chef IA está redactando las instrucciones paso a paso...
-            </Text>
-          </View>
-        )}
-
-        {stepsError && (
-          <View style={{ paddingVertical: spacing.md, paddingHorizontal: 14, backgroundColor: colors.error.background, borderRadius: radii.chips, marginVertical: spacing.sm }}>
-            <Text style={{ fontSize: typography.sizes.metadata, color: colors.error.text, marginBottom: spacing.sm }}>{stepsError}</Text>
-            <Pressable
-              onPress={async () => {
-                if (!recipe) return;
-                setIsLoadingSteps(true);
-                setStepsError(null);
-                try {
-                  const loadedSteps = await getRecipeSteps(recipe);
-                  setRecipe((prev) => (prev ? { ...prev, steps: loadedSteps } : prev));
-                } catch (err: any) {
-                  setStepsError(err?.message || 'Error reintentando cargar los pasos.');
-                } finally {
-                  setIsLoadingSteps(false);
-                }
-              }}
-              style={{
-                alignSelf: 'flex-start',
-                minHeight: spacing.touchTargetMin,
-                paddingHorizontal: spacing.md,
-                backgroundColor: colors.error.text,
-                borderRadius: radii.buttons,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Reintentar cargar pasos de la receta"
-            >
-              <Text style={{ fontSize: typography.sizes.label, fontWeight: '600', color: colors.textInverse }}>Reintentar</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {!isLoadingSteps && !stepsError && (recipe.steps?.length || 0) === 0 && (
-          <Text style={{ fontSize: typography.sizes.metadata, color: colors.textMuted, fontStyle: 'italic', paddingVertical: 10 }}>
-            No hay pasos registrados para esta receta.
-          </Text>
-        )}
-
-        {(recipe.steps || []).map((step, idx) => {
-          const isDone = completedSteps.includes(idx);
-          return (
-            <Pressable
-              key={idx}
-              onPress={() => toggleStep(idx)}
-              style={[styles.stepCard, isDone && styles.stepCardDone]}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: isDone }}
-              accessibilityLabel={`Paso ${idx + 1}: ${step}`}
-            >
-              <View style={[styles.stepNumber, isDone && styles.stepNumberDone]}>
-                {isDone ? (
-                  <Ionicons name="checkmark" size={14} color={colors.surface} />
-                ) : (
-                  <Text style={styles.stepNumberText}>{idx + 1}</Text>
-                )}
-              </View>
-              <Text style={[styles.stepText, isDone && styles.stepTextDone]}>{step}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* ── Acción de Finalizar Preparación ── */}
-      <View style={styles.actionSection}>
-        {!validation.canPrepare && (
-          <View style={styles.noticeCard}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.functional.expiringSoon.text} style={{ marginRight: spacing.sm }} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.noticeTitle}>Ingredientes incompletos</Text>
-              <Text style={styles.noticeText}>
-                No cuentas con todos los ingredientes registrados. Puedes preparar la receta igualmente sin alterar las existencias de tu inventario.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        <PrimaryButton
-          title={validation.canPrepare ? 'Finalizar preparación y descontar' : 'Preparar receta'}
-          onPress={handleFinishCooking}
-          isLoading={isFinishing}
-          iconName="restaurant"
+    <View style={styles.screen}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 170 + insets.bottom }}>
+        <RecipeCover
+          banner={banner}
+          imageUri={recipe.imageUri}
+          isSaved={recipe.isSaved}
+          topInset={insets.top}
+          onBack={() => router.back()}
+          onToggleSave={() => {
+            toggleSave(recipe.id);
+            setRecipe((r) => (r ? { ...r, isSaved: !r.isSaved } : r));
+          }}
         />
-        <View style={{ height: 10 }} />
-        <SecondaryButton
-          title="Volver a recetas"
-          variant="outline"
-          onPress={() => router.back()}
-        />
-      </View>
+
+        <View style={styles.content}>
+          {/* ── Encabezado ── */}
+          <View style={styles.intro}>
+            <AiBadge label={`${recipe.matchScore} % coincide con tu despensa`} />
+            <AppText weight="light" style={styles.title} accessibilityRole="header">
+              {lead ? `${lead} ` : ''}
+              <AppText weight="semibold">{emphasis}</AppText>
+            </AppText>
+            {!!recipe.description && (
+              <AppText variant="body" color={colors.textSecondary} style={styles.description}>
+                {recipe.description}
+              </AppText>
+            )}
+            <View style={styles.stats}>
+              <StatTile iconName="time-outline" value={recipe.prepTimeMinutes ? `${recipe.prepTimeMinutes} min` : '—'} label="preparación" />
+              <StatTile iconName="people-outline" value={recipe.servings ? String(recipe.servings) : '—'} label="porciones" />
+              <StatTile
+                value={DIFFICULTY_LABELS[recipe.difficulty] ?? DIFFICULTY_LABELS.easy}
+                label="dificultad"
+                tone={{ background: diff.background, text: diff.text }}
+                top={<DifficultyMeter level={diff.level} segment={diff.segment} empty={colors.surface} />}
+              />
+            </View>
+          </View>
+
+          {/* ── Ingredientes ── */}
+          <RecipeIngredientsCard
+            available={available}
+            total={total}
+            rows={recipe.availableIngredients.map((i) => ({ id: i.id, name: i.name, quantity: qty(i), badge: expiryFor(i) }))}
+          />
+          {recipe.missingIngredients.length > 0 && (
+            <MissingIngredientsCard
+              rows={recipe.missingIngredients.map((i) => ({
+                id: i.id,
+                name: i.name,
+                quantity: qty(i),
+                optional: i.isOptional,
+                substitutions: i.substitutions,
+              }))}
+              onAddToShopping={handleAddMissing}
+            />
+          )}
+
+          {/* ── Pasos ── */}
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <AppText variant="sectionTitle" accessibilityRole="header">
+                Pasos
+                {steps.length > 0 ? (
+                  <AppText weight="regular" color={colors.textSecondary}>{` · ${completedSteps.length} de ${steps.length}`}</AppText>
+                ) : null}
+              </AppText>
+              <AiBadge label="Generados por IA" size="sm" />
+            </View>
+
+            {isLoadingSteps && (
+              <View style={styles.stepsLoading} accessibilityLiveRegion="polite">
+                <ActivityIndicator color={colors.tertiary} />
+                <AppText variant="bodySmall" color={colors.onTertiaryContainer} style={styles.flex}>
+                  El Chef IA está escribiendo los pasos…
+                </AppText>
+              </View>
+            )}
+
+            {stepsError && !isLoadingSteps && (
+              <ErrorState
+                title="No pudimos generar"
+                titleEmphasis="los pasos"
+                message="Revisa tu conexión. Los ingredientes de la receta siguen disponibles."
+                onRetry={() => loadSteps(recipe)}
+              />
+            )}
+
+            {!isLoadingSteps && !stepsError && steps.length === 0 && (
+              <AppText variant="bodySmall" color={colors.textSecondary}>
+                Esta receta aún no tiene pasos.
+              </AppText>
+            )}
+
+            {steps.map((s, i) => (
+              <StepItem
+                key={i}
+                index={i + 1}
+                text={s}
+                state={completedSteps.includes(i) ? 'done' : i === currentStep ? 'current' : 'pending'}
+                onPress={() => toggleStep(i)}
+              />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+
+      <StickyActionBar note={note} bottomInset={insets.bottom}>
+        <PrimaryButton title="Preparar receta" onPress={handleFinishCooking} isLoading={isFinishing} style={styles.cta} />
+      </StickyActionBar>
 
       <M3Dialog
-        visible={dialogConfig.visible}
-        title={dialogConfig.title}
-        message={dialogConfig.message}
-        type={dialogConfig.type}
-        iconName={dialogConfig.iconName}
-        confirmText={dialogConfig.confirmText}
-        cancelText={dialogConfig.cancelText}
-        onConfirm={dialogConfig.onConfirm}
-        onCancel={dialogConfig.onCancel}
+        visible={dialog.visible}
+        title={dialog.title}
+        titleEmphasis={dialog.titleEmphasis}
+        message={dialog.message}
+        type={dialog.type}
+        iconName={dialog.iconName}
+        confirmText={dialog.confirmText}
+        cancelText={dialog.cancelText}
+        onConfirm={dialog.onConfirm}
+        onCancel={dialog.onCancel}
       />
-    </AppScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.background },
-  centerContainer: {
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  loading: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    gap: spacing.sm,
+    backgroundColor: colors.background,
   },
-  loadingText: {
-    fontSize: typography.sizes.body,
-    color: colors.textSecondary,
+  content: {
+    marginTop: -32,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    backgroundColor: colors.background,
+    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.screenGutter,
+    gap: spacing.xxl,
   },
-  heroCard: {
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.lg,
-    marginTop: 14,
-    padding: spacing.xl,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  matchBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 5,
-    borderRadius: radii.circular,
-    alignSelf: 'flex-start',
-    marginBottom: 10,
-  },
-  matchText: {
-    color: colors.textInverse,
-    fontSize: typography.sizes.label,
-    fontWeight: '700',
+  intro: {
+    gap: 10,
   },
   title: {
-    fontSize: typography.sizes.headline,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    fontSize: 30,
+    lineHeight: 36,
   },
   description: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textSecondary,
+    fontSize: 15,
     lineHeight: 22,
-    marginBottom: spacing.lg,
   },
-  metaRow: {
+  stats: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    flexWrap: 'wrap',
-  },
-  metaPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceVariant,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 5,
-    borderRadius: radii.circular,
-  },
-  metaText: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '600',
-    color: colors.primaryDark,
+    gap: 8,
+    marginTop: 4,
   },
   section: {
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.lg,
-    marginTop: 14,
-    padding: 18,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
+    gap: 12,
   },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: typography.sizes.body,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  ingredientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceVariant,
-  },
-  ingName: {
-    fontSize: typography.sizes.body,
-    fontWeight: '500',
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  ingQty: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  missingRow: {
+  sectionHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceVariant,
-  },
-  missingName: {
-    fontSize: typography.sizes.body,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  optionalTag: {
-    fontSize: typography.sizes.label,
-    color: colors.textMuted,
-  },
-  subText: {
-    fontSize: typography.sizes.label,
-    color: colors.primaryDark,
-    marginTop: 2,
-  },
-  missingQty: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
-  stepCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: spacing.md,
-    borderRadius: radii.buttons,
-    backgroundColor: colors.background,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  stepCardDone: {
-    backgroundColor: colors.functional.fresh.background,
-    borderColor: colors.functional.fresh.border,
-  },
-  stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.border,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-    marginTop: 2,
+    gap: spacing.sm,
   },
-  stepNumberDone: {
-    backgroundColor: colors.functional.fresh.text,
+  stepsLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: colors.tertiaryContainer,
   },
-  stepNumberText: {
-    fontSize: typography.sizes.label,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  stepText: {
-    fontSize: typography.sizes.bodySmall,
-    color: colors.textPrimary,
-    lineHeight: 20,
+  flex: {
     flex: 1,
   },
-  stepTextDone: {
-    color: colors.functional.fresh.text,
-    textDecorationLine: 'line-through',
-  },
-  actionSection: {
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xl,
-    paddingBottom: spacing.section,
-  },
-  noticeCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.functional.expiringSoon.background,
-    borderWidth: 1,
-    borderColor: colors.functional.expiringSoon.border,
-    borderRadius: radii.cards,
-    padding: 14,
-    marginBottom: 14,
-  },
-  noticeTitle: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '700',
-    color: colors.functional.expiringSoon.text,
-    marginBottom: 2,
-  },
-  noticeText: {
-    fontSize: typography.sizes.label,
-    color: colors.functional.expiringSoon.text,
-    lineHeight: 18,
-  },
-  addMissingButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryContainer,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.md,
-  },
-  addMissingButtonText: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: '700',
-    color: colors.primary,
+  cta: {
+    minHeight: 56,
   },
 });

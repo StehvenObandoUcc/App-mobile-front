@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AsyncStatus, Recipe, DietaryPreference } from '../types';
-import { RecipeService, mockRecipeService } from '../services/recipe-service';
+import { RecipeService, mockRecipeService, PrepareRecipeResult } from '../services/recipe-service';
 import { LocalStorage } from '../storage/local-storage';
 
 let memoryRecipes: Recipe[] | null = null;
@@ -51,10 +51,9 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
     }
   };
 
-  const prepareRecipe = async (id: string): Promise<string[]> => {
+  const prepareRecipe = async (id: string): Promise<PrepareRecipeResult> => {
     try {
-      const consumedNames = await service.prepareRecipe(id);
-      return consumedNames;
+      return await service.prepareRecipe(id);
     } catch (err: any) {
       setError(err?.message || 'Error al procesar la preparación');
       throw err;
