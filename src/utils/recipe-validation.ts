@@ -74,22 +74,6 @@ export function getValidTimeOptionsForFocus(focus: string, difficulty?: string):
 }
 
 /**
- * Reglas de coherencia entre tiempo de preparación y dificultad para el Chef IA
- */
-export function getValidTimesForDifficulty(difficulty: RecipeDifficulty): number[] {
-  switch (difficulty) {
-    case 'easy':
-      return [15, 20, 30];
-    case 'medium':
-      return [20, 30, 45];
-    case 'hard':
-      return [30, 45, 60];
-    default:
-      return [15, 20, 30, 45, 60];
-  }
-}
-
-/**
  * Clasificación y validación de coherencia gastronómica cuando se seleccionan ingredientes para el Chef IA.
  * Permite y valida casos de 1 solo ingrediente asegurando que sea coherente ("pero no está mal aún").
  */

@@ -31,7 +31,6 @@ export * from './AvatarButton';
 export * from './QuantityStepper';
 export * from './CategoryPicker';
 export * from './DateField';
-export * from './ExtendedFab';
 export * from './IngredientFormSheet';
 export * from './CalendarMonth';
 export * from './DialogTitle';

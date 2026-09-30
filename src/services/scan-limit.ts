@@ -33,21 +33,3 @@ export async function incrementTestPhotoCount(): Promise<number> {
   }
 }
 
-/**
- * Verifica si el usuario aún dispone de cupo para escanear fotos en la fase de pruebas.
- */
-export async function canScanPhoto(): Promise<boolean> {
-  const current = await getTestPhotoCount();
-  return current < MAX_TEST_PHOTOS;
-}
-
-/**
- * Reinicia el contador de fotos de prueba (útil para administradores o pruebas locales).
- */
-export async function resetTestPhotoCount(): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(STORAGE_KEY);
-  } catch (err) {
-    console.warn('[ScanLimit] Error al reiniciar conteo de fotos de prueba:', err);
-  }
-}

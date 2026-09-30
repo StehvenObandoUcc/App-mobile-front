@@ -10,12 +10,18 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://mobilebackend-3cde5d17a5a8.herokuapp.com"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://mobilebackend-3cde5d17a5a8.herokuapp.com"
+      },
       "android": {
         "buildType": "apk"
       }

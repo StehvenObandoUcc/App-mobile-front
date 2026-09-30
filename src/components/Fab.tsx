@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, elevations } from '../theme';
 
 /**
- * Fab — botón flotante solo con icono (squircle 56, radio 20), hermano de ExtendedFab.
+ * Fab — botón flotante solo con icono (squircle 56, radio 20).
  * tone 'ink' (cacao) | 'ai' (frambuesa). `iconRotation` permite girar el icono (+ → ×) con Animated.
  */
 export type FabProps = {

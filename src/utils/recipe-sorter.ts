@@ -49,38 +49,3 @@ export function sortRecipes(recipes: Recipe[], sortOption: RecipeSortOption = 'c
     }
   });
 }
-
-/**
- * Filtra la lista de recetas por búsqueda, dificultad y tiempo máximo.
- */
-export function filterRecipes(recipes: Recipe[], filters: RecipeFilterOptions): Recipe[] {
-  return recipes.filter((recipe) => {
-    // Filtro por texto de búsqueda
-    if (filters.searchQuery && filters.searchQuery.trim() !== '') {
-      const q = filters.searchQuery.toLowerCase().trim();
-      const titleMatch = recipe.title.toLowerCase().includes(q);
-      const descMatch = recipe.description.toLowerCase().includes(q);
-      const ingMatch = recipe.availableIngredients.some((i) => i.name.toLowerCase().includes(q));
-      if (!titleMatch && !descMatch && !ingMatch) return false;
-    }
-
-    // Filtro por dificultad
-    if (filters.difficulty && filters.difficulty !== 'all') {
-      if (recipe.difficulty !== filters.difficulty) return false;
-    }
-
-    // Filtro por tiempo máximo
-    if (filters.maxPrepTime && filters.maxPrepTime > 0) {
-      if ((recipe.prepTimeMinutes ?? 0) > filters.maxPrepTime) return false;
-    }
-
-    // Filtro por solo coincidencia total (sin faltantes)
-    if (filters.onlyFullMatch) {
-      if ((recipe.missingIngredients || []).filter((i) => !i.isOptional).length > 0) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-}

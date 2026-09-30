@@ -13,7 +13,6 @@
     "android": {
       "package": "com.foodai.app",
       "versionCode": 1,
-      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#4A2A21",
         "foregroundImage": "./assets/android-icon-foreground.png",
