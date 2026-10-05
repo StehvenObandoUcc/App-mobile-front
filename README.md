@@ -63,10 +63,10 @@ Está dirigida a usuarios finales que quieren organizar su despensa, su lista de
 
 ```mermaid
 flowchart TD
-    UI[Pantallas app/ - Expo Router] --> Hooks[Hooks: useAuth, useInventory, useRecipes, useScan, useShoppingList]
-    Hooks --> Services[Servicios: api-client, auth-service, scan-service, recipe-service]
-    Hooks --> Storage[(AsyncStorage + SecureStore)]
-    Services -->|REST + JWT| API[Backend FastAPI]
+    UI["Pantallas (app/ - Expo Router)"] --> Hooks["Hooks de dominio<br/>useAuth, useInventory, useRecipes,<br/>useScan, useShoppingList"]
+    Hooks --> Services["Servicios<br/>api-client, auth-service,<br/>scan-service, recipe-service"]
+    Hooks --> Storage[("AsyncStorage y SecureStore")]
+    Services -->|"REST + JWT"| API["Backend FastAPI"]
 ```
 
 - **`app/`**: pantallas y rutas (file-based routing).
