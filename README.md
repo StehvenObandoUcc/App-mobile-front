@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/icon.png" alt="Ícono de Food AI" width="120" />
+<img src="assets/logo-mark.png" alt="Logo de Food AI" width="120" />
 
 # Food AI — App móvil
 
@@ -150,7 +150,7 @@ Los perfiles `preview` y `production` generan un APK (`eas.json`).
 │   ├── recipes.tsx        # Recetas
 │   ├── recipe-detail.tsx  # Detalle de receta
 │   └── shopping-list.tsx  # Lista de compras
-├── assets/                # Íconos y splash
+├── assets/                # Íconos, splash y logo
 ├── src/
 │   ├── components/        # Componentes reutilizables de UI
 │   ├── hooks/             # Hooks de dominio
