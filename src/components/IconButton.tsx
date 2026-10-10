@@ -2,7 +2,9 @@ import React from 'react';
 import { StyleSheet, Pressable, View, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CountBadge } from './CountBadge';
-import { colors, spacing, radii } from '../theme';
+import { spacing, radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
 
 /**
  * IconButton (NUEVO) — Componentes.dc.html
@@ -26,7 +28,7 @@ export type IconButtonProps = {
   accessibilityHint?: string;
 };
 
-const VARIANTS: Record<IconButtonVariant, { bg: string; pressed: string; fg: string; border?: string }> = {
+const variantsFor = (colors: ThemeColors): Record<IconButtonVariant, { bg: string; pressed: string; fg: string; border?: string }> => ({
   surface: { bg: colors.surface, pressed: colors.m3.surfaceContainerLow, fg: colors.textPrimary, border: colors.border },
   // Blanco sin filete: botón «volver» de las pantallas (mockups: círculo blanco de 48 sin borde).
   white: { bg: colors.surface, pressed: colors.m3.surfaceContainerLow, fg: colors.textPrimary },
@@ -34,7 +36,7 @@ const VARIANTS: Record<IconButtonVariant, { bg: string; pressed: string; fg: str
   tonal: { bg: colors.primaryContainer, pressed: colors.m3.inversePrimary, fg: colors.onPrimaryContainer },
   neutral: { bg: colors.m3.surfaceContainer, pressed: colors.m3.surfaceContainerHigh, fg: colors.textPrimary },
   ghost: { bg: 'transparent', pressed: colors.m3.surfaceContainer, fg: colors.textPrimary },
-};
+});
 
 export function IconButton({
   iconName,
@@ -48,7 +50,9 @@ export function IconButton({
   style,
   accessibilityHint,
 }: IconButtonProps) {
-  const v = VARIANTS[variant];
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const v = variantsFor(colors)[variant];
   return (
     <Pressable
       onPress={onPress}
@@ -76,7 +80,7 @@ export function IconButton({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   button: {
     width: spacing.touchTargetMin,
     height: spacing.touchTargetMin,
@@ -92,4 +96,4 @@ const styles = StyleSheet.create({
     top: 2,
     right: 0,
   },
-});
+}));

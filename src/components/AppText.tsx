@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import { Text, TextProps, StyleProp, TextStyle } from 'react-native';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { fontFamilyFor } from '../utils/brand-font';
 
 /**
@@ -48,6 +49,13 @@ const VARIANTS: Record<TextVariant, VariantSpec> = {
   micro: { size: typography.sizes.micro, lineHeight: typography.lineHeights.micro, weight: 'bold' },
 };
 
+/**
+ * true dentro de un texto: los textos anidados heredan el color del padre (énfasis en un título).
+ * Un texto de primer nivel sin color recibe `textPrimary` del tema, nunca el negro por defecto
+ * de Android (que en modo oscuro quedaría invisible).
+ */
+export const InsideText = createContext(false);
+
 /** Estilo de fuente para un peso: familia Outfit si cargó; si no, fontWeight del sistema. */
 export function fontStyle(weight: TextWeight): TextStyle {
   const family = fontFamilyFor(weight);
@@ -75,6 +83,8 @@ export function AppText({
   children,
   ...rest
 }: AppTextProps) {
+  const { colors } = useTheme();
+  const nested = useContext(InsideText);
   const spec = variant ? VARIANTS[variant] : undefined;
   const resolvedWeight = weight ?? spec?.weight;
 
@@ -86,6 +96,7 @@ export function AppText({
     if (spec.letterSpacing) base.letterSpacing = spec.letterSpacing;
     base.color = colors.textPrimary;
   }
+  if (!spec && !color && !nested) base.color = colors.textPrimary;
   if (color) base.color = color;
   if (align) base.textAlign = align;
   if (uppercase) base.textTransform = 'uppercase';
@@ -95,7 +106,7 @@ export function AppText({
       {...rest}
       style={[base, resolvedWeight ? fontStyle(resolvedWeight) : null, style]}
     >
-      {children}
+      <InsideText.Provider value={true}>{children}</InsideText.Provider>
     </Text>
   );
 }

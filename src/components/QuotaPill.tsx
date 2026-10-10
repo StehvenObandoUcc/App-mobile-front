@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
 
 /**
  * QuotaPill — píldora de cuota de fotos de prueba (Escaneo / Escaneo-Estados).
@@ -16,22 +18,24 @@ export type QuotaPillProps = {
   accessibilityLabel?: string;
 };
 
-const TONES = {
-  camera: { bg: colors.ink, fg: colors.onInk, on: colors.accent, off: colors.quotaDotIdle, height: 40, weight: 'medium' as const, size: 14 },
+const tonesFor = (colors: ThemeColors) => ({
+  camera: { bg: colors.bar, fg: colors.onInk, on: colors.accent, off: colors.quotaDotIdle, height: 40, weight: 'medium' as const, size: 14 },
   light: { bg: colors.m3.surfaceContainerLow, fg: colors.textPrimary, on: colors.accent, off: colors.m3.outlineVariant, height: 36, weight: 'semibold' as const, size: 13 },
   warning: {
     bg: colors.functional.expiringSoon.background,
     fg: colors.functional.expiringSoon.text,
-    on: colors.difficulty.medium.segment,
-    off: colors.difficulty.medium.segment,
+    on: colors.warning,
+    off: colors.warning,
     height: 36,
     weight: 'semibold' as const,
     size: 13,
   },
-};
+});
 
 export function QuotaPill({ label, used, max, tone = 'camera', accessibilityLabel }: QuotaPillProps) {
-  const t = TONES[tone];
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const t = tonesFor(colors)[tone];
   const showDots = used !== undefined && max !== undefined;
   return (
     <View
@@ -53,7 +57,7 @@ export function QuotaPill({ label, used, max, tone = 'camera', accessibilityLabe
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   pill: {
     alignSelf: 'center',
     flexDirection: 'row',
@@ -71,4 +75,4 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-});
+}));

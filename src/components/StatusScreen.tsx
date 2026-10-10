@@ -6,7 +6,8 @@ import { AppText } from './AppText';
 import { HeroArt, HeroArtProps } from './HeroArt';
 import { PrimaryButton } from './PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * StatusScreen — estado a pantalla completa (Escaneo-Estados · B «Límite» y C «Error»; mismo estilo que el Chef IA).
@@ -31,6 +32,8 @@ export type StatusScreenProps = {
 };
 
 export function StatusScreen({ art, title, emphasis, message, primary, secondary, topSlot, role = 'none' }: StatusScreenProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   return (
     <View
@@ -56,7 +59,7 @@ export function StatusScreen({ art, title, emphasis, message, primary, secondary
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -84,4 +87,4 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 4,
   },
-});
+}));

@@ -2,7 +2,9 @@ import React, { useMemo, useRef } from 'react';
 import { View, StyleSheet, Pressable, PanResponder } from 'react-native';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
-import { colors, radii, spacing } from '../theme';
+import { radii, spacing } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 import { buildMonthGrid, formatMonthYear, formatLongDate, todayISO } from '../utils/dates';
 
 /**
@@ -20,9 +22,15 @@ export type CalendarMonthProps = {
   onNextMonth: () => void;
 };
 
-const WEEKDAYS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+const WEEKDAYS: Record<'es' | 'en', string[]> = {
+  es: ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'],
+  en: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
+};
 
 export function CalendarMonth({ year, month, selected, onSelect, onPrevMonth, onNextMonth }: CalendarMonthProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t, lang } = useI18n();
   const cells = useMemo(() => buildMonthGrid(year, month), [year, month]);
   const today = todayISO(); // calculado en cada render: correcto aunque pase la medianoche
 
@@ -51,15 +59,15 @@ export function CalendarMonth({ year, month, selected, onSelect, onPrevMonth, on
   return (
     <View {...pan.panHandlers}>
       <View style={styles.nav}>
-        <IconButton iconName="chevron-back" variant="neutral" accessibilityLabel="Mes anterior" onPress={onPrevMonth} style={styles.navBtn} />
+        <IconButton iconName="chevron-back" variant="neutral" accessibilityLabel={t('molecules.calendarMonth.prevMonthA11y')} onPress={onPrevMonth} style={styles.navBtn} />
         <AppText variant="body" weight="semibold" accessibilityRole="header">
           {formatMonthYear(year, month)}
         </AppText>
-        <IconButton iconName="chevron-forward" variant="neutral" accessibilityLabel="Mes siguiente" onPress={onNextMonth} style={styles.navBtn} />
+        <IconButton iconName="chevron-forward" variant="neutral" accessibilityLabel={t('molecules.calendarMonth.nextMonthA11y')} onPress={onNextMonth} style={styles.navBtn} />
       </View>
 
       <View style={styles.row}>
-        {WEEKDAYS.map((d) => (
+        {WEEKDAYS[lang].map((d) => (
           <View key={d} style={styles.cell}>
             <AppText variant="caption" weight="semibold" color={colors.textSecondary}>
               {d}
@@ -80,7 +88,7 @@ export function CalendarMonth({ year, month, selected, onSelect, onPrevMonth, on
               style={styles.cell}
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={`${formatLongDate(c.iso)}${isToday ? ', hoy' : ''}`}
+              accessibilityLabel={`${formatLongDate(c.iso)}${isToday ? t('molecules.calendarMonth.todayA11y') : ''}`}
             >
               <View style={[styles.day, isToday && !isSelected && styles.dayToday, isSelected && styles.daySelected]}>
                 <AppText
@@ -101,7 +109,7 @@ export function CalendarMonth({ year, month, selected, onSelect, onPrevMonth, on
 
 const CELL = 100 / 7;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   nav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -139,4 +147,4 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.ink,
   },
-});
+}));

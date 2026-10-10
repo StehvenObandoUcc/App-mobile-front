@@ -7,7 +7,9 @@ import { TextInput } from './Text';
 import { DialogTitle } from './DialogTitle';
 import { PrimaryButton } from './PrimaryButton';
 import { IconButton } from './IconButton';
-import { colors, radii, spacing, typography, elevations } from '../theme';
+import { radii, spacing, typography, elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * AvoidIngredientsSheet — «Ingredientes a evitar» (Configuración). Escribe y agrega; cada uno es una píldora
@@ -21,6 +23,9 @@ export type AvoidIngredientsSheetProps = {
 };
 
 export function AvoidIngredientsSheet({ visible, value, onSave, onClose }: AvoidIngredientsSheetProps) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<string[]>(value);
   const [text, setText] = useState('');
@@ -36,7 +41,7 @@ export function AvoidIngredientsSheet({ visible, value, onSave, onClose }: Avoid
   }, [visible]);
 
   const add = () => {
-    const parts = text.split(',').map((t) => t.trim()).filter(Boolean);
+    const parts = text.split(',').map((s) => s.trim()).filter(Boolean);
     if (parts.length === 0) return;
     setItems((prev) => {
       const lower = new Set(prev.map((p) => p.toLowerCase()));
@@ -48,33 +53,33 @@ export function AvoidIngredientsSheet({ visible, value, onSave, onClose }: Avoid
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Cerrar" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={t('common.close')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]} accessibilityViewIsModal>
           <View style={styles.handle} />
-          <DialogTitle title="Ingredientes a" emphasis="evitar" size={24} lineHeight={30} />
+          <DialogTitle title={t('sheets.avoidIngredients.title')} emphasis={t('sheets.avoidIngredients.titleEmphasis')} size={24} lineHeight={30} />
           <AppText variant="bodySmall" color={colors.textSecondary}>
-            Alergias o cosas que no comes. El Chef IA nunca los usará.
+            {t('sheets.avoidIngredients.description')}
           </AppText>
           <View style={styles.inputRow}>
             <TextInput
               value={text}
               onChangeText={setText}
               onSubmitEditing={add}
-              placeholder="Ej. maní, cilantro"
+              placeholder={t('sheets.avoidIngredients.placeholder')}
               placeholderTextColor={colors.textMuted}
               maxLength={80}
               returnKeyType="done"
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               style={[styles.input, focused && styles.inputFocused]}
-              accessibilityLabel="Ingrediente a evitar"
+              accessibilityLabel={t('sheets.avoidIngredients.inputA11y')}
             />
-            <IconButton iconName="add" variant="ink" accessibilityLabel="Agregar ingrediente a evitar" onPress={add} />
+            <IconButton iconName="add" variant="ink" accessibilityLabel={t('sheets.avoidIngredients.addA11y')} onPress={add} />
           </View>
           <View style={styles.chips}>
             {items.length === 0 ? (
               <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
-                Ninguno por ahora.
+                {t('sheets.avoidIngredients.none')}
               </AppText>
             ) : (
               items.map((it) => (
@@ -83,7 +88,7 @@ export function AvoidIngredientsSheet({ visible, value, onSave, onClose }: Avoid
                   onPress={() => setItems((prev) => prev.filter((p) => p !== it))}
                   style={styles.chip}
                   accessibilityRole="button"
-                  accessibilityLabel={`Quitar ${it}`}
+                  accessibilityLabel={t('sheets.avoidIngredients.removeA11y', { name: it })}
                 >
                   <AppText variant="bodySmall" weight="semibold" color={colors.functional.expired.text}>
                     {it}
@@ -94,10 +99,10 @@ export function AvoidIngredientsSheet({ visible, value, onSave, onClose }: Avoid
             )}
           </View>
           <PrimaryButton
-            title="Guardar"
+            title={t('common.save')}
             iconName="checkmark"
             onPress={() => {
-              const pending = text.split(',').map((t) => t.trim()).filter(Boolean);
+              const pending = text.split(',').map((s) => s.trim()).filter(Boolean);
               onSave([...items, ...pending.filter((p) => !items.some((i) => i.toLowerCase() === p.toLowerCase()))].slice(0, 20));
               onClose();
             }}
@@ -108,7 +113,7 @@ export function AvoidIngredientsSheet({ visible, value, onSave, onClose }: Avoid
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -167,4 +172,4 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: colors.functional.expired.background,
   },
-});
+}));

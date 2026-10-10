@@ -2,7 +2,9 @@ import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TextInput } from './Text';
-import { colors, radii, spacing, typography } from '../theme';
+import { radii, spacing, typography } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * QuantityStepper — Despensa-Formulario.dc.html
@@ -17,6 +19,9 @@ export type QuantityStepperProps = {
 };
 
 export function QuantityStepper({ value, onChange, min = 1, step = 1, maxLength = 8 }: QuantityStepperProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
   const current = parseFloat(value);
   const dec = () => {
     const base = Number.isNaN(current) ? min : current;
@@ -28,12 +33,12 @@ export function QuantityStepper({ value, onChange, min = 1, step = 1, maxLength 
   };
 
   return (
-    <View style={styles.group} accessibilityRole="adjustable" accessibilityLabel={`Cantidad ${value || 'vacía'}`}>
+    <View style={styles.group} accessibilityRole="adjustable" accessibilityLabel={t('molecules.quantityStepper.valueA11y', { value: value || t('molecules.quantityStepper.empty') })}>
       <Pressable
         onPress={dec}
         style={({ pressed }) => [styles.btn, styles.btnMinus, pressed && styles.pressed]}
         accessibilityRole="button"
-        accessibilityLabel="Reducir cantidad"
+        accessibilityLabel={t('molecules.quantityStepper.decreaseA11y')}
       >
         <Ionicons name="remove" size={22} color={colors.textPrimary} />
       </Pressable>
@@ -45,14 +50,14 @@ export function QuantityStepper({ value, onChange, min = 1, step = 1, maxLength 
         placeholder="1"
         placeholderTextColor={colors.textMuted}
         style={styles.input}
-        accessibilityLabel="Cantidad"
+        accessibilityLabel={t('molecules.quantityStepper.inputA11y')}
         selectTextOnFocus
       />
       <Pressable
         onPress={inc}
         style={({ pressed }) => [styles.btn, styles.btnPlus, pressed && styles.pressed]}
         accessibilityRole="button"
-        accessibilityLabel="Aumentar cantidad"
+        accessibilityLabel={t('molecules.quantityStepper.increaseA11y')}
       >
         <Ionicons name="add" size={22} color={colors.onInk} />
       </Pressable>
@@ -60,7 +65,7 @@ export function QuantityStepper({ value, onChange, min = 1, step = 1, maxLength 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   group: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
@@ -95,4 +100,4 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     color: colors.textPrimary,
   },
-});
+}));

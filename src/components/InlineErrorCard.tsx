@@ -2,7 +2,9 @@ import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * InlineErrorCard — error dentro de una sección (Recetas-Estados · D «No pudimos generar los pasos»).
@@ -15,7 +17,10 @@ export type InlineErrorCardProps = {
   retryLabel?: string;
 };
 
-export function InlineErrorCard({ title, message, onRetry, retryLabel = 'Reintentar' }: InlineErrorCardProps) {
+export function InlineErrorCard({ title, message, onRetry, retryLabel }: InlineErrorCardProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
   return (
     <View style={styles.card} accessibilityRole="alert">
       <View style={styles.head}>
@@ -36,16 +41,16 @@ export function InlineErrorCard({ title, message, onRetry, retryLabel = 'Reinten
         style={({ pressed }) => [styles.retry, pressed && styles.pressed]}
         accessibilityRole="button"
       >
-        <Ionicons name="refresh" size={18} color={colors.textInverse} />
-        <AppText weight="semibold" color={colors.textInverse} style={styles.retryText}>
-          {retryLabel}
+        <Ionicons name="refresh" size={18} color={colors.m3.errorContainer} />
+        <AppText weight="semibold" color={colors.m3.errorContainer} style={styles.retryText}>
+          {retryLabel ?? t('molecules.inlineErrorCard.retry')}
         </AppText>
       </Pressable>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   card: {
     borderRadius: radii.alerts,
     backgroundColor: colors.m3.errorContainer,
@@ -92,4 +97,4 @@ const styles = StyleSheet.create({
   retryText: {
     fontSize: 15,
   },
-});
+}));

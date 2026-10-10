@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { t } from '../i18n';
 import { AsyncStatus, ScanInput, ScanResult } from '../types';
 import { ScanService, mockScanService } from '../services/scan-service';
 
@@ -17,7 +18,7 @@ export function useScan(service: ScanService = mockScanService) {
         setStatus('success');
         return result;
       } catch (err: any) {
-        const msg = err?.message || 'No se pudo analizar la fotografía.';
+        const msg = err?.message || t('data.scan.analyzeError');
         setError(msg);
         setStatus('error');
         throw new Error(msg);

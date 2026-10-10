@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Image, ImageSourcePropType } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PhotoTag, PhotoTagSpec } from './PhotoTag';
-import { colors } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * OnboardingSlide — foto real de la bienvenida con etiquetas de alimentos (Bienvenida-Fotos.dc.html).
@@ -19,6 +19,8 @@ export type OnboardingSlideProps = {
 };
 
 export function OnboardingSlide({ photo, tags, width, height, accessibilityLabel, focusX = 0.5 }: OnboardingSlideProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const scale = width / 390;
   // «cover» con punto de enfoque horizontal (object-position del mockup): se calcula el tamaño a mano.
   const src = Image.resolveAssetSource(photo);
@@ -32,7 +34,7 @@ export function OnboardingSlide({ photo, tags, width, height, accessibilityLabel
         style={{ position: 'absolute', width: imgW, height: imgH, left: -(imgW - width) * focusX, top: -(imgH - height) / 2 }}
       />
       <LinearGradient
-        colors={['rgba(248,244,239,0)', colors.background]}
+        colors={[`${colors.background}00`, colors.background]}
         style={[styles.fade, { height: 120 * scale }]}
         pointerEvents="none"
       />
@@ -45,11 +47,11 @@ export function OnboardingSlide({ photo, tags, width, height, accessibilityLabel
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   fade: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
   },
-});
+}));

@@ -7,6 +7,14 @@
  * «Hoy» se calcula en el momento de usarlo (no se guarda al montar), para que cambie a medianoche.
  */
 
+const lang = (): 'es' | 'en' => ((globalThis as { __appLanguage?: 'es' | 'en' }).__appLanguage ?? 'es');
+const isEn = () => lang() === 'en';
+
+const EN_WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const EN_MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const EN_WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const EN_MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
 /** 'YYYY-MM-DD' de una fecha en hora local. */
 export function toLocalISODate(date: Date): string {
   const y = date.getFullYear();
@@ -55,6 +63,7 @@ const MONTHS_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'jul
 export function formatShortDate(value: string | null | undefined): string {
   const d = parseLocalDate(value);
   if (!d) return '';
+  if (isEn()) return `${EN_WEEKDAYS_SHORT[d.getDay()]}, ${EN_MONTHS_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   return `${WEEKDAYS_SHORT[d.getDay()]}, ${d.getDate()} de ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
 }
 
@@ -62,6 +71,7 @@ export function formatShortDate(value: string | null | undefined): string {
 export function formatLongDate(value: string | null | undefined): string {
   const d = parseLocalDate(value);
   if (!d) return '';
+  if (isEn()) return `${EN_WEEKDAYS_LONG[d.getDay()]}, ${EN_MONTHS_LONG[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   return `${WEEKDAYS_LONG[d.getDay()]} ${d.getDate()} de ${MONTHS_LONG[d.getMonth()]} de ${d.getFullYear()}`;
 }
 
@@ -69,6 +79,12 @@ export function formatLongDate(value: string | null | undefined): string {
 export function relativeDayLabel(value: string | null | undefined, now: Date = new Date()): string {
   const n = daysUntil(value, now);
   if (n === null) return '';
+  if (isEn()) {
+    if (n === 0) return 'today';
+    if (n === 1) return 'tomorrow';
+    if (n === -1) return 'yesterday';
+    return n > 0 ? `in ${n} days` : `${-n} days ago`;
+  }
   if (n === 0) return 'hoy';
   if (n === 1) return 'mañana';
   if (n === -1) return 'ayer';
@@ -79,12 +95,13 @@ export function relativeDayLabel(value: string | null | undefined, now: Date = n
 export function formatPickerHeader(value: string | null | undefined): { weekday: string; dayMonth: string } | null {
   const d = parseLocalDate(value);
   if (!d) return null;
+  if (isEn()) return { weekday: EN_WEEKDAYS_LONG[d.getDay()], dayMonth: `${EN_MONTHS_SHORT[d.getMonth()]} ${d.getDate()}` };
   return { weekday: WEEKDAYS_LONG[d.getDay()], dayMonth: `${d.getDate()} de ${MONTHS_SHORT[d.getMonth()]}` };
 }
 
 /** «octubre 2026» */
 export function formatMonthYear(year: number, monthIndex: number): string {
-  return `${MONTHS_LONG[monthIndex]} ${year}`;
+  return `${isEn() ? EN_MONTHS_LONG[monthIndex] : MONTHS_LONG[monthIndex]} ${year}`;
 }
 
 /**

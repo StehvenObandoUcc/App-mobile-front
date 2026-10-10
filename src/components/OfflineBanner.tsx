@@ -8,7 +8,11 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radii } from '../theme';
+import { typography, spacing, radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n, type t as TFn, type tp as TpFn } from '../i18n';
+import { useReduceMotion } from '../hooks/useReduceMotion';
+import type { ThemeColors } from '../theme/colors';
 import type { OutboxBannerState } from '../types';
 
 import { AppText } from './AppText';
@@ -20,37 +24,32 @@ export type OfflineBannerProps = {
   onRetry?: () => void;
 };
 
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
-
-function resolveCopy(state: OutboxBannerState, pending: number, stuck: number) {
+function resolveCopy(state: OutboxBannerState, pending: number, stuck: number, t: typeof TFn, tp: typeof TpFn) {
   switch (state) {
     case 'offline':
       return {
-        title: 'Sin conexión',
-        body:
-          pending > 0
-            ? `${pending} ${plural(pending, 'cambio se sincronizará', 'cambios se sincronizarán')} al volver`
-            : 'Lo que tienes guardado sigue disponible',
+        title: t('molecules.offlineBanner.offlineTitle'),
+        body: pending > 0 ? tp('molecules.offlineBanner.offlineBody', pending) : t('molecules.offlineBanner.offlineSaved'),
       };
     case 'authBlocked':
       return {
-        title: 'Tu sesión expiró',
-        body: `Inicia sesión para sincronizar ${pending} ${plural(pending, 'cambio', 'cambios')}`,
+        title: t('molecules.offlineBanner.authTitle'),
+        body: tp('molecules.offlineBanner.authBody', pending),
       };
     case 'attention':
       return {
-        title: 'Revisa tus cambios',
-        body: `${stuck} ${plural(stuck, 'cambio no se pudo', 'cambios no se pudieron')} sincronizar`,
+        title: t('molecules.offlineBanner.attentionTitle'),
+        body: tp('molecules.offlineBanner.attentionBody', stuck),
       };
     case 'synced':
-      return { title: 'Todo sincronizado', body: '' };
+      return { title: t('molecules.offlineBanner.syncedTitle'), body: '' };
     default:
       return { title: '', body: '' };
   }
 }
 
 /** Cada estado usa un contenedor pastel de la paleta + su texto «on-container». */
-function resolveTone(state: OutboxBannerState) {
+function resolveTone(colors: ThemeColors, state: OutboxBannerState) {
   switch (state) {
     case 'synced':
       return { bg: colors.functional.fresh.background, fg: colors.functional.fresh.text, icon: 'checkmark-circle-outline' as const };
@@ -77,17 +76,25 @@ export function OfflineBanner({
   isRetrying = false,
   onRetry,
 }: OfflineBannerProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t, tp } = useI18n();
+  const reduceMotion = useReduceMotion();
   const fade = useRef(new Animated.Value(state === 'hidden' ? 0 : 1)).current;
   const visible = state !== 'hidden';
-  const { title, body } = resolveCopy(state, pendingCount, stuckCount);
-  const tone = resolveTone(state);
+  const { title, body } = resolveCopy(state, pendingCount, stuckCount, t, tp);
+  const tone = resolveTone(colors, state);
 
   useEffect(() => {
-    Animated.timing(fade, {
-      toValue: visible ? 1 : 0,
-      duration: 220,
-      useNativeDriver: true,
-    }).start();
+    if (reduceMotion) {
+      fade.setValue(visible ? 1 : 0);
+    } else {
+      Animated.timing(fade, {
+        toValue: visible ? 1 : 0,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
+    }
     if (visible) {
       // iOS no tiene live regions: anunciamos el cambio para VoiceOver.
       AccessibilityInfo.announceForAccessibility(body ? `${title}. ${body}` : title);
@@ -123,7 +130,7 @@ export function OfflineBanner({
           onPress={onRetry}
           disabled={isRetrying}
           accessibilityRole="button"
-          accessibilityLabel="Reintentar sincronización"
+          accessibilityLabel={t('molecules.offlineBanner.retryA11y')}
           accessibilityState={{ disabled: isRetrying, busy: isRetrying }}
           style={({ pressed }) => [
             styles.retry,
@@ -132,10 +139,10 @@ export function OfflineBanner({
           ]}
         >
           {isRetrying ? (
-            <ActivityIndicator size="small" color={colors.textInverse} />
+            <ActivityIndicator size="small" color={tone.bg} />
           ) : (
-            <AppText numberOfLines={1} weight="semibold" color={colors.textInverse} style={styles.retryText}>
-              Reintentar
+            <AppText numberOfLines={1} weight="semibold" color={tone.bg} style={styles.retryText}>
+              {t('molecules.offlineBanner.retry')}
             </AppText>
           )}
         </Pressable>
@@ -144,7 +151,7 @@ export function OfflineBanner({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -187,4 +194,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
-});
+}));

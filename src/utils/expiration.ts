@@ -1,5 +1,6 @@
 import type { ExpirationStatus } from '../types';
 import { daysUntil } from './dates';
+import { t } from '../i18n';
 
 /**
  * Calcula el estado de caducidad y etiqueta legible a partir de una fecha 'YYYY-MM-DD'.
@@ -12,18 +13,18 @@ export function getExpirationStatus(dateStr: string | null): {
 } {
   const diffDays = daysUntil(dateStr);
   if (diffDays === null) {
-    return { status: 'unknown', label: 'Sin fecha' };
+    return { status: 'unknown', label: t('misc.expiration.noDate') };
   }
   if (diffDays < 0) {
-    return { status: 'expired', label: 'Vencido' };
+    return { status: 'expired', label: t('misc.expiration.expired') };
   }
   if (diffDays === 0) {
-    return { status: 'expiringSoon', label: 'Vence hoy' };
+    return { status: 'expiringSoon', label: t('misc.expiration.expiresToday') };
   }
   if (diffDays <= 3) {
-    return { status: 'expiringSoon', label: `Vence en ${diffDays}d` };
+    return { status: 'expiringSoon', label: t('misc.expiration.expiresSoon', { days: diffDays }) };
   }
-  return { status: 'fresh', label: `${diffDays}d restantes` };
+  return { status: 'fresh', label: t('misc.expiration.daysLeft', { days: diffDays }) };
 }
 
 /**

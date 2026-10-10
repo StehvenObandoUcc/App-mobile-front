@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { AppText } from './AppText';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * SectionHeader — título de sección 20/600 con enlace tomate a la derecha («Ver todos (3)»).
@@ -14,6 +15,8 @@ export type SectionHeaderProps = {
 };
 
 export function SectionHeader({ title, actionLabel, onAction }: SectionHeaderProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <AppText variant="sectionTitle" accessibilityRole="header" style={styles.title}>
@@ -35,7 +38,7 @@ export function SectionHeader({ title, actionLabel, onAction }: SectionHeaderPro
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -52,4 +55,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.6,
   },
-});
+}));

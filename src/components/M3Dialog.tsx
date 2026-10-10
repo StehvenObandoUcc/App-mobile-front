@@ -5,7 +5,11 @@ import { AppText } from './AppText';
 import { DialogTitle } from './DialogTitle';
 import { PrimaryButton, ButtonTone } from './PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
-import { colors, spacing, radii, elevations } from '../theme';
+import { spacing, radii, elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
+import { useI18n } from '../i18n';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
  * M3Dialog — Organismos.dc.html (success · info · warning · error)
@@ -34,14 +38,16 @@ export interface M3DialogProps {
   hero?: boolean;
   /** Contenido extra bajo el mensaje (p. ej. desglose «3 alimentos nuevos»). */
   children?: React.ReactNode;
+  /** Muestra el botón de confirmar ocupado (p. ej. mientras se elimina la cuenta). */
+  confirmLoading?: boolean;
 }
 
-const TYPES = {
-  success: { bg: colors.functional.fresh.background, fg: colors.functional.fresh.text, icon: 'checkmark-circle-outline' },
-  info: { bg: colors.tertiaryContainer, fg: colors.tertiary, icon: 'sparkles-outline' },
-  warning: { bg: colors.functional.expiringSoon.background, fg: colors.functional.expiringSoon.text, icon: 'alert-circle-outline' },
-  error: { bg: colors.error.background, fg: colors.error.text, icon: 'alert-circle-outline' },
-} as const;
+const typesFor = (colors: ThemeColors) => ({
+  success: { bg: colors.functional.fresh.background, fg: colors.functional.fresh.text, icon: 'checkmark-circle-outline' as const },
+  info: { bg: colors.tertiaryContainer, fg: colors.tertiary, icon: 'sparkles-outline' as const },
+  warning: { bg: colors.functional.expiringSoon.background, fg: colors.functional.expiringSoon.text, icon: 'alert-circle-outline' as const },
+  error: { bg: colors.error.background, fg: colors.error.text, icon: 'alert-circle-outline' as const },
+});
 
 export function M3Dialog({
   visible,
@@ -50,7 +56,7 @@ export function M3Dialog({
   message,
   type = 'info',
   iconName,
-  confirmText = 'Entendido',
+  confirmText,
   onConfirm,
   confirmTone = 'ink',
   cancelText,
@@ -59,12 +65,23 @@ export function M3Dialog({
   actionsLayout = 'row',
   hero = false,
   children,
+  confirmLoading = false,
 }: M3DialogProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
+  const reduceMotion = useReduceMotion();
+  const confirmLabel = confirmText ?? t('common.gotIt');
   const scaleAnim = useRef(new Animated.Value(0.92)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
+      if (reduceMotion) {
+        scaleAnim.setValue(1);
+        opacityAnim.setValue(1);
+        return;
+      }
       scaleAnim.setValue(0.92);
       opacityAnim.setValue(0);
       Animated.parallel([
@@ -72,23 +89,24 @@ export function M3Dialog({
         Animated.timing(opacityAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
       ]).start();
     }
-  }, [visible, scaleAnim, opacityAnim]);
+  }, [visible, scaleAnim, opacityAnim, reduceMotion]);
 
-  const t = TYPES[type] ?? TYPES.info;
+  const tones = typesFor(colors);
+  const tone = tones[type] ?? tones.info;
   const hasCancel = Boolean(cancelText && onCancel);
   const dismiss = onDismiss || onCancel || onConfirm;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={dismiss}>
+    <Modal visible={visible} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={dismiss}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} accessibilityLabel="Cerrar diálogo" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} accessibilityLabel={t('atoms.m3Dialog.closeA11y')} />
         <Animated.View
           style={[styles.card, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}
           accessibilityViewIsModal
           accessibilityRole={type === 'error' || type === 'warning' ? 'alert' : undefined}
         >
-          <View style={[styles.icon, hero && styles.iconHero, { backgroundColor: t.bg }]}>
-            <Ionicons name={iconName ?? t.icon} size={26} color={t.fg} />
+          <View style={[styles.icon, hero && styles.iconHero, { backgroundColor: tone.bg }]}>
+            <Ionicons name={iconName ?? tone.icon} size={26} color={tone.fg} />
           </View>
           <DialogTitle title={title} emphasis={titleEmphasis} size={hero ? 26 : 22} lineHeight={hero ? 32 : 28} />
           {!!message && (
@@ -99,7 +117,7 @@ export function M3Dialog({
           {children}
           {actionsLayout === 'stacked' ? (
             <View style={styles.stacked}>
-              <PrimaryButton title={confirmText} tone={confirmTone} onPress={onConfirm} />
+              <PrimaryButton title={confirmLabel} tone={confirmTone} onPress={onConfirm} isLoading={confirmLoading} />
               {hasCancel && (
                 <Pressable
                   onPress={onCancel}
@@ -117,7 +135,7 @@ export function M3Dialog({
               {hasCancel && (
                 <SecondaryButton title={cancelText!} variant="outline" onPress={onCancel!} style={styles.actionBtn} />
               )}
-              <PrimaryButton title={confirmText} tone={confirmTone} onPress={onConfirm} style={styles.actionBtn} />
+              <PrimaryButton title={confirmLabel} tone={confirmTone} onPress={onConfirm} isLoading={confirmLoading} style={styles.actionBtn} />
             </View>
           )}
         </Animated.View>
@@ -126,7 +144,7 @@ export function M3Dialog({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   backdrop: {
     flex: 1,
     backgroundColor: colors.scrim,
@@ -180,4 +198,4 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.md,
   },
-});
+}));

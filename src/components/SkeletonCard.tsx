@@ -1,15 +1,23 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Easing } from 'react-native';
-import { colors, spacing, radii } from '../theme';
+import { spacing, radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 export type SkeletonCardProps = {
   variant?: 'ingredient' | 'recipe';
 };
 
 export function SkeletonCard({ variant = 'ingredient' }: SkeletonCardProps) {
+  const styles = useStyles();
+  const reduceMotion = useReduceMotion();
   const opacity = useRef(new Animated.Value(0.35)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      opacity.setValue(0.35);
+      return;
+    }
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
@@ -28,7 +36,7 @@ export function SkeletonCard({ variant = 'ingredient' }: SkeletonCardProps) {
     );
     animation.start();
     return () => animation.stop();
-  }, [opacity]);
+  }, [opacity, reduceMotion]);
 
   if (variant === 'recipe') {
     return (
@@ -58,7 +66,7 @@ export function SkeletonCard({ variant = 'ingredient' }: SkeletonCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   // Forma del ticket de IngredientCard (Despensa-Estados.dc.html): 84 dp, icono 52, bloque 60.
   ingredientCard: {
     flexDirection: 'row',
@@ -113,4 +121,4 @@ const styles = StyleSheet.create({
     borderRadius: radii.circular,
     backgroundColor: colors.skeleton.background,
   },
-});
+}));

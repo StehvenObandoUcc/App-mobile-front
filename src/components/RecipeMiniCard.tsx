@@ -3,8 +3,10 @@ import { View, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { Recipe } from '../types';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { recipeBanner, DIFFICULTY_LABELS, missingLabel } from '../utils/recipe-visuals';
+import { useI18n } from '../i18n';
 
 /**
  * RecipeMiniCard — tarjeta horizontal de «Ideas para cocinar» (Inicio.dc.html).
@@ -17,10 +19,13 @@ export type RecipeMiniCardProps = {
 };
 
 export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardProps) {
-  const banner = recipeBanner(recipe.id);
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
+  const banner = recipeBanner(colors, recipe.id);
   const diff = DIFFICULTY_LABELS[recipe.difficulty] ?? DIFFICULTY_LABELS.easy;
   const meta = [
-    recipe.prepTimeMinutes !== null ? `${recipe.prepTimeMinutes} min` : null,
+    recipe.prepTimeMinutes !== null ? t('organisms.recipeMiniCard.minutes', { count: recipe.prepTimeMinutes ?? 0 }) : null,
     diff,
     missingLabel(recipe.missingIngredients.length),
   ]
@@ -33,7 +38,7 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
       onLongPress={onLongPress}
       delayLongPress={350}
       accessibilityRole="button"
-      accessibilityLabel={`Receta ${recipe.title}, ${recipe.matchScore}% con tu despensa, ${meta}`}
+      accessibilityLabel={t('organisms.recipeMiniCard.a11y', { title: recipe.title, match: recipe.matchScore, meta })}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={[styles.banner, { backgroundColor: banner.bg }]}>
@@ -46,7 +51,7 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
         )}
         <View style={styles.match}>
           <AppText variant="caption" weight="semibold" color={colors.onTertiaryContainer}>
-            {`${recipe.matchScore} %`}
+            {t('organisms.recipeMiniCard.match', { match: recipe.matchScore })}
           </AppText>
         </View>
       </View>
@@ -62,7 +67,7 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   card: {
     width: 236,
     backgroundColor: colors.surface,
@@ -110,4 +115,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
   },
-});
+}));

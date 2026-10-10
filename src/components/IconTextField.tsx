@@ -4,7 +4,9 @@ import type { TextInput as RNTextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { TextInput } from './Text';
-import { colors, radii, typography } from '../theme';
+import { radii, typography } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * IconTextField — campo con etiqueta e icono (Login-Formulario.dc.html).
@@ -20,6 +22,9 @@ export const IconTextField = forwardRef<RNTextInput, IconTextFieldProps>(functio
   { label, iconName, secure = false, onFocus, onBlur, ...inputProps },
   ref
 ) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
   const [focused, setFocused] = useState(false);
   const [visible, setVisible] = useState(false);
   return (
@@ -50,7 +55,7 @@ export const IconTextField = forwardRef<RNTextInput, IconTextFieldProps>(functio
             onPress={() => setVisible((v) => !v)}
             style={styles.eye}
             accessibilityRole="button"
-            accessibilityLabel={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            accessibilityLabel={visible ? t('molecules.iconTextField.hidePassword') : t('molecules.iconTextField.showPassword')}
           >
             <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textSecondary} />
           </Pressable>
@@ -60,7 +65,7 @@ export const IconTextField = forwardRef<RNTextInput, IconTextFieldProps>(functio
   );
 });
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   group: {
     gap: 6,
   },
@@ -97,4 +102,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

@@ -2,7 +2,9 @@ import React from 'react';
 import { Pressable, StyleSheet, View, Insets } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors, spacing, radii } from '../theme';
+import { spacing, radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 import { IngredientCategory, ExpirationStatus } from '../types';
 
 /**
@@ -27,11 +29,11 @@ export type ChipProps = {
   hitSlop?: Insets | number;
 };
 
-const DEFAULT_STATUS_CONFIG: Record<ExpirationStatus, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  fresh: { label: 'Fresco', icon: 'checkmark-circle-outline' },
-  expiringSoon: { label: 'Próximo a vencer', icon: 'time-outline' },
-  expired: { label: 'Vencido', icon: 'alert-circle-outline' },
-  unknown: { label: 'Sin fecha', icon: 'help-circle-outline' },
+const DEFAULT_STATUS_CONFIG: Record<ExpirationStatus, { labelKey: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  fresh: { labelKey: 'atoms.chip.status.fresh', icon: 'checkmark-circle-outline' },
+  expiringSoon: { labelKey: 'atoms.chip.status.expiringSoon', icon: 'time-outline' },
+  expired: { labelKey: 'atoms.chip.status.expired', icon: 'alert-circle-outline' },
+  unknown: { labelKey: 'atoms.chip.status.unknown', icon: 'help-circle-outline' },
 };
 
 export function Chip({
@@ -47,6 +49,9 @@ export function Chip({
   enableHitSlop,
   hitSlop,
 }: ChipProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
   let bg: string = colors.surface;
   let fg: string = colors.textPrimary;
   let border: string | undefined = colors.borderStrong;
@@ -71,7 +76,7 @@ export function Chip({
     fg = colors.functional[status].text;
     border = undefined;
     weight = 'semibold';
-    resolvedLabel = label || cfg.label;
+    resolvedLabel = label || t(cfg.labelKey);
     resolvedIcon = icon || cfg.icon;
   } else if ((variant === 'filter' || variant === 'choice') && selected) {
     bg = colors.ink;
@@ -123,7 +128,7 @@ export function Chip({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   touchTarget: {
     minHeight: spacing.touchTargetMin,
     justifyContent: 'center',
@@ -146,4 +151,4 @@ const styles = StyleSheet.create({
     opacity: 0.85,
     transform: [{ scale: 0.97 }],
   },
-});
+}));

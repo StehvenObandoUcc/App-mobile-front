@@ -4,7 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { Fab } from './Fab';
 import { useReduceMotion } from '../hooks/useReduceMotion';
-import { colors, radii, elevations } from '../theme';
+import { useI18n } from '../i18n';
+import { radii, elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
 
 /**
  * SpeedDialFab — botón «+» que despliega opciones (Despensa: escribir a mano / escanear).
@@ -27,11 +30,14 @@ export type SpeedDialFabProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-const TONE_BG = { ink: colors.ink, brand: colors.primary, ai: colors.tertiary };
+const toneBgFor = (colors: ThemeColors) => ({ ink: colors.ink, brand: colors.primary, ai: colors.tertiary });
 const DURATION = 240;
 
 export function SpeedDialFab({ actions, accessibilityLabel, style }: SpeedDialFabProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const reduceMotion = useReduceMotion();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
 
@@ -74,7 +80,7 @@ export function SpeedDialFab({ actions, accessibilityLabel, style }: SpeedDialFa
 
       <Modal visible={open} transparent animationType="none" onRequestClose={() => close()} statusBarTranslucent navigationBarTranslucent>
         <Animated.View style={[styles.scrim, { opacity: progress }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => close()} accessibilityLabel="Cerrar opciones" />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => close()} accessibilityLabel={t('molecules.speedDialFab.closeA11y')} />
         </Animated.View>
 
         <View style={[styles.anchor, style]} pointerEvents="box-none">
@@ -104,7 +110,7 @@ export function SpeedDialFab({ actions, accessibilityLabel, style }: SpeedDialFa
                     <AppText variant="body" weight="semibold" style={styles.itemText}>
                       {a.label}
                     </AppText>
-                    <View style={[styles.itemIcon, { backgroundColor: TONE_BG[a.tone ?? 'ink'] }]}>
+                    <View style={[styles.itemIcon, { backgroundColor: toneBgFor(colors)[a.tone ?? 'ink'] }]}>
                       <Ionicons name={a.iconName} size={20} color={colors.onInk} />
                     </View>
                   </Pressable>
@@ -114,7 +120,7 @@ export function SpeedDialFab({ actions, accessibilityLabel, style }: SpeedDialFa
           </View>
           <Fab
             iconName="add"
-            accessibilityLabel="Cerrar opciones"
+            accessibilityLabel={t('molecules.speedDialFab.closeA11y')}
             accessibilityState={{ expanded: true }}
             iconRotation={rotate}
             onPress={() => close()}
@@ -126,7 +132,7 @@ export function SpeedDialFab({ actions, accessibilityLabel, style }: SpeedDialFa
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   scrim: {
     ...StyleSheet.absoluteFill,
     backgroundColor: colors.scrim,
@@ -173,4 +179,4 @@ const styles = StyleSheet.create({
   fabInMenu: {
     position: 'relative',
   },
-});
+}));

@@ -14,8 +14,11 @@ import { DifficultyPicker } from './DifficultyPicker';
 import { OptionPills } from './OptionPills';
 import { SegmentedControl } from './SegmentedControl';
 import { Ingredient, RecipeDifficulty, DietaryPreference, DIETARY_OPTIONS, RecipeFocus, RECIPE_FOCUS_OPTIONS } from '../types';
-import { colors, radii, spacing, typography, elevations, getCategoryConfig } from '../theme';
+import { radii, spacing, typography, elevations, getCategoryConfig } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
 import { daysUntil } from '../utils/dates';
+import { useI18n, type t as TFn } from '../i18n';
 
 /**
  * ChefIaSheet — hoja «Chef IA» (Chef-IA.dc.html). Solo presentación: el estado vive en app/recipes.tsx.
@@ -51,21 +54,21 @@ export type ChefIaSheetProps = {
   onClose: () => void;
 };
 
-const FOCUS_TONES: Record<RecipeFocus, { background: string; text: string }> = {
+const focusTonesFor = (colors: ThemeColors): Record<RecipeFocus, { background: string; text: string }> => ({
   custom: { background: colors.tertiaryContainer, text: colors.onTertiaryContainer },
   quick: { background: colors.functional.expiringSoon.background, text: colors.functional.expiringSoon.text },
   waste_reduction: { background: colors.functional.fresh.background, text: colors.functional.fresh.text },
-};
-const FOCUS_TITLES: Record<RecipeFocus, string> = {
-  custom: 'Personalizada y creativa',
-  quick: 'Rápida y express',
-  waste_reduction: 'Cero desperdicio',
+});
+const FOCUS_TITLE_KEYS: Record<RecipeFocus, string> = {
+  custom: 'sheets.chefIa.focusTitle.custom',
+  quick: 'sheets.chefIa.focusTitle.quick',
+  waste_reduction: 'sheets.chefIa.focusTitle.waste_reduction',
 };
 // Orden del mockup: las lengüetas de arriba y la elegida desplegada abajo.
 const FOCUS_ORDER: RecipeFocus[] = ['custom', 'quick', 'waste_reduction'];
-const FOCUS_OPTIONS: FocusFolderOption<RecipeFocus>[] = FOCUS_ORDER.map((key) => {
+const focusOptionsFor = (colors: ThemeColors, t: typeof TFn): FocusFolderOption<RecipeFocus>[] => FOCUS_ORDER.map((key) => {
   const base = RECIPE_FOCUS_OPTIONS.find((o) => o.key === key)!;
-  return { key, title: FOCUS_TITLES[key], description: base.description, iconName: base.iconName, tone: FOCUS_TONES[key] };
+  return { key, title: t(FOCUS_TITLE_KEYS[key]), description: base.description, iconName: base.iconName, tone: focusTonesFor(colors)[key] };
 });
 
 const TIMES = [15, 20, 30, 45, 60];
@@ -87,6 +90,9 @@ export function ChefIaSheet({
   onGenerate,
   onClose,
 }: ChefIaSheetProps) {
+  const { colors } = useTheme();
+  const { t, tp } = useI18n();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const [showAll, setShowAll] = useState(false);
 
@@ -107,7 +113,7 @@ export function ChefIaSheet({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} disabled={!canClose} accessibilityLabel="Cerrar Chef IA" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={close} disabled={!canClose} accessibilityLabel={t('sheets.chefIa.closeChefA11y')} />
         <View style={styles.sheet} accessibilityViewIsModal>
           <View style={styles.handle} />
 
@@ -116,12 +122,12 @@ export function ChefIaSheet({
               <Ionicons name="sparkles" size={24} color={colors.m3.onTertiary} />
             </View>
             <AppText weight="light" style={styles.title} accessibilityRole="header">
-              Chef <AppText weight="semibold">IA</AppText>
+              {t('sheets.chefIa.title')} <AppText weight="semibold">{t('sheets.chefIa.titleEmphasis')}</AppText>
             </AppText>
             <IconButton
               iconName="close"
               variant="neutral"
-              accessibilityLabel="Cerrar"
+              accessibilityLabel={t('common.close')}
               onPress={close}
               disabled={!canClose}
               style={styles.closeBtn}
@@ -137,9 +143,9 @@ export function ChefIaSheet({
             {/* ── Enfoque ── */}
             <StaggerView index={0} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold" style={styles.label}>
-                ¿Qué enfoque quieres?
+                {t('sheets.chefIa.focusQuestion')}
               </AppText>
-              <FocusFolders options={FOCUS_OPTIONS} value={values.focus} onChange={(f) => onChange('focus', f)} />
+              <FocusFolders options={focusOptionsFor(colors, t)} value={values.focus} onChange={(f) => onChange('focus', f)} />
               {values.focus === 'custom' && (
                 // Aparece después de que las cartas terminan de moverse, y los estilos entran uno a uno.
                 <StaggerView index={3} delayMs={60} duration={300} style={styles.custom}>
@@ -159,11 +165,11 @@ export function ChefIaSheet({
                   <TextInput
                     value={values.note}
                     onChangeText={(v) => onChange('note', v)}
-                    placeholder="Antojo o indicación: salsa cremosa, plato caliente…"
+                    placeholder={t('sheets.chefIa.notePlaceholder')}
                     placeholderTextColor={colors.textMuted}
                     maxLength={60}
                     style={styles.noteInput}
-                    accessibilityLabel="Indicación o antojo especial para la receta"
+                    accessibilityLabel={t('sheets.chefIa.noteA11y')}
                     returnKeyType="done"
                   />
                 </StaggerView>
@@ -174,23 +180,23 @@ export function ChefIaSheet({
             <StaggerView index={1} delayMs={70} duration={320} style={styles.section}>
               <View style={styles.rowBetween}>
                 <AppText variant="body" weight="semibold" style={styles.label}>
-                  Ingredientes a usar{' '}
-                  <AppText weight="regular" color={colors.textSecondary}>{`· ${values.ingredientIds.size} de ${ingredients.length}`}</AppText>
+                  {t('sheets.chefIa.ingredientsLabel')}{' '}
+                  <AppText weight="regular" color={colors.textSecondary}>{t('sheets.chefIa.ingredientsCount', { selected: values.ingredientIds.size, total: ingredients.length })}</AppText>
                 </AppText>
                 {ingredients.length > 0 && (
                   <View style={styles.links}>
-                    <Pressable onPress={onSelectAll} style={styles.link} accessibilityRole="button" accessibilityLabel="Seleccionar todos los ingredientes">
-                      <AppText variant="bodySmall" weight="semibold" color={colors.primary}>Todos</AppText>
+                    <Pressable onPress={onSelectAll} style={styles.link} accessibilityRole="button" accessibilityLabel={t('sheets.chefIa.selectAllA11y')}>
+                      <AppText variant="bodySmall" weight="semibold" color={colors.primary}>{t('sheets.chefIa.all')}</AppText>
                     </Pressable>
-                    <Pressable onPress={onClearAll} style={styles.link} accessibilityRole="button" accessibilityLabel="Quitar todos los ingredientes">
-                      <AppText variant="bodySmall" weight="semibold" color={colors.primary}>Ninguno</AppText>
+                    <Pressable onPress={onClearAll} style={styles.link} accessibilityRole="button" accessibilityLabel={t('sheets.chefIa.clearAllA11y')}>
+                      <AppText variant="bodySmall" weight="semibold" color={colors.primary}>{t('sheets.chefIa.none')}</AppText>
                     </Pressable>
                   </View>
                 )}
               </View>
               {ingredients.length === 0 ? (
                 <AppText variant="bodySmall" color={colors.textSecondary}>
-                  Tu despensa está vacía. Agrega o escanea alimentos para crear recetas con lo que tienes.
+                  {t('sheets.chefIa.emptyPantry')}
                 </AppText>
               ) : (
                 <>
@@ -210,17 +216,17 @@ export function ChefIaSheet({
                         onPress={() => setShowAll(true)}
                         style={({ pressed }) => [styles.more, pressed && { opacity: 0.8 }]}
                         accessibilityRole="button"
-                        accessibilityLabel={`Ver ${hidden} ingredientes más`}
+                        accessibilityLabel={t('sheets.chefIa.showMoreA11y', { count: hidden })}
                       >
-                        <AppText variant="bodySmall" weight="semibold">{`+ ${hidden} más`}</AppText>
+                        <AppText variant="bodySmall" weight="semibold">{t('sheets.chefIa.more', { count: hidden })}</AppText>
                       </Pressable>
                     )}
                   </View>
                   <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
-                    Los que vencen pronto aparecen primero y ya vienen marcados.
+                    {t('sheets.chefIa.expiringHint')}
                   </AppText>
                   {values.ingredientIds.size === 0 && (
-                    <Hint text="Elige al menos un alimento de tu despensa." warning />
+                    <Hint text={t('sheets.chefIa.pickOneHint')} warning />
                   )}
                   {coherence && <Hint text={coherence.message} warning={coherence.isWarning} />}
                 </>
@@ -230,11 +236,11 @@ export function ChefIaSheet({
             {/* ── Dieta ── */}
             <StaggerView index={2} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold" style={styles.label}>
-                Preferencia dietaria
+                {t('sheets.chefIa.dietLabel')}
               </AppText>
-              <View style={styles.wrap} accessibilityRole="radiogroup" accessibilityLabel="Preferencia dietaria">
+              <View style={styles.wrap} accessibilityRole="radiogroup" accessibilityLabel={t('sheets.chefIa.dietLabel')}>
                 {DIETARY_OPTIONS.map((d) => (
-                  <Chip key={d.key} variant="choice" label={d.label} selected={values.diet === d.key} onPress={() => onChange('diet', d.key)} />
+                  <Chip key={d.key} variant="choice" label={t(`common.diets.${d.key}`)} selected={values.diet === d.key} onPress={() => onChange('diet', d.key)} />
                 ))}
               </View>
             </StaggerView>
@@ -242,7 +248,7 @@ export function ChefIaSheet({
             {/* ── Dificultad ── */}
             <StaggerView index={3} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold" style={styles.label}>
-                Nivel de dificultad
+                {t('sheets.chefIa.difficultyLabel')}
               </AppText>
               <DifficultyPicker value={values.difficulty} onChange={(d) => onChange('difficulty', d)} />
             </StaggerView>
@@ -250,16 +256,16 @@ export function ChefIaSheet({
             {/* ── Tiempo ── */}
             <StaggerView index={4} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold" style={styles.label}>
-                Tiempo máximo
+                {t('sheets.chefIa.timeLabel')}
               </AppText>
               <OptionPills
-                accessibilityLabel="Tiempo máximo de preparación"
+                accessibilityLabel={t('sheets.chefIa.timeA11y')}
                 value={values.time}
-                onChange={(t) => onChange('time', t)}
+                onChange={(v) => onChange('time', v)}
                 options={TIMES.map((m) => ({
                   value: m,
                   label: `${m}′`,
-                  accessibilityLabel: `${m} minutos`,
+                  accessibilityLabel: t('sheets.chefIa.minutesA11y', { count: m }),
                   disabled: !validTimes.includes(m),
                 }))}
               />
@@ -269,13 +275,13 @@ export function ChefIaSheet({
             {/* ── Cantidad ── */}
             <StaggerView index={5} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold" style={styles.label}>
-                ¿Cuántas recetas?
+                {t('sheets.chefIa.howManyLabel')}
               </AppText>
               <SegmentedControl
-                accessibilityLabel="Cantidad de recetas"
+                accessibilityLabel={t('sheets.chefIa.countA11y')}
                 value={values.count}
                 onChange={(c) => onChange('count', c)}
-                options={[1, 2, 3].map((n) => ({ value: n, label: String(n), accessibilityLabel: `${n} ${n === 1 ? 'receta' : 'recetas'}` }))}
+                options={[1, 2, 3].map((n) => ({ value: n, label: String(n), accessibilityLabel: tp('sheets.chefIa.recipes', n) }))}
               />
             </StaggerView>
           </ScrollView>
@@ -285,7 +291,7 @@ export function ChefIaSheet({
             <PrimaryButton
               tone="ai"
               iconName="sparkles"
-              title={`Generar ${values.count} ${values.count === 1 ? 'receta' : 'recetas'} con IA`}
+              title={tp('sheets.chefIa.generate', values.count)}
               onPress={onGenerate}
               isLoading={isGenerating}
               disabled={values.ingredientIds.size === 0}
@@ -299,6 +305,8 @@ export function ChefIaSheet({
 }
 
 function Hint({ text, warning, icon }: { text: string; warning?: boolean; icon?: keyof typeof Ionicons.glyphMap }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const fg = warning ? colors.functional.expiringSoon.text : colors.tertiary;
   return (
     <View style={styles.hint}>
@@ -310,7 +318,7 @@ function Hint({ text, warning, icon }: { text: string; warning?: boolean; icon?:
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -425,4 +433,4 @@ const styles = StyleSheet.create({
   cta: {
     minHeight: 56,
   },
-});
+}));

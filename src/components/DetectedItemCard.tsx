@@ -4,9 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../types';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
-import { colors, radii, getCategoryConfig } from '../theme';
+import { radii, getCategoryConfig } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
 import { formatQuantity } from '../utils/units';
 import { daysUntil } from '../utils/dates';
+import { useI18n, type t as TFn, type tp as TpFn } from '../i18n';
 
 /**
  * DetectedItemCard — alimento detectado por la IA (Escaneo-Resultado.dc.html).
@@ -27,31 +30,39 @@ export type DetectedItemCardProps = {
   mergeCompatible?: boolean;
 };
 
-export function expiryLabel(date: string | null): string {
+export function expiryLabel(date: string | null, t: typeof TFn, tp: typeof TpFn): string {
   const d = daysUntil(date);
-  if (d === null) return 'sin fecha';
-  if (d < 0) return 'vencido';
-  if (d === 0) return 'vence hoy';
-  return `vence en ${d} ${d === 1 ? 'día' : 'días'}`;
+  if (d === null) return t('organisms.detectedItemCard.noDate');
+  if (d < 0) return t('organisms.detectedItemCard.expired');
+  if (d === 0) return t('organisms.detectedItemCard.today');
+  return tp('organisms.detectedItemCard.daysLeft', d);
 }
 
 /** ≥ 80 % seguro · 60–79 % revisa · < 60 % verifica. */
-export function confidenceBadge(confidence: number | null | undefined) {
+export function confidenceBadge(colors: ThemeColors, confidence: number | null | undefined, t: typeof TFn) {
   if (confidence === null || confidence === undefined) return null;
   const pct = Math.round(confidence * 100);
-  if (confidence >= 0.8) return { label: `${pct} % seguro`, tone: colors.functional.fresh };
-  if (confidence >= 0.6) return { label: `${pct} % · revisa`, tone: colors.functional.expiringSoon };
-  return { label: 'Verifica este alimento', tone: colors.functional.expired };
+  if (confidence >= 0.8) return { label: t('organisms.detectedItemCard.confidenceSafe', { pct }), tone: colors.functional.fresh };
+  if (confidence >= 0.6) return { label: t('organisms.detectedItemCard.confidenceReview', { pct }), tone: colors.functional.expiringSoon };
+  return { label: t('organisms.detectedItemCard.confidenceVerify'), tone: colors.functional.expired };
 }
 
 export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, mergeChecked = true, onToggleMerge, mergeCompatible = true }: DetectedItemCardProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t, tp } = useI18n();
   const cat = getCategoryConfig(item.category);
   const catColor = colors.categories[item.category] || colors.categories.other;
-  const qty = item.quantity !== null && item.quantity !== undefined ? formatQuantity(item.quantity, item.unit, { long: true }) : 'sin cantidad';
-  const badge = item.source === 'ai' ? confidenceBadge(item.confidence) : null;
+  const qty = item.quantity !== null && item.quantity !== undefined ? formatQuantity(item.quantity, item.unit, { long: true }) : t('organisms.detectedItemCard.noQty');
+  const badge = item.source === 'ai' ? confidenceBadge(colors, item.confidence, t) : null;
   const addQty =
-    item.quantity !== null && item.quantity !== undefined ? `+${formatQuantity(item.quantity, item.unit)}` : 'la cantidad detectada';
+    item.quantity !== null && item.quantity !== undefined ? `+${formatQuantity(item.quantity, item.unit)}` : t('organisms.detectedItemCard.detectedQty');
 
+  const existingLabel = existing
+    ? existing.quantity !== null
+      ? t('organisms.detectedItemCard.alreadyHaveQty', { name: existing.name, quantity: formatQuantity(existing.quantity, existing.unit) })
+      : t('organisms.detectedItemCard.alreadyHave', { name: existing.name })
+    : '';
   return (
     <View style={[styles.card, !item.confirmed && styles.off]}>
       <View style={styles.row}>
@@ -60,7 +71,7 @@ export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, m
           style={styles.checkArea}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: item.confirmed }}
-          accessibilityLabel={`Incluir ${item.name}`}
+          accessibilityLabel={t('organisms.detectedItemCard.includeA11y', { name: item.name })}
         >
           {item.confirmed ? (
             <View style={styles.checkOn}>
@@ -75,12 +86,12 @@ export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, m
           <Ionicons name={cat.icon} size={22} color={catColor.text} />
         </View>
 
-        <Pressable onPress={onEdit} style={styles.info} accessibilityRole="button" accessibilityLabel={`Editar ${item.name}`}>
+        <Pressable onPress={onEdit} style={styles.info} accessibilityRole="button" accessibilityLabel={t('organisms.detectedItemCard.editA11y', { name: item.name })}>
           <AppText variant="body" weight="semibold" numberOfLines={2} style={styles.name}>
             {item.name}
           </AppText>
           <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
-            {`${qty} · ${expiryLabel(item.expirationDate)}`}
+            {`${qty} · ${expiryLabel(item.expirationDate, t, tp)}`}
           </AppText>
           {badge && (
             <View style={[styles.badge, { backgroundColor: badge.tone.background }]}>
@@ -91,8 +102,8 @@ export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, m
           )}
         </Pressable>
 
-        <IconButton iconName="create-outline" variant="ghost" iconSize={19} iconColor={colors.textSecondary} accessibilityLabel={`Editar ${item.name}`} onPress={onEdit} />
-        <IconButton iconName="trash-outline" variant="ghost" iconSize={19} iconColor={colors.m3.error} accessibilityLabel={`Quitar ${item.name}`} onPress={onRemove} />
+        <IconButton iconName="create-outline" variant="ghost" iconSize={19} iconColor={colors.textSecondary} accessibilityLabel={t('organisms.detectedItemCard.editA11y', { name: item.name })} onPress={onEdit} />
+        <IconButton iconName="trash-outline" variant="ghost" iconSize={19} iconColor={colors.m3.error} accessibilityLabel={t('organisms.detectedItemCard.removeA11y', { name: item.name })} onPress={onRemove} />
       </View>
 
       {existing && !mergeCompatible && (
@@ -100,10 +111,10 @@ export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, m
           <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
           <View style={styles.mergeText}>
             <AppText variant="metadata" weight="semibold">
-              {`Ya tienes ${existing.name}${existing.quantity !== null ? ` (${formatQuantity(existing.quantity, existing.unit)})` : ''}`}
+              {existingLabel}
             </AppText>
             <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
-              Se guardará aparte porque la unidad es distinta
+              {t('organisms.detectedItemCard.differentUnit')}
             </AppText>
           </View>
         </View>
@@ -125,10 +136,10 @@ export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, m
           )}
           <View style={styles.mergeText}>
             <AppText variant="metadata" weight="semibold">
-              {`Ya tienes ${existing.name}${existing.quantity !== null ? ` (${formatQuantity(existing.quantity, existing.unit)})` : ''}`}
+              {existingLabel}
             </AppText>
             <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
-              {mergeChecked ? `Sumar ${addQty} y conservar la fecha más próxima` : 'Se guardará como un alimento aparte'}
+              {mergeChecked ? t('organisms.detectedItemCard.mergeAdd', { qty: addQty }) : t('organisms.detectedItemCard.mergeSeparate')}
             </AppText>
           </View>
         </Pressable>
@@ -137,7 +148,7 @@ export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, m
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.cards,
@@ -228,4 +239,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.m3.outline,
   },
-});
+}));

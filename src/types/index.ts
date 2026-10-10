@@ -1,4 +1,6 @@
 // ─── Estados y Enums Comunes ──────────────────────────────────────────────────
+import { t } from '../i18n';
+
 export type AsyncStatus = 'idle' | 'loading' | 'success' | 'error';
 export type DataSource = 'ai' | 'manual';
 
@@ -135,11 +137,11 @@ export interface DietaryOption {
 }
 
 export const DIETARY_OPTIONS: readonly DietaryOption[] = [
-  { key: 'any', label: 'Cualquiera' },
-  { key: 'vegetarian', label: 'Vegetariana' },
-  { key: 'vegan', label: 'Vegana' },
-  { key: 'keto', label: 'Keto' },
-  { key: 'gluten_free', label: 'Sin Gluten' },
+  { key: 'any', get label() { return t('misc.dietary.any'); } },
+  { key: 'vegetarian', get label() { return t('misc.dietary.vegetarian'); } },
+  { key: 'vegan', get label() { return t('misc.dietary.vegan'); } },
+  { key: 'keto', get label() { return t('misc.dietary.keto'); } },
+  { key: 'gluten_free', get label() { return t('misc.dietary.gluten_free'); } },
 ] as const;
 
 // ─── Contratos de Enfoque Culinario del Chef IA ──────────────────────────────
@@ -155,20 +157,20 @@ export interface RecipeFocusOption {
 export const RECIPE_FOCUS_OPTIONS: readonly RecipeFocusOption[] = [
   {
     key: 'waste_reduction',
-    title: 'Aprovechar por vencer (Cero Desperdicio)',
-    description: 'Prioriza ingredientes próximos a caducar para no botar comida.',
+    get title() { return t('misc.focus.waste_reduction.title'); },
+    get description() { return t('misc.focus.waste_reduction.description'); },
     iconName: 'leaf-outline',
   },
   {
     key: 'quick',
-    title: 'Rápida y Express',
-    description: 'Platos sencillos con menor cantidad de pasos y utensilios.',
+    get title() { return t('misc.focus.quick.title'); },
+    get description() { return t('misc.focus.quick.description'); },
     iconName: 'flash-outline',
   },
   {
     key: 'custom',
-    title: 'Personalizada y Creativa',
-    description: 'Libertad gastronómica total: define estilo, técnica o antojo.',
+    get title() { return t('misc.focus.custom.title'); },
+    get description() { return t('misc.focus.custom.description'); },
     iconName: 'color-wand-outline',
   },
 ] as const;

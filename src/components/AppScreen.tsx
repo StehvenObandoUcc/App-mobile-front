@@ -12,7 +12,8 @@ import { useReduceMotion } from '../hooks/useReduceMotion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, usePathname } from 'expo-router';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import {
   MAIN_TABS,
   setSwipeNavigation,
@@ -37,6 +38,7 @@ export function AppScreen({
   style,
   enableSwipeTabs = true,
 }: AppScreenProps) {
+  const styles = useStyles();
   const router = useRouter();
   const pathname = usePathname();
   const isNavigatingRef = useRef(false);
@@ -195,7 +197,7 @@ export function AppScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -206,4 +208,4 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: spacing.xxxl,
   },
-});
+}));

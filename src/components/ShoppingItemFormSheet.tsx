@@ -11,8 +11,9 @@ import { QuantityStepper } from './QuantityStepper';
 import { DialogTitle } from './DialogTitle';
 import { M3Dialog } from './M3Dialog';
 import { IngredientCategory, IngredientUnit } from '../types';
-import { colors, radii, spacing, typography, elevations, CATEGORY_LIST } from '../theme';
-import { unitFullLabel } from '../utils/units';
+import { radii, spacing, typography, elevations, CATEGORY_LIST } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * ShoppingItemFormSheet — «Nuevo producto» de Compras (Compras-Agregar.dc.html · derecha).
@@ -34,16 +35,19 @@ export type ShoppingItemFormSheetProps = {
   onClose: () => void;
 };
 
-const UNIT_OPTIONS: { key: IngredientUnit; label: string }[] = [
-  { key: 'units', label: 'unid.' },
-  { key: 'grams', label: 'g' },
-  { key: 'kilograms', label: 'kg' },
-  { key: 'milliliters', label: 'ml' },
-  { key: 'liters', label: 'L' },
-  { key: 'package', label: 'paquete' },
+const UNIT_OPTIONS: { key: IngredientUnit; label: string; full: string }[] = [
+  { key: 'units', label: 'sheets.shoppingItemForm.unit.units', full: 'sheets.shoppingItemForm.unitFull.units' },
+  { key: 'grams', label: 'sheets.shoppingItemForm.unit.grams', full: 'sheets.shoppingItemForm.unitFull.grams' },
+  { key: 'kilograms', label: 'sheets.shoppingItemForm.unit.kilograms', full: 'sheets.shoppingItemForm.unitFull.kilograms' },
+  { key: 'milliliters', label: 'sheets.shoppingItemForm.unit.milliliters', full: 'sheets.shoppingItemForm.unitFull.milliliters' },
+  { key: 'liters', label: 'sheets.shoppingItemForm.unit.liters', full: 'sheets.shoppingItemForm.unitFull.liters' },
+  { key: 'package', label: 'sheets.shoppingItemForm.unit.package', full: 'sheets.shoppingItemForm.unitFull.package' },
 ];
 
 export function ShoppingItemFormSheet({ visible, values, onChange, onSubmit, onClose }: ShoppingItemFormSheetProps) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const [focused, setFocused] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
@@ -65,56 +69,56 @@ export function ShoppingItemFormSheet({ visible, values, onChange, onSubmit, onC
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={requestClose}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={requestClose} accessibilityLabel="Cerrar formulario" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={requestClose} accessibilityLabel={t('sheets.shoppingItemForm.closeFormA11y')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]} accessibilityViewIsModal>
           <View style={styles.handle} />
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
               <View style={styles.flex}>
-                <DialogTitle title="Nuevo" emphasis="producto" size={24} lineHeight={30} />
+                <DialogTitle title={t('sheets.shoppingItemForm.title')} emphasis={t('sheets.shoppingItemForm.titleEmphasis')} size={24} lineHeight={30} />
               </View>
-              <IconButton iconName="close" variant="neutral" accessibilityLabel="Cerrar formulario de nuevo producto" onPress={requestClose} style={styles.closeBtn} />
+              <IconButton iconName="close" variant="neutral" accessibilityLabel={t('sheets.shoppingItemForm.closeA11y')} onPress={requestClose} style={styles.closeBtn} />
             </View>
 
             <View style={styles.field}>
               <AppText variant="bodySmall" weight="semibold">
-                Nombre
+                {t('sheets.shoppingItemForm.nameLabel')}
               </AppText>
               <TextInput
                 value={values.name}
                 onChangeText={(v) => onChange('name', v)}
-                placeholder="Ej. Leche, tomates, huevos"
+                placeholder={t('sheets.shoppingItemForm.namePlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 maxLength={60}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
                 style={[styles.input, focused && styles.inputFocused]}
-                accessibilityLabel="Nombre del producto"
+                accessibilityLabel={t('sheets.shoppingItemForm.nameA11y')}
                 returnKeyType="done"
               />
             </View>
 
             <View style={styles.qtyRow}>
               <AppText variant="bodySmall" weight="semibold" style={styles.flex}>
-                Cantidad
+                {t('sheets.shoppingItemForm.quantity')}
               </AppText>
               <QuantityStepper value={values.quantity} onChange={(v) => onChange('quantity', v)} />
             </View>
 
-            <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Unidad">
+            <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel={t('sheets.shoppingItemForm.unitA11y')}>
               {UNIT_OPTIONS.map((u) => (
                 <Chip
                   key={u.key}
                   variant="choice"
-                  label={u.label}
-                  accessibilityLabel={unitFullLabel(u.key)}
+                  label={t(u.label)}
+                  accessibilityLabel={t(u.full)}
                   selected={values.unit === u.key}
                   onPress={() => onChange('unit', u.key)}
                 />
               ))}
             </View>
 
-            <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Categoría">
+            <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel={t('sheets.shoppingItemForm.categoryA11y')}>
               {CATEGORY_LIST.map((c) => (
                 <Chip
                   key={c.key}
@@ -129,8 +133,8 @@ export function ShoppingItemFormSheet({ visible, values, onChange, onSubmit, onC
             </View>
 
             <View style={styles.actions}>
-              <SecondaryButton title="Cancelar" variant="outline" onPress={requestClose} style={styles.flex} />
-              <PrimaryButton title="Guardar" iconName="checkmark" onPress={onSubmit} style={styles.flex} />
+              <SecondaryButton title={t('common.cancel')} variant="outline" onPress={requestClose} style={styles.flex} />
+              <PrimaryButton title={t('common.save')} iconName="checkmark" onPress={onSubmit} style={styles.flex} />
             </View>
           </ScrollView>
         </View>
@@ -139,15 +143,15 @@ export function ShoppingItemFormSheet({ visible, values, onChange, onSubmit, onC
       <M3Dialog
         visible={confirmExit}
         type="warning"
-        title="Este producto"
-        titleEmphasis="no se ha guardado"
-        message="Si sales ahora, lo que escribiste no se guardará."
-        cancelText="Salir sin guardar"
+        title={t('sheets.shoppingItemForm.exit.title')}
+        titleEmphasis={t('sheets.shoppingItemForm.exit.emphasis')}
+        message={t('sheets.shoppingItemForm.exit.message')}
+        cancelText={t('sheets.shoppingItemForm.exit.leave')}
         onCancel={() => {
           setConfirmExit(false);
           onClose();
         }}
-        confirmText="Guardar"
+        confirmText={t('common.save')}
         onConfirm={() => {
           setConfirmExit(false);
           onSubmit();
@@ -158,7 +162,7 @@ export function ShoppingItemFormSheet({ visible, values, onChange, onSubmit, onC
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   flex: { flex: 1 },
   overlay: {
     flex: 1,
@@ -225,4 +229,4 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 4,
   },
-});
+}));

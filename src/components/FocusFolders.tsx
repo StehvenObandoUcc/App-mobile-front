@@ -3,7 +3,9 @@ import { View, StyleSheet, Pressable, Animated, Easing, LayoutChangeEvent } from
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { useReduceMotion } from '../hooks/useReduceMotion';
-import { colors, radii, typography } from '../theme';
+import { useI18n } from '../i18n';
+import { radii, typography } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * FocusFolders — enfoque del Chef IA como pestañas apiladas tipo carpeta (Chef-IA.dc.html, ref. C).
@@ -40,7 +42,10 @@ const CLOSED_TITLE_SCALE = 15 / typography.sizes.cardTitle;
 type CardAnim = { y: Animated.Value; open: Animated.Value };
 
 export function FocusFolders<K extends string>({ options, value, onChange }: FocusFoldersProps<K>) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const reduceMotion = useReduceMotion();
+  const { t } = useI18n();
   const selectedKey = options.some((o) => o.key === value) ? value : options[0].key;
   const [cardHeight, setCardHeight] = useState(FALLBACK_HEIGHT);
   const measured = useRef<Partial<Record<K, number>>>({}).current;
@@ -98,7 +103,7 @@ export function FocusFolders<K extends string>({ options, value, onChange }: Foc
     <View
       style={{ height: (options.length - 1) * STEP + cardHeight }}
       accessibilityRole="radiogroup"
-      accessibilityLabel="Enfoque culinario"
+      accessibilityLabel={t('molecules.focusFolders.groupA11y')}
     >
       {options.map((o) => {
         const a = anims.get(o.key)!;
@@ -121,7 +126,7 @@ export function FocusFolders<K extends string>({ options, value, onChange }: Foc
               style={({ pressed }) => [styles.fill, pressed && !isOpen && styles.pressed]}
               accessibilityRole="radio"
               accessibilityState={{ checked: isOpen }}
-              accessibilityLabel={isOpen ? `${o.title}, elegido. ${o.description}` : `${o.title}. ${o.description}`}
+              accessibilityLabel={isOpen ? t('molecules.focusFolders.chosenA11y', { title: o.title, description: o.description }) : `${o.title}. ${o.description}`}
             >
               <View style={styles.content} onLayout={onMeasure(o.key)}>
                 <View style={styles.head}>
@@ -167,7 +172,7 @@ export function FocusFolders<K extends string>({ options, value, onChange }: Foc
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   card: {
     position: 'absolute',
     left: 0,
@@ -212,4 +217,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.ink,
   },
-});
+}));

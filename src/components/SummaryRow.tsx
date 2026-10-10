@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /** SummaryRow — fila de desglose en diálogos de éxito: cifra grande + texto («3 alimentos nuevos»). */
 export function SummaryRow({ value, label }: { value: number | string; label: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.row} accessibilityRole="text" accessibilityLabel={`${value} ${label}`}>
       <AppText weight="medium" style={styles.value}>
@@ -17,7 +19,7 @@ export function SummaryRow({ value, label }: { value: number | string; label: st
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   row: {
     minHeight: 44,
     flexDirection: 'row',
@@ -35,4 +37,4 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
   },
-});
+}));

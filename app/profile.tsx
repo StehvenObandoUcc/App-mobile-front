@@ -8,16 +8,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/hooks/useAuth';
 import { useAvatar } from '../src/hooks/useAvatar';
 import { AppText, IconButton, ProfileCard, ActionSheetModal, M3Dialog } from '../src/components';
-import { colors, radii, spacing } from '../src/theme';
+import { radii, spacing } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useI18n } from '../src/i18n';
 
 /**
  * Perfil (Perfil.dc.html): volver + «Mi perfil», ProfileCard y «Cerrar sesión» en rojo suave.
  * Tocar la foto abre opciones (elegir o quitar). Cerrar sesión pide confirmación.
  */
 export default function ProfileScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
+  const { t } = useI18n();
   const { uri, save } = useAvatar(user?.id);
   const [photoSheet, setPhotoSheet] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
@@ -29,7 +34,7 @@ export default function ProfileScreen() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        setNotice({ title: 'Necesitamos tus', emphasis: 'fotos', message: 'Permite el acceso a tus fotos en los ajustes del teléfono para elegir tu foto de perfil.' });
+        setNotice({ title: t('screensFlow.profile.photoNeedTitle'), emphasis: t('screensFlow.profile.photoNeedEmphasis'), message: t('screensFlow.profile.photoNeedMessage') });
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -49,7 +54,7 @@ export default function ProfileScreen() {
         if (small.base64) await save(`data:image/jpeg;base64,${small.base64}`);
       }
     } catch (err: any) {
-      setNotice({ title: 'No se pudo cambiar', emphasis: 'la foto', message: err?.message || 'Inténtalo de nuevo.' });
+      setNotice({ title: t('screensFlow.profile.photoFailTitle'), emphasis: t('screensFlow.profile.photoFailEmphasis'), message: err?.message || t('screensFlow.profile.photoFailFallback') });
     }
   };
 
@@ -59,10 +64,10 @@ export default function ProfileScreen() {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}>
         <View style={styles.header}>
-          <IconButton iconName="chevron-back" variant="white" accessibilityLabel="Volver al inicio" onPress={goBack} />
+          <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('screensFlow.profile.backA11y')} onPress={goBack} />
           <AppText weight="light" style={styles.title} accessibilityRole="header">
-            {'Mi '}
-            <AppText weight="semibold">perfil</AppText>
+            {t('screensFlow.profile.titleLight')}
+            <AppText weight="semibold">{t('screensFlow.profile.titleBold')}</AppText>
           </AppText>
         </View>
 
@@ -80,7 +85,7 @@ export default function ProfileScreen() {
         >
           <Ionicons name="log-out-outline" size={20} color={colors.m3.onErrorContainer} />
           <AppText variant="body" weight="semibold" color={colors.m3.onErrorContainer}>
-            Cerrar sesión
+            {t('screensFlow.profile.logout')}
           </AppText>
         </Pressable>
       </ScrollView>
@@ -88,24 +93,24 @@ export default function ProfileScreen() {
       <ActionSheetModal
         visible={photoSheet}
         onClose={() => setPhotoSheet(false)}
-        title="Foto de perfil"
+        title={t('screensFlow.profile.photoSheetTitle')}
         headerIconName="camera-outline"
         headerTone={{ background: colors.tertiaryContainer, text: colors.onTertiaryContainer }}
         actions={[
-          { label: 'Elegir otra foto', icon: 'image-outline', onPress: pickPhoto },
-          { label: 'Quitar foto', icon: 'trash-outline', isDestructive: true, onPress: () => save(null) },
+          { label: t('screensFlow.profile.choosePhoto'), icon: 'image-outline', onPress: pickPhoto },
+          { label: t('screensFlow.profile.removePhoto'), icon: 'trash-outline', isDestructive: true, onPress: () => save(null) },
         ]}
       />
       <M3Dialog
         visible={confirmLogout}
         type="warning"
         iconName="log-out-outline"
-        title="¿Cerrar"
-        titleEmphasis="sesión?"
-        message="Tus datos se quedan en tu cuenta. En este teléfono volverás a la bienvenida."
-        cancelText="Cancelar"
+        title={t('screensFlow.profile.logoutTitle')}
+        titleEmphasis={t('screensFlow.profile.logoutEmphasis')}
+        message={t('screensFlow.profile.logoutMessage')}
+        cancelText={t('common.cancel')}
         onCancel={() => setConfirmLogout(false)}
-        confirmText="Cerrar sesión"
+        confirmText={t('screensFlow.profile.logout')}
         confirmTone="danger"
         onConfirm={async () => {
           setConfirmLogout(false);
@@ -125,7 +130,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -156,4 +161,4 @@ const styles = StyleSheet.create({
   logoutPressed: {
     opacity: 0.85,
   },
-});
+}));

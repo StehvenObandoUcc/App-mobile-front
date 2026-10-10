@@ -37,21 +37,22 @@ import {
 } from '../src/components';
 import { getExpirationStatus } from '../src/utils/expiration';
 import { daysUntil } from '../src/utils/dates';
-import { colors, radii, spacing, typography, CATEGORY_LIST } from '../src/theme';
+import { radii, spacing, typography, CATEGORY_LIST } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useI18n } from '../src/i18n';
 
 type CategoryFilter = 'all' | 'expiring' | IngredientCategory;
 
-const CATEGORIES: {
+type CategoryChip = {
   key: CategoryFilter;
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
-}[] = [
-  { key: 'all', label: 'Todos' },
-  { key: 'expiring', label: 'Por vencer', icon: 'time-outline' },
-  ...CATEGORY_LIST.map((c) => ({ key: c.key as CategoryFilter, label: c.label, icon: c.icon })),
-];
+};
 
 export default function InventoryScreen() {
+  const { colors } = useTheme();
+  const { t, tp } = useI18n();
+  const styles = useStyles();
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -59,6 +60,15 @@ export default function InventoryScreen() {
   const { items, status, error, reload, addItem, updateItem, deleteItem, deleteMultipleItems, consumeItem } =
     useInventory();
   const isLeavingRef = useRef(false);
+  const categories: CategoryChip[] = [
+    { key: 'all', label: t('screensMain.inventory.all') },
+    { key: 'expiring', label: t('screensMain.inventory.expiring'), icon: 'time-outline' },
+    ...CATEGORY_LIST.map((c) => ({
+      key: c.key as CategoryFilter,
+      label: t(`screensMain.inventory.categories.${c.key}`),
+      icon: c.icon,
+    })),
+  ];
 
   // Intercepción universal de retroceso tras escanear:
   // Redirigir a Inicio (/) cubriendo header, botón físico Android y gesto swipe-back en iOS
@@ -156,11 +166,11 @@ export default function InventoryScreen() {
     const count = selectedIds.size;
     setConfirmModal({
       visible: true,
-      title: '¿Eliminar',
-      titleEmphasis: `${count} ${count === 1 ? 'alimento' : 'alimentos'}?`,
-      description: 'Se quitarán de tu despensa en este dispositivo y se sincronizará al volver la conexión.',
+      title: t('screensMain.shared.deleteTitle'),
+      titleEmphasis: t('screensMain.shared.countEmphasis', { count, noun: tp('screensMain.shared.food', count) }),
+      description: t('screensMain.inventory.deleteManyDesc'),
       confirmDestructive: true,
-      confirmText: 'Eliminar',
+      confirmText: t('common.delete'),
       onConfirm: async () => {
         await deleteMultipleItems(Array.from(selectedIds));
         setSelectedIds(new Set());
@@ -243,8 +253,8 @@ export default function InventoryScreen() {
     if (!trimmedName) {
       setDialogConfig({
         visible: true,
-        title: 'Campo requerido',
-        message: 'Por favor ingresa el nombre del alimento.',
+        title: t('screensMain.inventory.requiredTitle'),
+        message: t('screensMain.inventory.requiredMessage'),
         type: 'warning',
         onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
       });
@@ -254,8 +264,8 @@ export default function InventoryScreen() {
     if (trimmedName.length > 60) {
       setDialogConfig({
         visible: true,
-        title: 'Nombre muy largo',
-        message: 'El nombre del alimento no puede superar los 60 caracteres.',
+        title: t('screensMain.inventory.tooLongTitle'),
+        message: t('screensMain.inventory.tooLongMessage'),
         type: 'warning',
         onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
       });
@@ -268,8 +278,8 @@ export default function InventoryScreen() {
       if (isNaN(q) || q <= 0) {
         setDialogConfig({
           visible: true,
-          title: 'Cantidad inválida',
-          message: 'La cantidad debe ser un número positivo mayor que cero.',
+          title: t('screensMain.inventory.invalidQtyTitle'),
+          message: t('screensMain.inventory.invalidQtyMessage'),
           type: 'warning',
           onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
         });
@@ -278,8 +288,8 @@ export default function InventoryScreen() {
       if (q > 99999) {
         setDialogConfig({
           visible: true,
-          title: 'Cantidad excedida',
-          message: 'La cantidad no puede superar 99,999.',
+          title: t('screensMain.inventory.tooBigQtyTitle'),
+          message: t('screensMain.inventory.tooBigQtyMessage'),
           type: 'warning',
           onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
         });
@@ -292,8 +302,8 @@ export default function InventoryScreen() {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(expirationDate.trim())) {
         setDialogConfig({
           visible: true,
-          title: 'Formato de fecha inválido',
-          message: 'Por favor usa el selector de fecha para elegir un día válido.',
+          title: t('screensMain.inventory.invalidDateTitle'),
+          message: t('screensMain.inventory.invalidDateMessage'),
           type: 'warning',
           onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
         });
@@ -303,8 +313,8 @@ export default function InventoryScreen() {
       if (y < 2024 || y > 2099) {
         setDialogConfig({
           visible: true,
-          title: 'Año fuera de rango',
-          message: 'El año de vencimiento debe estar entre 2024 y 2099.',
+          title: t('screensMain.inventory.yearRangeTitle'),
+          message: t('screensMain.inventory.yearRangeMessage'),
           type: 'warning',
           onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
         });
@@ -335,8 +345,8 @@ export default function InventoryScreen() {
     } catch {
       setDialogConfig({
         visible: true,
-        title: 'Error',
-        message: 'No se pudo guardar el alimento en el inventario.',
+        title: t('screensMain.inventory.errorTitle'),
+        message: t('screensMain.inventory.saveErrorMessage'),
         type: 'error',
         onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
       });
@@ -346,11 +356,11 @@ export default function InventoryScreen() {
   const handleDelete = (id: string, itemName: string) => {
     setConfirmModal({
       visible: true,
-      title: '¿Eliminar',
-      titleEmphasis: `${itemName}?`,
-      description: 'Se quitará de tu despensa en este dispositivo y se sincronizará al volver la conexión.',
+      title: t('screensMain.shared.deleteTitle'),
+      titleEmphasis: t('screensMain.inventory.itemEmphasis', { name: itemName }),
+      description: t('screensMain.inventory.deleteOneDesc'),
       confirmDestructive: true,
-      confirmText: 'Eliminar',
+      confirmText: t('common.delete'),
       onConfirm: () => deleteItem(id),
     });
   };
@@ -358,11 +368,11 @@ export default function InventoryScreen() {
   const handleConsume = (id: string, itemName: string) => {
     setConfirmModal({
       visible: true,
-      title: '¿Marcar como',
-      titleEmphasis: 'agotado?',
-      description: `«${itemName}» quedará en tu despensa como «Sin stock» hasta que lo repongas o lo elimines.`,
+      title: t('screensMain.inventory.consumeTitle'),
+      titleEmphasis: t('screensMain.inventory.consumeEmphasis'),
+      description: t('screensMain.inventory.consumeDesc', { name: itemName }),
       confirmDestructive: false,
-      confirmText: 'Confirmar',
+      confirmText: t('screensMain.inventory.consumeConfirm'),
       onConfirm: () => consumeItem(id),
     });
   };
@@ -396,7 +406,7 @@ export default function InventoryScreen() {
             <SearchInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Buscar en tu despensa o nevera..."
+              placeholder={t('screensMain.inventory.searchPlaceholder')}
             />
           </View>
 
@@ -407,7 +417,7 @@ export default function InventoryScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.categoriesList}
             >
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <Chip
                   key={cat.key}
                   label={cat.label}
@@ -434,16 +444,16 @@ export default function InventoryScreen() {
           {status === 'success' && filteredItems.length > 0 && (
             <View style={styles.countRow}>
               <AppText variant="metadata" weight="semibold" color={colors.textSecondary}>
-                {`${filteredItems.length} ${filteredItems.length === 1 ? 'alimento' : 'alimentos'} · por vencimiento`}
+                {t('screensMain.inventory.countLine', { count: filteredItems.length, noun: tp('screensMain.shared.food', filteredItems.length) })}
               </AppText>
               <Pressable
                 onPress={handleEnterSelectMode}
                 style={styles.selectEntryBtn}
                 accessibilityRole="button"
-                accessibilityLabel="Activar modo de selección"
+                accessibilityLabel={t('screensMain.inventory.selectEntryA11y')}
               >
                 <Ionicons name="checkmark-circle-outline" size={18} color={colors.textPrimary} />
-                <AppText variant="metadata" weight="semibold">Seleccionar</AppText>
+                <AppText variant="metadata" weight="semibold">{t('screensMain.inventory.select')}</AppText>
               </Pressable>
             </View>
           )}
@@ -467,12 +477,12 @@ export default function InventoryScreen() {
         <View style={styles.headerSection}>
           <View style={{ flex: 1 }}>
             <ScreenHeader
-              title="Mi"
-              emphasis="Despensa"
+              title={t('screensMain.inventory.title')}
+              emphasis={t('screensMain.inventory.emphasis')}
               subtitle={
                 items.length === 0
-                  ? 'Organiza tus alimentos e ingredientes'
-                  : `${items.length} alimento${items.length === 1 ? '' : 's'} guardado${items.length === 1 ? '' : 's'}`
+                  ? t('screensMain.inventory.subtitleEmpty')
+                  : tp('screensMain.inventory.savedCount', items.length)
               }
             />
           </View>
@@ -495,9 +505,9 @@ export default function InventoryScreen() {
 
       {status === 'error' && (
         <ErrorState
-          title="No pudimos cargar tu"
-          titleEmphasis="despensa"
-          message={error || 'Hubo un error de lectura local. Tus datos no se han perdido.'}
+          title={t('screensMain.inventory.loadErrorTitle')}
+          titleEmphasis={t('screensMain.inventory.loadErrorEmphasis')}
+          message={error || t('screensMain.inventory.loadErrorFallback')}
           onRetry={reload}
         />
       )}
@@ -521,16 +531,16 @@ export default function InventoryScreen() {
           ListEmptyComponent={
             searchQuery.trim() ? (
               <EmptyState
-                title="Sin resultados para"
-                titleEmphasis={`«${searchQuery.trim()}»`}
-                description="Revisa la ortografía o agrégalo si acabas de comprarlo."
+                title={t('screensMain.inventory.noResultsTitle')}
+                titleEmphasis={t('screensMain.inventory.noResultsEmphasis', { query: searchQuery.trim() })}
+                description={t('screensMain.inventory.noResultsDesc')}
                 iconName="search-outline"
                 tone="neutral"
-                actionLabel={`Agregar «${searchQuery.trim()}»`}
+                actionLabel={t('screensMain.inventory.addQuery', { query: searchQuery.trim() })}
                 actionTone="tint"
                 actionIconName="add"
                 onAction={() => openAddModal(searchQuery.trim())}
-                secondaryActionLabel="Ver todos"
+                secondaryActionLabel={t('screensMain.shared.seeAll')}
                 onSecondaryAction={() => {
                   setSearchQuery('');
                   setSelectedCategory('all');
@@ -538,24 +548,24 @@ export default function InventoryScreen() {
               />
             ) : selectedCategory !== 'all' ? (
               <EmptyState
-                title="Nada en esta"
-                titleEmphasis="categoría"
-                description="No encontramos alimentos con este filtro."
-                secondaryActionLabel="Ver todos"
+                title={t('screensMain.inventory.emptyCategoryTitle')}
+                titleEmphasis={t('screensMain.inventory.emptyCategoryEmphasis')}
+                description={t('screensMain.inventory.emptyCategoryDesc')}
+                secondaryActionLabel={t('screensMain.shared.seeAll')}
                 onSecondaryAction={() => setSelectedCategory('all')}
                 iconName="search-outline"
                 tone="neutral"
               />
             ) : (
               <EmptyState
-                title="Tu despensa está"
-                titleEmphasis="vacía"
-                description="Escanea tu nevera con la cámara o añade alimentos manualmente para comenzar."
-                actionLabel="Escanear alimentos"
+                title={t('screensMain.inventory.emptyPantryTitle')}
+                titleEmphasis={t('screensMain.inventory.emptyPantryEmphasis')}
+                description={t('screensMain.inventory.emptyPantryDesc')}
+                actionLabel={t('screensMain.inventory.scanFood')}
                 actionTone="brand"
                 actionIconName="scan-outline"
                 onAction={() => router.push('/scan')}
-                secondaryActionLabel="Agregar a mano"
+                secondaryActionLabel={t('screensMain.inventory.addByHand')}
                 onSecondaryAction={() => openAddModal()}
                 iconName="basket-outline"
               />
@@ -567,11 +577,11 @@ export default function InventoryScreen() {
       {/* ── FAB extendido «Agregar» (oculto en modo selección) ── */}
       {!isSelectMode && (
         <SpeedDialFab
-          accessibilityLabel="Agregar alimento"
+          accessibilityLabel={t('screensMain.inventory.addA11y')}
           style={{ right: spacing.screenGutter, bottom: bottomBarPosition + NAV_HEIGHT + 16 }}
           actions={[
-            { key: 'scan', label: 'Escanear con la cámara', iconName: 'scan-outline', tone: 'brand', onPress: () => router.push('/scan') },
-            { key: 'manual', label: 'Escribir a mano', iconName: 'create-outline', onPress: () => openAddModal() },
+            { key: 'scan', label: t('screensMain.inventory.scanWithCamera'), iconName: 'scan-outline', tone: 'brand', onPress: () => router.push('/scan') },
+            { key: 'manual', label: t('screensMain.inventory.writeByHand'), iconName: 'create-outline', onPress: () => openAddModal() },
           ]}
         />
       )}
@@ -580,7 +590,7 @@ export default function InventoryScreen() {
       {isSelectMode && (
         <SelectionActionBar
           count={selectedIds.size}
-          itemNoun="alimentos"
+          itemNoun={t('screensMain.inventory.itemNoun')}
           onCancel={handleCancelSelection}
           onDelete={handleDeleteSelected}
         />
@@ -644,7 +654,7 @@ export default function InventoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   selectionHeaderWrap: {
     marginHorizontal: spacing.screenGutter,
     marginTop: spacing.md,
@@ -730,4 +740,4 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: 110,
   },
-});
+}));

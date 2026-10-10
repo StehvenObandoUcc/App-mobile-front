@@ -2,7 +2,9 @@ import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * IngredientToggleChip — ingrediente a usar en el Chef IA (Chef-IA.dc.html).
@@ -18,9 +20,26 @@ export type IngredientToggleChipProps = {
 };
 
 export function IngredientToggleChip({ label, selected, onToggle, iconName, daysLeft }: IngredientToggleChipProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
   const urgent = daysLeft !== null && daysLeft !== undefined && daysLeft <= 3;
-  const badge = !urgent ? null : daysLeft! < 0 ? 'venc.' : daysLeft === 0 ? 'hoy' : `${daysLeft} d`;
+  const expiredBadge = urgent && daysLeft! < 0;
+  const badge = !urgent
+    ? null
+    : expiredBadge
+      ? t('molecules.ingredientToggleChip.expiredShort')
+      : daysLeft === 0
+        ? t('molecules.ingredientToggleChip.todayShort')
+        : t('molecules.ingredientToggleChip.daysShort', { count: daysLeft! });
   const badgeTone = daysLeft !== null && daysLeft !== undefined && daysLeft < 0 ? colors.functional.expired : colors.functional.expiringSoon;
+  const dueA11y = !badge
+    ? ''
+    : expiredBadge
+      ? t('molecules.ingredientToggleChip.expiredA11y')
+      : daysLeft === 0
+        ? t('molecules.ingredientToggleChip.dueTodayA11y')
+        : t('molecules.ingredientToggleChip.dueA11y', { when: badge });
 
   return (
     <Pressable
@@ -33,7 +52,7 @@ export function IngredientToggleChip({ label, selected, onToggle, iconName, days
       ]}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
-      accessibilityLabel={`${label}${badge ? `, vence ${badge === 'venc.' ? 'ya' : badge}` : ''}`}
+      accessibilityLabel={`${label}${dueA11y}`}
     >
       {selected && iconName && <Ionicons name={iconName} size={16} color={colors.onInk} />}
       <AppText variant="bodySmall" weight={selected ? 'semibold' : 'medium'} color={selected ? colors.onInk : colors.textPrimary} numberOfLines={1}>
@@ -50,7 +69,7 @@ export function IngredientToggleChip({ label, selected, onToggle, iconName, days
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   chip: {
     height: 40,
     flexDirection: 'row',
@@ -77,4 +96,4 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     justifyContent: 'center',
   },
-});
+}));

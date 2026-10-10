@@ -2,7 +2,8 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * PhotoTag — etiqueta sobre una foto con línea guía y punto (Bienvenida-Fotos.dc.html).
@@ -18,6 +19,8 @@ export type PhotoTagSpec = {
 };
 
 export function PhotoTag({ spec, scale }: { spec: PhotoTagSpec; scale: number }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const ai = spec.tone === 'ai';
   return (
     <>
@@ -54,7 +57,7 @@ export function PhotoTag({ spec, scale }: { spec: PhotoTagSpec; scale: number })
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   line: {
     position: 'absolute',
     width: 2,
@@ -104,4 +107,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
-});
+}));

@@ -1,10 +1,11 @@
+import { t } from '../i18n';
 import { Platform } from 'react-native';
 import { getNotifications } from './notifications-runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LocalStorage } from '../storage/local-storage';
 import { loadAppSettings } from '../storage/app-settings';
 import { buildExpiryReminderPlan } from '../utils/expiry-reminders';
-import { colors } from '../theme';
+import { lightColors as colors } from '../theme/colors';
 
 export { areNotificationsAvailable, isExpoGo } from './notifications-runtime';
 
@@ -45,8 +46,8 @@ async function ensureAndroidChannel(): Promise<void> {
   if (!Notifications || Platform.OS !== 'android') return;
   // En Android 13+ el canal debe existir antes de pedir el permiso.
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-    name: 'Avisos de vencimiento',
-    description: 'Te avisa antes de que un alimento de tu despensa venza.',
+    name: t('data.notifications.channelName'),
+    description: t('data.notifications.channelDescription'),
     importance: Notifications.AndroidImportance.DEFAULT,
     lightColor: colors.primary,
   });
@@ -193,8 +194,8 @@ export async function sendTestExpiryNotification(seconds = 10): Promise<boolean>
     await ensureAndroidChannel();
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Prueba · Espinaca vence en 2 días',
-        body: 'Así se verán tus avisos de vencimiento. Tócalo para abrir la Despensa.',
+        title: t('data.notifications.testTitle'),
+        body: t('data.notifications.testBody'),
         data: { kind: EXPIRY_TEST_NOTIFICATION_KIND, route: '/inventory', filter: 'expiring' },
       },
       trigger: {

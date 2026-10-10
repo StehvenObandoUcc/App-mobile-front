@@ -7,7 +7,10 @@ import { DialogTitle } from './DialogTitle';
 import { PrimaryButton } from './PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
 import { M3Dialog } from './M3Dialog';
-import { colors, spacing, radii, elevations } from '../theme';
+import { spacing, radii, elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
  * ActionSheetModal — Organismos.dc.html
@@ -54,21 +57,33 @@ export function ActionSheetModal({
   description,
   variant = 'action_sheet',
   actions = [],
-  confirmText = 'Confirmar',
+  confirmText: confirmTextProp,
   confirmDestructive = false,
   onConfirm,
-  cancelText = 'Cancelar',
+  cancelText: cancelTextProp,
   headerIconName,
   headerTone,
   titleEmphasis,
 }: ActionSheetModalProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
+  const reduceMotion = useReduceMotion();
+  const confirmText = confirmTextProp ?? t('atoms.actionSheet.confirm');
+  const cancelText = cancelTextProp ?? t('atoms.actionSheet.cancel');
   const slideAnim = useRef(new Animated.Value(400)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const [isMounted, setIsMounted] = React.useState(false);
 
   useEffect(() => {
     if (visible) {
+      if (reduceMotion) {
+        slideAnim.setValue(0);
+        backdropOpacity.setValue(1);
+        setIsMounted(true);
+        return;
+      }
       setIsMounted(true);
       requestAnimationFrame(() => {
         Animated.parallel([
@@ -76,6 +91,10 @@ export function ActionSheetModal({
           Animated.timing(backdropOpacity, { toValue: 1, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: true }),
         ]).start();
       });
+    } else if (reduceMotion) {
+      slideAnim.setValue(400);
+      backdropOpacity.setValue(0);
+      setIsMounted(false);
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, { toValue: 400, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }),
@@ -136,7 +155,7 @@ export function ActionSheetModal({
   return (
     <Modal visible={isMounted} transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.overlay, { opacity: backdropOpacity }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel={t('atoms.actionSheet.closeA11y')} />
 
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY: slideAnim }], paddingBottom: Math.max(insets.bottom + 12, 24) }]}
@@ -239,7 +258,7 @@ export function ActionSheetModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   overlay: {
     flex: 1,
     backgroundColor: colors.scrim,
@@ -357,4 +376,4 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.md,
   },
-});
+}));

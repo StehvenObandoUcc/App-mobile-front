@@ -2,10 +2,12 @@ import React from 'react';
 import { StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /** DashedAddButton — botón de borde punteado «+ Agregar producto a la lista» (Compras). 56 dp, radio 20. */
 export function DashedAddButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -21,7 +23,7 @@ export function DashedAddButton({ label, onPress }: { label: string; onPress: ()
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   btn: {
     height: 56,
     borderRadius: 20,
@@ -36,4 +38,4 @@ const styles = StyleSheet.create({
   pressed: {
     backgroundColor: colors.surfaceVariant,
   },
-});
+}));

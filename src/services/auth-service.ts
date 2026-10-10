@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL, registerAuthTokenProvider } from './api-client';
 import { AuthSession } from '../types';
@@ -23,7 +24,7 @@ async function saveSecureSession(session: AuthSession): Promise<void> {
     await SecureStore.setItemAsync(SESSION_SECURE_KEY, JSON.stringify(session));
   } catch (err) {
     console.error('[Auth] Error crítico guardando sesión en SecureStore:', err);
-    throw new Error('No se pudo almacenar la sesión de forma segura en el dispositivo.');
+    throw new Error(t('data.auth.saveError'));
   }
 }
 
@@ -46,7 +47,7 @@ async function getSecureSession(): Promise<SecureSessionResult> {
     console.error('[Auth] Error crítico leyendo sesión desde SecureStore:', err);
     return {
       session: null,
-      error: 'Error al acceder al almacenamiento seguro de credenciales.',
+      error: t('data.auth.secureReadError'),
     };
   }
 }
@@ -80,7 +81,7 @@ async function hydrateAuth() {
     }
   } catch (err) {
     console.error('[Auth] Error inesperado en hydrateAuth:', err);
-    hydrationError = 'Error inesperado al acceder al almacenamiento seguro.';
+    hydrationError = t('data.auth.hydrationError');
     currentSession = null;
   } finally {
     isHydrated = true;
@@ -134,7 +135,7 @@ export class AuthService {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Credenciales incorrectas');
+        throw new Error(errData.detail || t('data.auth.invalidCredentials'));
       }
 
       const data = await response.json();
@@ -158,7 +159,7 @@ export class AuthService {
         (err instanceof TypeError && String(err.message).toLowerCase().includes('network')) ||
         String(err?.message || '').toLowerCase().includes('network request failed');
       if (isNetwork) {
-        throw new Error('No se pudo conectar con el servidor. Revisa tu conexión a internet o verifica que el backend esté iniciado.');
+        throw new Error(t('data.network.connectionError'));
       }
       throw err;
     }
@@ -181,7 +182,7 @@ export class AuthService {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Error al registrar usuario');
+        throw new Error(errData.detail || t('data.auth.registerError'));
       }
 
       const data = await response.json();
@@ -205,10 +206,41 @@ export class AuthService {
         (err instanceof TypeError && String(err.message).toLowerCase().includes('network')) ||
         String(err?.message || '').toLowerCase().includes('network request failed');
       if (isNetwork) {
-        throw new Error('No se pudo conectar con el servidor. Revisa tu conexión a internet o verifica que el backend esté iniciado.');
+        throw new Error(t('data.network.connectionError'));
       }
       throw err;
     }
+  }
+
+  /**
+   * Elimina para siempre la cuenta y todos sus datos en el servidor (pide la contraseña actual).
+   * Si sale bien, borra también la copia local (despensa, recetas, compras y cola de sincronización)
+   * y cierra la sesión. Errores: 'wrong_password' (contraseña errada) o mensaje de red.
+   */
+  static async deleteAccount(rawPassword: string): Promise<void> {
+    const token = currentSession?.accessToken;
+    if (!token) throw new Error(t('data.auth.noSession'));
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/api/v1/auth/delete-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: rawPassword }),
+      });
+    } catch {
+      throw new Error(t('data.network.connectionError'));
+    }
+    if (response.status === 401) throw new Error('wrong_password');
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.detail || t('data.auth.deleteAccountError'));
+    }
+    try {
+      await LocalStorage.clearAllUserData();
+    } catch (err) {
+      console.warn('[Auth] No se pudo limpiar la copia local tras eliminar la cuenta:', err);
+    }
+    await AuthService.logout();
   }
 
   /**

@@ -1,3 +1,4 @@
+import { t, getLanguage } from '../i18n';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import type { DietaryPreference } from '../types';
@@ -73,6 +74,8 @@ async function requestJson<T = any>(url: string, options?: RequestInit): Promise
     if (token) {
       baseHeaders['Authorization'] = `Bearer ${token}`;
     }
+    // El backend usa este idioma para que el Chef IA y el escaneo respondan en el idioma de la app.
+    baseHeaders['Accept-Language'] = getLanguage();
     const mergedHeaders = {
       ...baseHeaders,
       ...(options?.headers || {}),
@@ -80,14 +83,14 @@ async function requestJson<T = any>(url: string, options?: RequestInit): Promise
     response = await fetch(url, { ...options, headers: mergedHeaders });
   } catch (err: any) {
     throw new ApiError(
-      'No se pudo conectar con el servidor. Revisa tu conexión a internet o verifica que el backend esté iniciado.',
+      t('data.network.connectionError'),
       0,
       true
     );
   }
 
   if (!response.ok) {
-    let detail = 'Error en la solicitud al servidor';
+    let detail = t('data.network.requestError');
     try {
       const errorJson = await response.json();
       if (errorJson?.detail) {

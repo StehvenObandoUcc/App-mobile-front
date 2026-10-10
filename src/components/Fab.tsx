@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Pressable, StyleProp, ViewStyle, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, elevations } from '../theme';
+import { elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * Fab — botón flotante solo con icono (squircle 56, radio 20).
@@ -18,6 +19,8 @@ export type FabProps = {
 };
 
 export function Fab({ iconName, onPress, accessibilityLabel, tone = 'ink', style, iconRotation, accessibilityState }: FabProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const bg = tone === 'ai' ? colors.tertiary : colors.ink;
   const pressedBg = tone === 'ai' ? colors.m3.tertiaryPressed : colors.inkPressed;
   return (
@@ -35,7 +38,7 @@ export function Fab({ iconName, onPress, accessibilityLabel, tone = 'ink', style
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   fab: {
     position: 'absolute',
     width: 56,
@@ -48,4 +51,4 @@ const styles = StyleSheet.create({
   pressed: {
     transform: [{ scale: 0.94 }],
   },
-});
+}));

@@ -5,8 +5,10 @@ import { Chip } from './Chip';
 import { PrimaryButton } from './PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
 import { CalendarMonth } from './CalendarMonth';
-import { colors, radii, spacing, elevations } from '../theme';
+import { radii, spacing, elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { todayISO, addDaysISO, parseLocalDate, formatPickerHeader } from '../utils/dates';
+import { useI18n } from '../i18n';
 
 /**
  * M3DatePickerModal — organismo (Organismos.dc.html).
@@ -22,13 +24,16 @@ export interface M3DatePickerModalProps {
 }
 
 const SHORTCUTS = [
-  { label: 'Hoy', days: 0 },
-  { label: '+3 días', days: 3 },
-  { label: '+1 sem', days: 7 },
-  { label: '+1 mes', days: 30 },
+  { labelKey: 'sheets.m3DatePicker.shortcut.today', days: 0 },
+  { labelKey: 'sheets.m3DatePicker.shortcut.plus3Days', days: 3 },
+  { labelKey: 'sheets.m3DatePicker.shortcut.plus1Week', days: 7 },
+  { labelKey: 'sheets.m3DatePicker.shortcut.plus1Month', days: 30 },
 ] as const;
 
 export function M3DatePickerModal({ visible, value, onChange, onClose }: M3DatePickerModalProps) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   const [selected, setSelected] = useState('');
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth());
@@ -70,11 +75,11 @@ export function M3DatePickerModal({ visible, value, onChange, onClose }: M3DateP
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Cerrar calendario" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={t('sheets.m3DatePicker.closeA11y')} />
         <View style={styles.card} accessibilityViewIsModal>
           <View style={styles.header}>
             <AppText variant="label" uppercase color={colors.textSecondary}>
-              Vence el
+              {t('sheets.m3DatePicker.eyebrow')}
             </AppText>
             <AppText variant="headline" weight="light" accessibilityLiveRegion="polite">
               {header ? (
@@ -83,7 +88,7 @@ export function M3DatePickerModal({ visible, value, onChange, onClose }: M3DateP
                   <AppText weight="semibold">{header.dayMonth}</AppText>
                 </>
               ) : (
-                'Sin fecha'
+                t('sheets.m3DatePicker.noDate')
               )}
             </AppText>
           </View>
@@ -93,9 +98,9 @@ export function M3DatePickerModal({ visible, value, onChange, onClose }: M3DateP
               const iso = addDaysISO(s.days);
               return (
                 <Chip
-                  key={s.label}
+                  key={s.labelKey}
                   variant="choice"
-                  label={s.label}
+                  label={t(s.labelKey)}
                   selected={selected === iso}
                   onPress={() => {
                     setSelected(iso);
@@ -117,7 +122,7 @@ export function M3DatePickerModal({ visible, value, onChange, onClose }: M3DateP
 
           <View style={styles.footer}>
             <SecondaryButton
-              title="Sin fecha"
+              title={t('sheets.m3DatePicker.noDate')}
               variant="outline"
               onPress={() => {
                 onChange('');
@@ -126,7 +131,7 @@ export function M3DatePickerModal({ visible, value, onChange, onClose }: M3DateP
               style={styles.footerBtn}
             />
             <PrimaryButton
-              title="Confirmar"
+              title={t('sheets.m3DatePicker.confirm')}
               disabled={!selected}
               onPress={() => {
                 onChange(selected);
@@ -141,7 +146,7 @@ export function M3DatePickerModal({ visible, value, onChange, onClose }: M3DateP
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   backdrop: {
     flex: 1,
     backgroundColor: colors.scrim,
@@ -175,4 +180,4 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.md,
   },
-});
+}));

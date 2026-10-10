@@ -29,7 +29,9 @@ import { useOutboxStatus } from '../src/hooks/useOutboxStatus';
 import { useAvatar } from '../src/hooks/useAvatar';
 import { useAuth } from '../src/hooks/useAuth';
 import { useShoppingList } from '../src/hooks/useShoppingList';
-import { colors, radii, spacing, typography, elevations } from '../src/theme';
+import { radii, spacing, typography, elevations } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useI18n } from '../src/i18n';
 
 /**
  * Sin sesión no se monta Inicio: antes se cargaban despensa, recetas y compras (y una llamada al servidor)
@@ -43,6 +45,9 @@ export default function HomeScreen() {
 }
 
 function HomeContent() {
+  const { colors } = useTheme();
+  const { t, tp } = useI18n();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items } = useInventory();
@@ -67,10 +72,10 @@ function HomeContent() {
   const handleLongPressRecipe = (recipe: Recipe) => {
     setConfirmModal({
       visible: true,
-      title: 'Descartar sugerencia',
-      description: `¿Deseas descartar la receta "${recipe.title}" de tus sugerencias?`,
+      title: t('screensMain.home.discardTitle'),
+      description: t('screensMain.home.discardDescription', { title: recipe.title }),
       confirmDestructive: true,
-      confirmText: 'Descartar',
+      confirmText: t('screensMain.home.discardConfirm'),
       onConfirm: async () => {
         await deleteRecipe(recipe.id);
       },
@@ -89,8 +94,8 @@ function HomeContent() {
 
   // Encabezado «Mi **Cocina**» (mockup) o «Chef **Steve**» cuando hay sesión.
   const firstName = user?.name ? user.name.replace(/^chef\s+/i, '').split(' ')[0] : null;
-  const headerTitle = firstName ? 'Chef' : 'Mi';
-  const headerEmphasis = firstName ?? 'Cocina';
+  const headerTitle = firstName ? t('screensMain.home.headerChef') : t('screensMain.home.headerMine');
+  const headerEmphasis = firstName ?? t('screensMain.home.headerKitchen');
 
   // Ficha grande «Alimentos en despensa»: barra frescos / por vencer / sin fecha.
   const freshCount = items.filter((i) => getExpirationStatus(i.expirationDate).status === 'fresh').length;
@@ -113,7 +118,7 @@ function HomeContent() {
       {/* ── 1. Encabezado (Inicio.dc.html) ── */}
       <StaggerView index={0}>
         <ScreenHeader
-          overline="Aprovecha mejor tu despensa hoy"
+          overline={t('screensMain.home.overline')}
           title={headerTitle}
           emphasis={headerEmphasis}
           right={
@@ -121,13 +126,13 @@ function HomeContent() {
               <IconButton
                 iconName="settings-outline"
                 variant="surface"
-                accessibilityLabel="Configuración"
+                accessibilityLabel={t('screensMain.home.settingsA11y')}
                 onPress={() => router.push('/settings')}
               />
               <AvatarButton
                 uri={avatarUri}
                 signedIn={!!user}
-                accessibilityLabel={user ? `Perfil de ${user.name}` : 'Iniciar sesión o ver perfil'}
+                accessibilityLabel={user ? t('screensMain.home.profileA11y', { name: user.name }) : t('screensMain.home.loginOrProfileA11y')}
                 onPress={() => router.push('/profile')}
               />
             </>
@@ -157,38 +162,38 @@ function HomeContent() {
           <FeatureTile
             size="lg"
             tone="fresh"
-            label={'Alimentos\nen despensa'}
+            label={t('screensMain.home.pantryTitle')}
             value={ingredientCount}
-            accessibilityLabel={`Despensa con ${ingredientCount} alimentos: ${freshCount} frescos, ${expiringCount} por vencer`}
+            accessibilityLabel={t('screensMain.home.pantryA11y', { total: ingredientCount, foodNoun: tp('screensMain.shared.food', ingredientCount), fresh: freshCount, freshNoun: tp('screensMain.shared.fresh', freshCount), expiring: expiringCount })}
             onPress={() => router.navigate('/inventory')}
             footer={
               ingredientCount > 0 ? (
                 <View style={styles.tileFooter}>
                   <View style={styles.freshBar}>
-                    {freshCount > 0 && <View style={[styles.freshSeg, { flexGrow: freshCount, backgroundColor: colors.difficulty.easy.segment }]} />}
-                    {expiringCount > 0 && <View style={[styles.freshSeg, { flexGrow: expiringCount, backgroundColor: colors.difficulty.medium.segment }]} />}
+                    {freshCount > 0 && <View style={[styles.freshSeg, { flexGrow: freshCount, backgroundColor: colors.secondary }]} />}
+                    {expiringCount > 0 && <View style={[styles.freshSeg, { flexGrow: expiringCount, backgroundColor: colors.warning }]} />}
                     {unknownCount > 0 && <View style={[styles.freshSeg, { flexGrow: unknownCount, backgroundColor: colors.borderStrong }]} />}
                   </View>
-                  <AppText variant="metadata" color={colors.functional.fresh.text}>{`${freshCount} frescos · ${expiringCount} por vencer`}</AppText>
+                  <AppText variant="metadata" color={colors.functional.fresh.text}>{t('screensMain.home.pantrySummary', { fresh: freshCount, freshNoun: tp('screensMain.shared.fresh', freshCount), expiring: expiringCount })}</AppText>
                 </View>
               ) : (
-                <AppText variant="metadata" color={colors.functional.fresh.text}>Escanea o agrega tu primer alimento</AppText>
+                <AppText variant="metadata" color={colors.functional.fresh.text}>{t('screensMain.home.pantryEmpty')}</AppText>
               )
             }
           />
           <View style={styles.metricsCol}>
             <FeatureTile
               tone="expiring"
-              label="Por vencer"
+              label={t('screensMain.home.expiringTitle')}
               value={expiringCount}
-              accessibilityLabel={`${expiringCount} alimentos por vencer`}
+              accessibilityLabel={tp('screensMain.home.expiringA11y', expiringCount)}
               onPress={openExpiring}
             />
             <FeatureTile
               tone="brand"
-              label="Por comprar"
+              label={t('screensMain.home.shoppingTitle')}
               value={pendingItems.length}
-              accessibilityLabel={`${pendingItems.length} compras pendientes`}
+              accessibilityLabel={tp('screensMain.home.shoppingA11y', pendingItems.length)}
               onPress={() => router.navigate('/shopping-list')}
             />
           </View>
@@ -198,7 +203,7 @@ function HomeContent() {
       {/* ── 4. ¿Qué cocinamos hoy? ── */}
       <StaggerView index={3}>
         <View style={styles.section}>
-          <ScreenHeader title="¿Qué cocinamos" emphasis="hoy?" size="headline" />
+          <ScreenHeader title={t('screensMain.home.cookTodayTitle')} emphasis={t('screensMain.home.cookTodayEmphasis')} size="headline" />
           <TodayRecipeCard
             recipe={featuredRecipe}
             onOpen={() => featuredRecipe && openRecipe(featuredRecipe.id)}
@@ -211,8 +216,8 @@ function HomeContent() {
       <StaggerView index={4}>
         <View style={styles.sectionTight}>
           <SectionHeader
-            title="Aprovecha primero"
-            actionLabel={expiringCount > 0 ? `Ver todos (${expiringCount})` : undefined}
+            title={t('screensMain.home.useFirstTitle')}
+            actionLabel={expiringCount > 0 ? t('screensMain.home.seeAllExpiring', { count: expiringCount }) : undefined}
             onAction={openExpiring}
           />
           {expiringCount > 0 ? (
@@ -222,7 +227,7 @@ function HomeContent() {
           ) : (
             <View style={styles.allFresh}>
               <Ionicons name="checkmark-circle-outline" size={20} color={colors.functional.fresh.text} />
-              <AppText variant="bodySmall" color={colors.functional.fresh.text} style={styles.allFreshText}>Tu despensa está al día. Nada próximo a vencer.</AppText>
+              <AppText variant="bodySmall" color={colors.functional.fresh.text} style={styles.allFreshText}>{t('screensMain.home.allFresh')}</AppText>
             </View>
           )}
         </View>
@@ -232,8 +237,8 @@ function HomeContent() {
       <StaggerView index={5}>
         <View style={styles.sectionTight}>
           <SectionHeader
-            title="Ideas para cocinar"
-            actionLabel={`Ver todas (${recipes.length})`}
+            title={t('screensMain.home.ideasTitle')}
+            actionLabel={t('screensMain.home.seeAllRecipes', { count: recipes.length })}
             onAction={() => router.navigate('/recipes')}
           />
           {availableRecipes.length > 0 ? (
@@ -254,7 +259,7 @@ function HomeContent() {
             </ScrollView>
           ) : (
             <SecondaryButton
-              title="Generar ideas con Chef IA"
+              title={t('screensMain.home.generateIdeas')}
               iconName="sparkles-outline"
               variant="outline"
               onPress={() => router.navigate('/recipes')}
@@ -279,7 +284,7 @@ function HomeContent() {
 }
 
 // Inicio.dc.html: margen lateral 20, 20 entre bloques, +8 antes de cada sección.
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: {
     backgroundColor: colors.background,
   },
@@ -339,4 +344,4 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingRight: spacing.screenGutter,
   },
-});
+}));

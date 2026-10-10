@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { t } from '../i18n';
 import { AsyncStatus, Recipe, DietaryPreference } from '../types';
 import { RecipeService, mockRecipeService, PrepareRecipeResult } from '../services/recipe-service';
 import { LocalStorage } from '../storage/local-storage';
@@ -19,7 +20,7 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
       setRecipes(data);
       setStatus('success');
     } catch (err: any) {
-      setError(err?.message || 'Error al cargar las recetas');
+      setError(err?.message || t('data.recipes.loadError'));
       setStatus('error');
     }
   }, [service]);
@@ -48,7 +49,7 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
     try {
       await service.toggleSave(id);
     } catch (err: any) {
-      setError(err?.message || 'Error al actualizar favorita');
+      setError(err?.message || t('data.recipes.favoriteError'));
     }
   };
 
@@ -56,7 +57,7 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
     try {
       return await service.prepareRecipe(id);
     } catch (err: any) {
-      setError(err?.message || 'Error al procesar la preparación');
+      setError(err?.message || t('data.recipes.prepareError'));
       throw err;
     }
   };
@@ -65,7 +66,7 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
     try {
       await service.deleteRecipe(id);
     } catch (err: any) {
-      setError(err?.message || 'Error al descartar la receta');
+      setError(err?.message || t('data.recipes.discardError'));
     }
   };
 
@@ -80,7 +81,7 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
     try {
       await service.deleteRecipes(ids);
     } catch (err: any) {
-      setError(err?.message || 'Error al eliminar recetas seleccionadas');
+      setError(err?.message || t('data.recipes.deleteSelectedError'));
     }
   };
 
@@ -110,7 +111,7 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
       setStatus('success');
       return generated;
     } catch (err: any) {
-      setError(err?.message || 'Error generando recetas con IA');
+      setError(err?.message || t('data.recipes.generateAiError'));
       if (hadNoRecipes) {
         setStatus('error');
       }

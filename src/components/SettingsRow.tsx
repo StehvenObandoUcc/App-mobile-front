@@ -3,7 +3,9 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { ToggleSwitch } from './ToggleSwitch';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * SettingsSection + SettingsRow — Configuracion.dc.html.
@@ -12,6 +14,8 @@ import { colors, radii } from '../theme';
  * chevron · valor + chevron · interruptor · botón · nada. Destructiva = título rojo.
  */
 export function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.section}>
       <AppText variant="metadata" weight="semibold" color={colors.textSecondary} style={styles.sectionTitle} accessibilityRole="header">
@@ -53,6 +57,9 @@ export function SettingsRow({
   divider = false,
   accessibilityHint,
 }: SettingsRowProps) {
+  const { t } = useI18n();
+  const { colors } = useTheme();
+  const styles = useStyles();
   const isToggle = trailing.type === 'toggle';
   const press = onPress ?? (isToggle && trailing.onChange && !trailing.disabled ? () => trailing.onChange!(!trailing.value) : undefined);
   // Sin acción propia (p. ej. la fila solo tiene un botón a la derecha) la fila es un View:
@@ -85,7 +92,7 @@ export function SettingsRow({
             accessibilityLabel={trailing.label}
           >
             <AppText variant="bodySmall" weight="semibold">
-              {trailing.busy ? 'Sincronizando…' : trailing.label}
+              {trailing.busy ? t('common.syncing') : trailing.label}
             </AppText>
           </Pressable>
         )}
@@ -118,7 +125,7 @@ export function SettingsRow({
       {trailing.type === 'chevron' && <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
       {trailing.type === 'value' && (
         <View style={styles.value}>
-          <AppText variant="bodySmall" weight="semibold">
+          <AppText variant="bodySmall" weight="semibold" numberOfLines={1} style={styles.valueText}>
             {trailing.text}
           </AppText>
           <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
@@ -138,7 +145,7 @@ export function SettingsRow({
           accessibilityLabel={trailing.label}
         >
           <AppText variant="bodySmall" weight="semibold">
-            {trailing.busy ? 'Sincronizando…' : trailing.label}
+            {trailing.busy ? t('common.syncing') : trailing.label}
           </AppText>
         </Pressable>
       )}
@@ -146,7 +153,7 @@ export function SettingsRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   section: {
     gap: 8,
   },
@@ -186,7 +193,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  // El valor nunca aplasta el título: máximo 45 % del ancho y una sola línea.
+  valueText: {
+    flexShrink: 1,
+  },
   value: {
+    maxWidth: '45%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -201,4 +213,4 @@ const styles = StyleSheet.create({
   buttonPressed: {
     backgroundColor: colors.m3.surfaceContainer,
   },
-});
+}));

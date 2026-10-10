@@ -12,8 +12,9 @@ import { DateField } from './DateField';
 import { M3Dialog } from './M3Dialog';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IngredientCategory, IngredientUnit } from '../types';
-import { colors, radii, spacing, typography, elevations } from '../theme';
-import { unitFullLabel } from '../utils/units';
+import { radii, spacing, typography, elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * IngredientFormSheet — hoja «Añadir / Editar alimento» (Despensa-Formulario.dc.html).
@@ -44,14 +45,14 @@ export type IngredientFormSheetProps = {
 const NAME_MAX = 60;
 
 // Etiquetas cortas de las opciones de unidad (el lector de pantalla usa el nombre completo).
-const UNIT_OPTIONS: { key: IngredientUnit; label: string }[] = [
-  { key: 'units', label: 'unid.' },
-  { key: 'grams', label: 'g' },
-  { key: 'kilograms', label: 'kg' },
-  { key: 'milliliters', label: 'ml' },
-  { key: 'liters', label: 'L' },
-  { key: 'package', label: 'paquete' },
-  { key: 'unknown', label: 'sin unidad' },
+const UNIT_OPTIONS: { key: IngredientUnit; label: string; full: string }[] = [
+  { key: 'units', label: 'sheets.ingredientForm.unit.units', full: 'sheets.ingredientForm.unitFull.units' },
+  { key: 'grams', label: 'sheets.ingredientForm.unit.grams', full: 'sheets.ingredientForm.unitFull.grams' },
+  { key: 'kilograms', label: 'sheets.ingredientForm.unit.kilograms', full: 'sheets.ingredientForm.unitFull.kilograms' },
+  { key: 'milliliters', label: 'sheets.ingredientForm.unit.milliliters', full: 'sheets.ingredientForm.unitFull.milliliters' },
+  { key: 'liters', label: 'sheets.ingredientForm.unit.liters', full: 'sheets.ingredientForm.unitFull.liters' },
+  { key: 'package', label: 'sheets.ingredientForm.unit.package', full: 'sheets.ingredientForm.unitFull.package' },
+  { key: 'unknown', label: 'sheets.ingredientForm.unit.unknown', full: 'sheets.ingredientForm.unitFull.unknown' },
 ];
 
 export function IngredientFormSheet({
@@ -64,6 +65,9 @@ export function IngredientFormSheet({
   onOpenCalendar,
   onDelete,
 }: IngredientFormSheetProps) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   const [nameFocused, setNameFocused] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
   const insets = useSafeAreaInsets();
@@ -83,21 +87,21 @@ export function IngredientFormSheet({
     if (isDirty) setConfirmExit(true);
     else onClose();
   };
-  const submitLabel = mode === 'edit' ? 'Guardar cambios' : 'Añadir alimento';
+  const submitLabel = t(mode === 'edit' ? 'sheets.ingredientForm.submitEdit' : 'sheets.ingredientForm.submitAdd');
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={requestClose}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={requestClose} accessibilityLabel="Cerrar formulario" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={requestClose} accessibilityLabel={t('sheets.ingredientForm.closeFormA11y')} />
         <View style={styles.sheet} accessibilityViewIsModal>
           <View style={styles.handle} />
 
           <View style={styles.header}>
             <AppText weight="light" style={styles.title} accessibilityRole="header">
-              {mode === 'edit' ? 'Editar ' : 'Añadir '}
-              <AppText weight="semibold">alimento</AppText>
+              {mode === 'edit' ? t('sheets.ingredientForm.titleEdit') : t('sheets.ingredientForm.titleAdd')}{' '}
+              <AppText weight="semibold">{t('sheets.ingredientForm.titleEmphasis')}</AppText>
             </AppText>
-            <IconButton iconName="close" variant="neutral" accessibilityLabel="Cerrar" onPress={requestClose} style={styles.closeBtn} />
+            <IconButton iconName="close" variant="neutral" accessibilityLabel={t('common.close')} onPress={requestClose} style={styles.closeBtn} />
           </View>
 
           <ScrollView
@@ -109,23 +113,23 @@ export function IngredientFormSheet({
             {/* ── Nombre ── */}
             <View style={styles.field}>
               <AppText variant="bodySmall" weight="semibold">
-                Nombre del alimento <AppText color={colors.error.text}>*</AppText>
+                {t('sheets.ingredientForm.nameLabel')} <AppText color={colors.error.text}>*</AppText>
               </AppText>
               <TextInput
                 value={values.name}
                 onChangeText={(v) => onChange('name', v)}
-                placeholder="Ej. Tomates cherry"
+                placeholder={t('sheets.ingredientForm.namePlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 maxLength={NAME_MAX}
                 onFocus={() => setNameFocused(true)}
                 onBlur={() => setNameFocused(false)}
                 style={[styles.input, nameFocused && styles.inputFocused]}
-                accessibilityLabel="Nombre del alimento, obligatorio"
+                accessibilityLabel={t('sheets.ingredientForm.nameA11y')}
                 returnKeyType="done"
               />
               <View style={styles.helperRow}>
                 <AppText variant="caption" color={colors.textSecondary}>
-                  Ej. Tomates cherry, leche entera…
+                  {t('sheets.ingredientForm.nameHelper')}
                 </AppText>
                 <AppText variant="caption" color={colors.textSecondary}>{`${values.name.length}/${NAME_MAX}`}</AppText>
               </View>
@@ -134,16 +138,16 @@ export function IngredientFormSheet({
             {/* ── Cantidad + unidad ── */}
             <View style={styles.fieldWide}>
               <AppText variant="bodySmall" weight="semibold">
-                Cantidad
+                {t('sheets.ingredientForm.quantity')}
               </AppText>
               <QuantityStepper value={values.quantity} onChange={(v) => onChange('quantity', v)} />
-              <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Unidad">
+              <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel={t('sheets.ingredientForm.unitA11y')}>
                 {UNIT_OPTIONS.map((u) => (
                   <Chip
                     key={u.key}
                     variant="choice"
-                    label={u.label}
-                    accessibilityLabel={unitFullLabel(u.key)}
+                    label={t(u.label)}
+                    accessibilityLabel={t(u.full)}
                     selected={values.unit === u.key}
                     onPress={() => onChange('unit', u.key)}
                   />
@@ -154,7 +158,7 @@ export function IngredientFormSheet({
             {/* ── Categoría ── */}
             <View style={styles.fieldWide}>
               <AppText variant="bodySmall" weight="semibold">
-                Categoría
+                {t('sheets.ingredientForm.category')}
               </AppText>
               <CategoryPicker value={values.category} onChange={(c) => onChange('category', c)} />
             </View>
@@ -162,7 +166,7 @@ export function IngredientFormSheet({
             {/* ── Vencimiento ── */}
             <View style={styles.fieldWide}>
               <AppText variant="bodySmall" weight="semibold">
-                Fecha de vencimiento
+                {t('sheets.ingredientForm.expiration')}
               </AppText>
               <DateField
                 value={values.expirationDate}
@@ -176,11 +180,11 @@ export function IngredientFormSheet({
                 onPress={onDelete}
                 style={({ pressed }) => [styles.deleteBtn, pressed && styles.deletePressed]}
                 accessibilityRole="button"
-                accessibilityLabel="Eliminar este alimento"
+                accessibilityLabel={t('sheets.ingredientForm.deleteLabel')}
               >
                 <Ionicons name="trash-outline" size={18} color={colors.m3.onErrorContainer} />
                 <AppText variant="body" weight="semibold" color={colors.m3.onErrorContainer}>
-                  Eliminar este alimento
+                  {t('sheets.ingredientForm.deleteLabel')}
                 </AppText>
               </Pressable>
             )}
@@ -196,19 +200,15 @@ export function IngredientFormSheet({
       <M3Dialog
         visible={confirmExit}
         type="warning"
-        title={mode === 'edit' ? 'Tienes cambios' : 'Este alimento'}
-        titleEmphasis={mode === 'edit' ? 'sin guardar' : 'no se ha guardado'}
-        message={
-          mode === 'edit'
-            ? 'Si sales ahora, los cambios que hiciste no se guardarán.'
-            : 'Si sales ahora, lo que escribiste no se guardará.'
-        }
-        cancelText="Salir sin guardar"
+        title={t(mode === 'edit' ? 'sheets.ingredientForm.exit.titleEdit' : 'sheets.ingredientForm.exit.titleAdd')}
+        titleEmphasis={t(mode === 'edit' ? 'sheets.ingredientForm.exit.emphasisEdit' : 'sheets.ingredientForm.exit.emphasisAdd')}
+        message={t(mode === 'edit' ? 'sheets.ingredientForm.exit.messageEdit' : 'sheets.ingredientForm.exit.messageAdd')}
+        cancelText={t('sheets.ingredientForm.exit.leave')}
         onCancel={() => {
           setConfirmExit(false);
           onClose();
         }}
-        confirmText={mode === 'edit' ? 'Guardar cambios' : 'Guardar'}
+        confirmText={t(mode === 'edit' ? 'sheets.ingredientForm.submitEdit' : 'common.save')}
         onConfirm={() => {
           setConfirmExit(false);
           onSubmit();
@@ -219,7 +219,7 @@ export function IngredientFormSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -316,4 +316,4 @@ const styles = StyleSheet.create({
   deletePressed: {
     opacity: 0.85,
   },
-});
+}));

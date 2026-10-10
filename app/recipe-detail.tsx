@@ -24,10 +24,12 @@ import {
   DifficultyMeter,
 } from '../src/components';
 import { validateRecipeIngredients } from '../src/utils/recipe-validation';
-import { recipeBanner, DIFFICULTY_LABELS, splitRecipeTitle, cleanStepText } from '../src/utils/recipe-visuals';
+import { recipeBanner, splitRecipeTitle, cleanStepText } from '../src/utils/recipe-visuals';
 import { formatQuantity } from '../src/utils/units';
 import { daysUntil } from '../src/utils/dates';
-import { colors, spacing } from '../src/theme';
+import { spacing } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useI18n } from '../src/i18n';
 
 type DialogState = {
   visible: boolean;
@@ -42,8 +44,6 @@ type DialogState = {
   onCancel?: () => void;
 };
 
-const qty = (i: RecipeIngredient) => (i.quantity !== null ? formatQuantity(i.quantity, i.unit, { long: true }) : 'Al gusto');
-
 /**
  * Detalle de receta — Receta-Detalle.dc.html.
  * Portada pastel con volver/guardar · coincidencia (IA) · título 300 + 600 · 3 fichas ·
@@ -52,6 +52,10 @@ const qty = (i: RecipeIngredient) => (i.quantity !== null ? formatQuantity(i.qua
  * Sin «Volver a recetas» (decisión aprobada): se vuelve con la flecha de la portada.
  */
 export default function RecipeDetailScreen() {
+  const { colors } = useTheme();
+  const { t, tp } = useI18n();
+  const qty = (i: RecipeIngredient) => (i.quantity !== null ? formatQuantity(i.quantity, i.unit, { long: true }) : t('screensMain.recipeDetail.toTaste'));
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { recipeId } = useLocalSearchParams<{ recipeId?: string }>();
@@ -76,7 +80,7 @@ export default function RecipeDetailScreen() {
         const loaded = await getRecipeSteps(rec);
         setRecipe((prev) => (prev ? { ...prev, steps: loaded } : prev));
       } catch (err: any) {
-        setStepsError(err?.message || 'No pudimos cargar los pasos en este momento.');
+        setStepsError(err?.message || t('screensMain.recipeDetail.stepsErrorFallback'));
       } finally {
         setIsLoadingSteps(false);
       }
@@ -102,10 +106,10 @@ export default function RecipeDetailScreen() {
         items.find((i) => i.name.trim().toLowerCase() === ing.name.trim().toLowerCase());
       const d = match ? daysUntil(match.expirationDate) : null;
       if (d === null || d > 3) return undefined;
-      if (d < 0) return { label: 'vencido', tone: colors.functional.expired };
-      return { label: d === 0 ? 'vence hoy' : `vence en ${d} d`, tone: colors.functional.expiringSoon };
+      if (d < 0) return { label: t('screensMain.recipeDetail.expired'), tone: colors.functional.expired };
+      return { label: d === 0 ? t('screensMain.recipeDetail.expiresToday') : t('screensMain.recipeDetail.expiresIn', { count: d }), tone: colors.functional.expiringSoon };
     },
-    [items]
+    [items, t]
   );
 
   const steps = useMemo(() => (recipe?.steps ?? []).map(cleanStepText), [recipe?.steps]);
@@ -114,12 +118,12 @@ export default function RecipeDetailScreen() {
     return (
       <View style={[styles.loading, { paddingTop: insets.top, paddingHorizontal: 24 }]}>
         <EmptyState
-          title="No encontramos"
-          titleEmphasis="esta receta"
-          description="Puede que la hayas borrado o que ya no esté disponible."
+          title={t('screensMain.recipeDetail.notFoundTitle')}
+          titleEmphasis={t('screensMain.recipeDetail.notFoundEmphasis')}
+          description={t('screensMain.recipeDetail.notFoundDesc')}
           iconName="restaurant-outline"
           tone="neutral"
-          actionLabel="Ver mis recetas"
+          actionLabel={t('screensMain.recipeDetail.backToRecipes')}
           onAction={() => router.replace('/recipes')}
         />
       </View>
@@ -131,14 +135,14 @@ export default function RecipeDetailScreen() {
       <View style={[styles.loading, { paddingTop: insets.top }]}>
         <ActivityIndicator color={colors.ink} />
         <AppText variant="bodySmall" color={colors.textSecondary}>
-          Cargando receta…
+          {t('screensMain.recipeDetail.loadingRecipe')}
         </AppText>
       </View>
     );
   }
 
   const validation = validateRecipeIngredients(recipe);
-  const banner = recipeBanner(recipe.id);
+  const banner = recipeBanner(colors, recipe.id);
   const { lead, emphasis } = splitRecipeTitle(recipe.title);
   const available = recipe.availableIngredients.length;
   const total = available + recipe.missingIngredients.length;
@@ -155,24 +159,26 @@ export default function RecipeDetailScreen() {
     } catch {
       setDialog({
         visible: true,
-        title: 'No se pudieron',
-        titleEmphasis: 'agregar',
-        message: 'Inténtalo de nuevo en un momento.',
+        title: t('screensMain.recipeDetail.addErrorTitle'),
+        titleEmphasis: t('screensMain.recipeDetail.addErrorEmphasis'),
+        message: t('screensMain.recipeDetail.addErrorMessage'),
         type: 'error',
-        confirmText: 'Entendido',
+        confirmText: t('common.gotIt'),
         onConfirm: closeDialog,
       });
       return;
     }
     setDialog({
       visible: true,
-      title: '¡Listo! Faltantes en tu',
-      titleEmphasis: 'lista de compras',
-      message: `${res.addedCount} ${res.addedCount === 1 ? 'agregado' : 'agregados'}${res.mergedCount ? ` y ${res.mergedCount} sumados a lo que ya tenías` : ''}.`,
+      title: t('screensMain.recipeDetail.addSuccessTitle'),
+      titleEmphasis: t('screensMain.recipeDetail.addSuccessEmphasis'),
+      message: res.mergedCount
+        ? t('screensMain.recipeDetail.addedMerged', { added: tp('screensMain.recipeDetail.addedCount', res.addedCount), merged: res.mergedCount })
+        : t('screensMain.recipeDetail.addedOnly', { added: tp('screensMain.recipeDetail.addedCount', res.addedCount) }),
       type: 'success',
       iconName: 'cart-outline',
-      confirmText: 'Ir a compras',
-      cancelText: 'Seguir aquí',
+      confirmText: t('screensMain.recipeDetail.goShopping'),
+      cancelText: t('screensMain.recipeDetail.stayHere'),
       onConfirm: () => {
         closeDialog();
         router.navigate('/shopping-list');
@@ -189,20 +195,20 @@ export default function RecipeDetailScreen() {
       const { consumed, skipped } = await prepareRecipe(recipe.id);
       const parts = [
         consumed.length > 0
-          ? `Se descontaron de tu despensa: ${consumed.join(', ')}.`
-          : 'No se descontó nada de tu despensa.',
+          ? t('screensMain.recipeDetail.prepDeducted', { list: consumed.join(', ') })
+          : t('screensMain.recipeDetail.prepNothing'),
         skipped.length > 0
-          ? `Revisa a mano ${skipped.join(', ')}: la receta usa otra unidad o no indica cantidad.`
+          ? t('screensMain.recipeDetail.prepSkipped', { list: skipped.join(', ') })
           : '',
       ].filter(Boolean);
       setDialog({
         visible: true,
-        title: '¡Buen',
-        titleEmphasis: 'provecho!',
+        title: t('screensMain.recipeDetail.enjoyTitle'),
+        titleEmphasis: t('screensMain.recipeDetail.enjoyEmphasis'),
         message: parts.join('\n\n'),
         type: 'success',
         iconName: 'checkmark-circle-outline',
-        confirmText: 'Ver despensa',
+        confirmText: t('screensMain.recipeDetail.viewPantry'),
         onConfirm: () => {
           closeDialog();
           router.replace('/inventory');
@@ -211,11 +217,11 @@ export default function RecipeDetailScreen() {
     } catch {
       setDialog({
         visible: true,
-        title: 'No se pudo',
-        titleEmphasis: 'descontar',
-        message: 'Tus ingredientes siguen en la despensa. Inténtalo de nuevo.',
+        title: t('screensMain.recipeDetail.prepErrorTitle'),
+        titleEmphasis: t('screensMain.recipeDetail.prepErrorEmphasis'),
+        message: t('screensMain.recipeDetail.prepErrorMessage'),
         type: 'error',
-        confirmText: 'Entendido',
+        confirmText: t('common.gotIt'),
         onConfirm: closeDialog,
       });
     } finally {
@@ -228,12 +234,12 @@ export default function RecipeDetailScreen() {
     if (!validation.willDeductFromInventory) {
       setDialog({
         visible: true,
-        title: '¡Buen',
-        titleEmphasis: 'provecho!',
+        title: t('screensMain.recipeDetail.enjoyTitle'),
+        titleEmphasis: t('screensMain.recipeDetail.enjoyEmphasis'),
         message: validation.inventoryDeductionNotice,
         type: 'success',
         iconName: 'restaurant-outline',
-        confirmText: 'Ver recetas',
+        confirmText: t('screensMain.recipes.viewRecipes'),
         onConfirm: () => {
           closeDialog();
           router.replace('/recipes');
@@ -245,21 +251,21 @@ export default function RecipeDetailScreen() {
     const partial = !validation.canPrepare;
     setDialog({
       visible: true,
-      title: partial ? '¿Preparar sin todos los' : '¿Terminaste de',
-      titleEmphasis: partial ? 'ingredientes?' : 'cocinar?',
+      title: partial ? t('screensMain.recipeDetail.partialTitle') : t('screensMain.recipeDetail.doneTitle'),
+      titleEmphasis: partial ? t('screensMain.recipeDetail.partialEmphasis') : t('screensMain.recipeDetail.doneEmphasis'),
       message: validation.inventoryDeductionNotice,
       type: partial ? 'warning' : 'info',
       iconName: partial ? undefined : 'restaurant-outline',
-      confirmText: partial ? 'Preparar y descontar' : 'Sí, descontar',
-      cancelText: 'Todavía no',
+      confirmText: partial ? t('screensMain.recipeDetail.partialConfirm') : t('screensMain.recipeDetail.doneConfirm'),
+      cancelText: t('screensMain.recipeDetail.notYet'),
       onCancel: closeDialog,
       onConfirm: runPrepare,
     });
   };
 
   const note = validation.willDeductFromInventory
-    ? `Al terminar se descontarán ${available} ${available === 1 ? 'ingrediente' : 'ingredientes'} de tu despensa`
-    : 'No tienes estos ingredientes: no se descontará nada';
+    ? tp('screensMain.recipeDetail.deductNote', available)
+    : t('screensMain.recipeDetail.noDeductNote');
 
   return (
     <View style={styles.screen}>
@@ -279,7 +285,7 @@ export default function RecipeDetailScreen() {
         <View style={styles.content}>
           {/* ── Encabezado ── */}
           <View style={styles.intro}>
-            <AiBadge label={`${recipe.matchScore} % coincide con tu despensa`} />
+            <AiBadge label={t('screensMain.recipeDetail.matchLabel', { score: recipe.matchScore })} />
             <AppText weight="light" style={styles.title} accessibilityRole="header">
               {lead ? `${lead} ` : ''}
               <AppText weight="semibold">{emphasis}</AppText>
@@ -290,11 +296,11 @@ export default function RecipeDetailScreen() {
               </AppText>
             )}
             <View style={styles.stats}>
-              <StatTile iconName="time-outline" value={recipe.prepTimeMinutes ? `${recipe.prepTimeMinutes} min` : '—'} label="preparación" />
-              <StatTile iconName="people-outline" value={recipe.servings ? String(recipe.servings) : '—'} label="porciones" />
+              <StatTile iconName="time-outline" value={recipe.prepTimeMinutes ? t('screensMain.recipeDetail.minutes', { count: recipe.prepTimeMinutes }) : '—'} label={t('screensMain.recipeDetail.statPrep')} />
+              <StatTile iconName="people-outline" value={recipe.servings ? String(recipe.servings) : '—'} label={t('screensMain.recipeDetail.statServings')} />
               <StatTile
-                value={DIFFICULTY_LABELS[recipe.difficulty] ?? DIFFICULTY_LABELS.easy}
-                label="dificultad"
+                value={t(`screensMain.recipeDetail.difficulty.${recipe.difficulty}`)}
+                label={t('screensMain.recipeDetail.statDifficulty')}
                 tone={{ background: diff.background, text: diff.text }}
                 top={<DifficultyMeter level={diff.level} segment={diff.segment} empty={colors.surface} />}
               />
@@ -324,27 +330,27 @@ export default function RecipeDetailScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <AppText variant="sectionTitle" accessibilityRole="header">
-                Pasos
+                {t('screensMain.recipeDetail.stepsTitle')}
                 {steps.length > 0 ? (
-                  <AppText weight="regular" color={colors.textSecondary}>{` · ${completedSteps.length} de ${steps.length}`}</AppText>
+                  <AppText weight="regular" color={colors.textSecondary}>{t('screensMain.recipeDetail.stepsProgress', { done: completedSteps.length, total: steps.length })}</AppText>
                 ) : null}
               </AppText>
-              <AiBadge label="Generados por IA" size="sm" />
+              <AiBadge label={t('screensMain.recipeDetail.aiGenerated')} size="sm" />
             </View>
 
             {isLoadingSteps && <StepsLoading />}
 
             {stepsError && !isLoadingSteps && (
               <InlineErrorCard
-                title="No pudimos generar los pasos"
-                message="Revisa tu conexión. Los ingredientes de la receta siguen disponibles."
+                title={t('screensMain.recipeDetail.stepsErrorTitle')}
+                message={t('screensMain.recipeDetail.stepsErrorMessage')}
                 onRetry={() => loadSteps(recipe)}
               />
             )}
 
             {!isLoadingSteps && !stepsError && steps.length === 0 && (
               <AppText variant="bodySmall" color={colors.textSecondary}>
-                Esta receta aún no tiene pasos.
+                {t('screensMain.recipeDetail.noSteps')}
               </AppText>
             )}
 
@@ -362,7 +368,7 @@ export default function RecipeDetailScreen() {
       </ScrollView>
 
       <StickyActionBar note={note} bottomInset={insets.bottom}>
-        <PrimaryButton title="Preparar receta" onPress={handleFinishCooking} isLoading={isFinishing} style={styles.cta} />
+        <PrimaryButton title={t('screensMain.recipeDetail.cookButton')} onPress={handleFinishCooking} isLoading={isFinishing} style={styles.cta} />
       </StickyActionBar>
 
       <M3Dialog
@@ -381,7 +387,7 @@ export default function RecipeDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -441,4 +447,4 @@ const styles = StyleSheet.create({
   cta: {
     minHeight: 56,
   },
-});
+}));

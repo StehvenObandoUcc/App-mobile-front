@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { fontStyle } from './AppText';
-import { colors, typography, spacing, radii } from '../theme';
+import { typography, spacing, radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 import { TextInput } from './Text';
 /**
@@ -27,10 +29,15 @@ export function SearchInput({
   value,
   onChangeText,
   onClear,
-  placeholder = 'Buscar alimentos o ingredientes…',
-  accessibilityLabel = 'Buscar en inventario',
+  placeholder: placeholderProp,
+  accessibilityLabel: accessibilityLabelProp,
   trailingAction,
 }: SearchInputProps) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const placeholder = placeholderProp ?? t('atoms.searchInput.placeholder');
+  const accessibilityLabel = accessibilityLabelProp ?? t('atoms.searchInput.accessibilityLabel');
+  const styles = useStyles();
   const [focused, setFocused] = useState(false);
   const active = focused || value.length > 0;
 
@@ -58,7 +65,7 @@ export function SearchInput({
             onClear?.();
           }}
           accessibilityRole="button"
-          accessibilityLabel="Limpiar búsqueda"
+          accessibilityLabel={t('atoms.searchInput.clearA11y')}
           style={({ pressed }) => [styles.actionBtn, pressed && styles.clearPressed]}
         >
           <Ionicons name="close" size={20} color={colors.textSecondary} />
@@ -78,7 +85,7 @@ export function SearchInput({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: {
     height: spacing.inputHeight,
     backgroundColor: colors.surfaceVariant,
@@ -121,4 +128,4 @@ const styles = StyleSheet.create({
   trailingPressed: {
     backgroundColor: colors.inkPressed,
   },
-});
+}));

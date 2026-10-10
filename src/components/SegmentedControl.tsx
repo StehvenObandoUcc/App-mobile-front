@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { AppText } from './AppText';
-import { colors, radii, elevations } from '../theme';
+import { radii, elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * SegmentedControl — «¿Cuántas recetas?» 1 · 2 · 3 (Chef-IA.dc.html).
@@ -19,6 +20,7 @@ export type SegmentedControlProps<V extends string | number> = {
 };
 
 export function SegmentedControl<V extends string | number>({ options, value, onChange, accessibilityLabel, rail = 'low', role = 'radio' }: SegmentedControlProps<V>) {
+  const styles = useStyles();
   return (
     <View
       style={[styles.rail, rail === 'container' && styles.railContainer]}
@@ -46,7 +48,7 @@ export function SegmentedControl<V extends string | number>({ options, value, on
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   rail: {
     height: 52,
     flexDirection: 'row',
@@ -70,4 +72,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     ...elevations.md,
   },
-});
+}));

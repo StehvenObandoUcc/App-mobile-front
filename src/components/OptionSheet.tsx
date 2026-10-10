@@ -4,7 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
 import { DialogTitle } from './DialogTitle';
-import { colors, radii, spacing, elevations } from '../theme';
+import { radii, spacing, elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /** OptionSheet — hoja para elegir una opción (Configuración: dieta, porciones, días…). Filas de 56 con radio. */
 export type OptionSheetProps<V extends string | number | null> = {
@@ -19,11 +21,14 @@ export type OptionSheetProps<V extends string | number | null> = {
 };
 
 export function OptionSheet<V extends string | number | null>({ visible, title, emphasis, description, options, value, onSelect, onClose }: OptionSheetProps<V>) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Cerrar" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={t('common.close')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]} accessibilityViewIsModal>
           <View style={styles.handle} />
           <DialogTitle title={title} emphasis={emphasis} size={24} lineHeight={30} />
@@ -70,7 +75,7 @@ export function OptionSheet<V extends string | number | null>({ visible, title, 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -129,4 +134,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.ink,
     borderColor: colors.ink,
   },
-});
+}));

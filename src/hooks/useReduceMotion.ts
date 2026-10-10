@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
+import { useAppPreferences } from '../preferences/AppPreferences';
 
-/** true si el usuario pidió «reducir movimiento» en el sistema: las animaciones pasan a ser instantáneas. */
-export function useReduceMotion(): boolean {
+/** Valor del sistema (opción de accesibilidad del teléfono). */
+export function useSystemReduceMotion(): boolean {
   const [reduce, setReduce] = useState(false);
   useEffect(() => {
     let alive = true;
@@ -16,4 +17,17 @@ export function useReduceMotion(): boolean {
     };
   }, []);
   return reduce;
+}
+
+/**
+ * true = las animaciones pasan a ser instantáneas.
+ * Respeta Configuración › Reducir animaciones: «Como el teléfono» (sistema), «Siempre» o «Nunca».
+ * Toda animación (Animated.timing / spring / loop, LayoutAnimation) debe consultarlo.
+ */
+export function useReduceMotion(): boolean {
+  const system = useSystemReduceMotion();
+  const { reduceMotion } = useAppPreferences();
+  if (reduceMotion === 'on') return true;
+  if (reduceMotion === 'off') return false;
+  return system;
 }

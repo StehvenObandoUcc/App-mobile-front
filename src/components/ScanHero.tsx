@@ -2,11 +2,13 @@ import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * ScanHero — tarjeta principal del Inicio (Inicio.dc.html).
- * Fondo cacao, anillo decorativo, chip «IA de visión», título 26/32 300 + 600 y botón squircle tomate 64.
+ * Fondo ciruela (color de la IA), anillo decorativo, chip «IA de visión», título 26/32 300 + 600 y botón squircle claro 64.
  * Toda la tarjeta abre el escáner.
  */
 export type ScanHeroProps = {
@@ -14,33 +16,36 @@ export type ScanHeroProps = {
 };
 
 export function ScanHero({ onPress }: ScanHeroProps) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Escanear alimentos con la cámara. Toma una foto para detectar ingredientes y actualizar tu despensa."
+      accessibilityLabel={t('organisms.scanHero.a11y')}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.ring} pointerEvents="none" />
 
       <View style={styles.badge}>
-        <Ionicons name="sparkles" size={14} color={colors.m3.inversePrimary} />
-        <AppText variant="label" uppercase color={colors.m3.inversePrimary} style={styles.badgeText}>
-          IA de visión
+        <Ionicons name="sparkles" size={14} color={colors.onAiHero} />
+        <AppText variant="label" uppercase color={colors.onAiHero} style={styles.badgeText}>
+          {t('organisms.scanHero.badge')}
         </AppText>
       </View>
 
       <View style={styles.row}>
         <View style={styles.texts}>
-          <AppText weight="light" color={colors.textInverse} style={styles.title}>
-            Escanea tus <AppText weight="semibold">alimentos</AppText>
+          <AppText weight="light" color={colors.onAiHero} style={styles.title}>
+            {t('organisms.scanHero.title')} <AppText weight="semibold">{t('organisms.scanHero.titleBold')}</AppText>
           </AppText>
-          <AppText variant="bodySmall" color="#E4D9D0">
-            Toma una foto para detectar ingredientes y actualizar tu despensa al instante.
+          <AppText variant="bodySmall" color={colors.aiHeroMuted}>
+            {t('organisms.scanHero.description')}
           </AppText>
         </View>
         <View style={styles.fab}>
-          <Ionicons name="scan-outline" size={30} color={colors.ink} />
+          <Ionicons name="scan-outline" size={30} color={colors.aiHero} />
           <View style={styles.fabLens} />
         </View>
       </View>
@@ -48,18 +53,17 @@ export function ScanHero({ onPress }: ScanHeroProps) {
   );
 }
 
-const RING = '#603A2E'; // tono cacao más claro del mockup (decorativo)
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   card: {
     borderRadius: radii.tiles,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.aiHero,
     padding: 22,
     gap: 10,
     overflow: 'hidden',
   },
   pressed: {
-    backgroundColor: colors.inkPressed,
+    backgroundColor: colors.aiHeroPressed,
   },
   ring: {
     position: 'absolute',
@@ -69,7 +73,7 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 75,
     borderWidth: 22,
-    borderColor: RING,
+    borderColor: colors.aiHeroChip,
   },
   badge: {
     alignSelf: 'flex-start',
@@ -80,7 +84,7 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
     paddingRight: 10,
     borderRadius: radii.pill,
-    backgroundColor: RING,
+    backgroundColor: colors.aiHeroChip,
   },
   badgeText: {
     letterSpacing: 0.8,
@@ -102,7 +106,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 22,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.onAiHero,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -112,6 +116,6 @@ const styles = StyleSheet.create({
     height: 9,
     borderRadius: 5,
     borderWidth: 2,
-    borderColor: colors.ink,
+    borderColor: colors.aiHero,
   },
-});
+}));

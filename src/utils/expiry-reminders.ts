@@ -41,7 +41,23 @@ function toDayKey(d: Date): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
+const lang = (): 'es' | 'en' => ((globalThis as { __appLanguage?: 'es' | 'en' }).__appLanguage ?? 'es');
+
+function buildCopyEn(names: string[], daysBefore: number) {
+  const when = daysBefore === 1 ? 'tomorrow' : `in ${daysBefore} days`;
+  if (names.length === 1) {
+    return { title: `${names[0]} expires ${when}`, body: 'Use it first or ask the AI Chef for a recipe.' };
+  }
+  const shown = names.slice(0, 3).join(', ');
+  const extra = names.length > 3 ? ` and ${names.length - 3} more` : '';
+  return {
+    title: `${names.length} items expire ${when}`,
+    body: `${shown}${extra}. Use them up with an AI Chef recipe.`,
+  };
+}
+
 function buildCopy(names: string[], daysBefore: number) {
+  if (lang() === 'en') return buildCopyEn(names, daysBefore);
   const when = daysBefore === 1 ? 'mañana' : `en ${daysBefore} días`;
   if (names.length === 1) {
     return { title: `${names[0]} vence ${when}`, body: 'Úsalo primero o pide una receta al Chef IA.' };

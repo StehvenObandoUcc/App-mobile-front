@@ -2,7 +2,9 @@ import React from 'react';
 import { StyleSheet, ActivityIndicator, View, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors, spacing, radii } from '../theme';
+import { spacing, radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
 
 /**
  * PrimaryButton — Componentes.dc.html
@@ -25,13 +27,13 @@ export type PrimaryButtonProps = {
   accessibilityHint?: string;
 };
 
-const TONES: Record<ButtonTone, { bg: string; pressed: string; fg: string }> = {
+const tonesFor = (colors: ThemeColors): Record<ButtonTone, { bg: string; pressed: string; fg: string }> => ({
   ink: { bg: colors.ink, pressed: colors.inkPressed, fg: colors.onInk },
   brand: { bg: colors.m3.primary, pressed: colors.m3.primaryPressed, fg: colors.m3.onPrimary },
   ai: { bg: colors.m3.tertiary, pressed: colors.m3.tertiaryPressed, fg: colors.m3.onTertiary },
   // Confirmaciones destructivas (Organismos.dc.html · M3Dialog «Eliminar»): blanco sobre #B3261E 6.54:1
   danger: { bg: colors.m3.error, pressed: colors.functional.expired.text, fg: colors.m3.onError },
-};
+});
 
 export function PrimaryButton({
   title,
@@ -44,8 +46,10 @@ export function PrimaryButton({
   accessibilityLabel,
   accessibilityHint,
 }: PrimaryButtonProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const isDisabled = disabled || isLoading;
-  const t = TONES[tone];
+  const t = tonesFor(colors)[tone];
   const fg = disabled && !isLoading ? colors.textSecondary : t.fg;
 
   return (
@@ -78,7 +82,7 @@ export function PrimaryButton({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   button: {
     minHeight: spacing.buttonHeight,
     borderRadius: radii.pill,
@@ -100,4 +104,4 @@ const styles = StyleSheet.create({
   disabled: {
     backgroundColor: colors.m3.surfaceContainerHigh,
   },
-});
+}));

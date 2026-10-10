@@ -22,7 +22,9 @@ import {
 import { findSimilarItem } from '../src/utils/text-matching';
 import { convertQuantity } from '../src/utils/consumption';
 import { earliestISODate } from '../src/utils/dates';
-import { colors, radii, spacing } from '../src/theme';
+import { radii, spacing } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useI18n } from '../src/i18n';
 
 /**
  * Resultado del escaneo (Escaneo-Resultado.dc.html + Escaneo-Resultado-Estados.dc.html).
@@ -46,10 +48,13 @@ type DialogState = {
 const round = (n: number) => Math.round(n * 1000) / 1000;
 
 export default function ScanResultScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { items: inventoryItems, addItem, updateItem } = useInventory();
+  const { t, tp } = useI18n();
   const hasConfirmedRef = useRef(false);
   const [mergeOptions, setMergeOptions] = useState<Record<string, boolean>>({});
 
@@ -85,13 +90,13 @@ export default function ScanResultScreen() {
       const n = detectedItems.length;
       setDialog({
         visible: true,
-        title: '¿Descartar',
-        titleEmphasis: n === 1 ? 'este alimento?' : `${n} alimentos?`,
-        message: n === 1 ? 'Aún no se guarda en tu despensa. Si sales ahora, se pierde.' : 'Aún no se guardan en tu despensa. Si sales ahora, se pierden.',
+        title: t('screensFlow.scanResult.discardTitle'),
+        titleEmphasis: tp('screensFlow.scanResult.discardEmphasis', n),
+        message: tp('screensFlow.scanResult.discardMessage', n),
         type: 'warning',
-        confirmText: 'Descartar',
+        confirmText: t('screensFlow.scanResult.discardConfirm'),
         confirmTone: 'danger',
-        cancelText: 'Seguir revisando',
+        cancelText: t('screensFlow.scanResult.keepReviewing'),
         onConfirm: () => {
           hasConfirmedRef.current = true;
           closeDialog();
@@ -158,12 +163,12 @@ export default function ScanResultScreen() {
 
   const handleSaveSheet = () => {
     const trimmed = name.trim();
-    if (!trimmed) return warn('Falta el', 'nombre', 'Escribe el nombre del alimento.');
-    if (trimmed.length > 60) return warn('Nombre muy', 'largo', 'El nombre no puede pasar de 60 caracteres.');
+    if (!trimmed) return warn(t('screensFlow.scanResult.noNameTitle'), t('screensFlow.scanResult.noNameEmphasis'), t('screensFlow.scanResult.noNameMessage'));
+    if (trimmed.length > 60) return warn(t('screensFlow.scanResult.nameTooLongTitle'), t('screensFlow.scanResult.nameTooLongEmphasis'), t('screensFlow.scanResult.nameTooLongMessage'));
     let qty: number | null = null;
     if (quantity.trim()) {
       const q = parseFloat(quantity.trim().replace(',', '.'));
-      if (isNaN(q) || q <= 0 || q > 99999) return warn('Cantidad', 'inválida', 'Usa un número mayor que 0 y menor que 99 999.');
+      if (isNaN(q) || q <= 0 || q > 99999) return warn(t('screensFlow.scanResult.quantityInvalidTitle'), t('screensFlow.scanResult.quantityInvalidEmphasis'), t('screensFlow.scanResult.quantityInvalidMessage'));
       qty = q;
     }
     const patch = { name: trimmed, quantity: qty, unit, category, expirationDate: expirationDate || null };
@@ -186,7 +191,7 @@ export default function ScanResultScreen() {
   const selected = detectedItems.filter((i) => i.confirmed);
 
   const handleConfirmAll = async () => {
-    if (selected.length === 0) return warn('Marca al menos', 'un alimento', 'Solo se guardan los alimentos marcados.');
+    if (selected.length === 0) return warn(t('screensFlow.scanResult.pickOneTitle'), t('screensFlow.scanResult.pickOneEmphasis'), t('screensFlow.scanResult.pickOneMessage'));
     let added = 0;
     let merged = 0;
     try {
@@ -224,14 +229,14 @@ export default function ScanResultScreen() {
       hasConfirmedRef.current = true;
       setDialog({
         visible: true,
-        title: '¡Despensa',
-        titleEmphasis: 'actualizada!',
+        title: t('screensFlow.scanResult.savedTitle'),
+        titleEmphasis: t('screensFlow.scanResult.savedEmphasis'),
         message: '',
         type: 'success',
-        confirmText: 'Ver despensa',
+        confirmText: t('screensFlow.scanResult.viewPantry'),
         summary: [
-          ...(added > 0 ? [{ value: added, label: added === 1 ? 'alimento nuevo' : 'alimentos nuevos' }] : []),
-          ...(merged > 0 ? [{ value: merged, label: merged === 1 ? 'sumado a uno que ya tenías' : 'sumados a los que ya tenías' }] : []),
+          ...(added > 0 ? [{ value: added, label: tp('screensFlow.scanResult.summaryAdded', added) }] : []),
+          ...(merged > 0 ? [{ value: merged, label: tp('screensFlow.scanResult.summaryMerged', merged) }] : []),
         ],
         onConfirm: () => {
           closeDialog();
@@ -241,9 +246,9 @@ export default function ScanResultScreen() {
     } catch {
       setDialog({
         visible: true,
-        title: 'No se pudo',
-        titleEmphasis: 'guardar',
-        message: 'Tus alimentos siguen aquí. Inténtalo de nuevo.',
+        title: t('screensFlow.scanResult.saveFailTitle'),
+        titleEmphasis: t('screensFlow.scanResult.saveFailEmphasis'),
+        message: t('screensFlow.scanResult.saveFailMessage'),
         type: 'error',
         onConfirm: closeDialog,
       });
@@ -296,21 +301,21 @@ export default function ScanResultScreen() {
   if (detectedItems.length === 0) {
     return (
       <View style={[styles.screen, styles.emptyScreen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }]}>
-        <IconButton iconName="chevron-back" variant="white" accessibilityLabel="Volver a la cámara" onPress={() => router.back()} />
+        <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('screensFlow.scanResult.backToCameraA11y')} onPress={() => router.back()} />
         <View style={styles.empty}>
           <IllustrationBlob iconName="scan-outline" tone="ai" size="lg" />
           <AppText weight="light" align="center" style={styles.emptyTitle} accessibilityRole="header">
-            {detectedCount === 0 ? 'No encontramos ' : 'Quitaste todos los '}
-            <AppText weight="semibold">alimentos</AppText>
+            {detectedCount === 0 ? t('screensFlow.scanResult.emptyTitleNone') : t('screensFlow.scanResult.emptyTitleRemoved')}
+            <AppText weight="semibold">{t('screensFlow.scanResult.emptyBold')}</AppText>
           </AppText>
           <AppText variant="body" color={colors.textSecondary} align="center" style={styles.emptyText}>
             {detectedCount === 0
-              ? 'Prueba tomando la foto más de cerca o con mejor iluminación, o añade tu producto a mano.'
-              : 'Toma otra foto o añade tus productos a mano.'}
+              ? t('screensFlow.scanResult.emptyTextNone')
+              : t('screensFlow.scanResult.emptyTextRemoved')}
           </AppText>
           <View style={styles.emptyActions}>
-            <PrimaryButton title="Tomar otra foto" onPress={() => router.back()} />
-            <SecondaryButton title="Añadir manual" variant="outline" onPress={openAddManual} />
+            <PrimaryButton title={t('screensFlow.scanResult.takeAnother')} onPress={() => router.back()} />
+            <SecondaryButton title={t('screensFlow.scanResult.addManual')} variant="outline" onPress={openAddManual} />
           </View>
         </View>
         {overlays}
@@ -324,16 +329,16 @@ export default function ScanResultScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 12, paddingBottom: 170 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        <IconButton iconName="chevron-back" variant="white" accessibilityLabel="Volver a la cámara" onPress={() => router.back()} />
+        <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('screensFlow.scanResult.backToCameraA11y')} onPress={() => router.back()} />
 
         <View style={styles.header}>
-          <AiBadge label="Análisis de IA completado" />
+          <AiBadge label={t('screensFlow.scanResult.aiBadge')} />
           <AppText weight="light" style={styles.title} accessibilityRole="header">
-            {'Revisa lo '}
-            <AppText weight="semibold">detectado</AppText>
+            {t('screensFlow.scanResult.reviewTitleLight')}
+            <AppText weight="semibold">{t('screensFlow.scanResult.reviewTitleBold')}</AppText>
           </AppText>
           <AppText variant="body" color={colors.textSecondary} style={styles.subtitle}>
-            Los alimentos que no marques no se guardarán.
+            {t('screensFlow.scanResult.reviewSubtitle')}
           </AppText>
         </View>
 
@@ -348,11 +353,9 @@ export default function ScanResultScreen() {
 
         <View style={styles.countRow}>
           <AppText variant="metadata" weight="semibold" color={colors.textSecondary} style={styles.flex}>
-            {`${detectedItems.length} ${detectedItems.length === 1 ? 'detectado' : 'detectados'} · ${selected.length} ${
-              selected.length === 1 ? 'seleccionado' : 'seleccionados'
-            }`}
+            {`${tp('screensFlow.scanResult.countDetected', detectedItems.length)} · ${tp('screensFlow.scanResult.countSelected', selected.length)}`}
           </AppText>
-          <SecondaryButton title="Añadir manual" iconName="add" variant="tint" onPress={openAddManual} style={styles.addBtn} />
+          <SecondaryButton title={t('screensFlow.scanResult.addManual')} iconName="add" variant="tint" onPress={openAddManual} style={styles.addBtn} />
         </View>
 
         <View style={styles.list}>
@@ -378,7 +381,7 @@ export default function ScanResultScreen() {
 
       <StickyActionBar bottomInset={insets.bottom}>
         <PrimaryButton
-          title={selected.length === 1 ? 'Confirmar 1 alimento' : `Confirmar ${selected.length} alimentos`}
+          title={tp('screensFlow.scanResult.confirm', selected.length)}
           onPress={handleConfirmAll}
           disabled={selected.length === 0}
         />
@@ -388,7 +391,7 @@ export default function ScanResultScreen() {
           accessibilityRole="button"
         >
           <AppText variant="body" weight="semibold" color={colors.m3.error} style={styles.discardText}>
-            Descartar y volver a escanear
+            {t('screensFlow.scanResult.discardAndRescan')}
           </AppText>
         </Pressable>
       </StickyActionBar>
@@ -398,7 +401,7 @@ export default function ScanResultScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   flex: { flex: 1 },
   screen: {
     flex: 1,
@@ -479,4 +482,4 @@ const styles = StyleSheet.create({
   summary: {
     gap: 8,
   },
-});
+}));

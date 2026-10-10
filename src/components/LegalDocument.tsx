@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
-import { colors } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /** LegalDocument — tarjeta blanca con secciones numeradas (Legal.dc.html): título 17/24 600 y párrafo 15/23. */
 export function LegalDocument({ sections }: { sections: { title: string; body: string }[] }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.card}>
       {sections.map((s) => (
@@ -21,7 +23,7 @@ export function LegalDocument({ sections }: { sections: { title: string; body: s
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   card: {
     backgroundColor: colors.surface,
     borderRadius: 24,
@@ -40,4 +42,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 23,
   },
-});
+}));

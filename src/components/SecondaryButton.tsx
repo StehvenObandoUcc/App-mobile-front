@@ -2,7 +2,8 @@ import React from 'react';
 import { StyleSheet, ActivityIndicator, View, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors, spacing, radii } from '../theme';
+import { spacing, radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * SecondaryButton — Componentes.dc.html
@@ -32,6 +33,8 @@ export function SecondaryButton({
   accessibilityLabel,
   accessibilityHint,
 }: SecondaryButtonProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const isDisabled = disabled || isLoading;
   const isOutline = variant === 'outline';
   const fg = disabled ? colors.textSecondary : isOutline ? colors.textPrimary : colors.onPrimaryContainer;
@@ -67,7 +70,7 @@ export function SecondaryButton({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   button: {
     minHeight: spacing.buttonHeight,
     borderRadius: radii.pill,
@@ -107,4 +110,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.m3.surfaceContainerHigh,
     borderColor: colors.m3.surfaceContainerHigh,
   },
-});
+}));

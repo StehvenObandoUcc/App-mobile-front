@@ -23,7 +23,9 @@ import {
 } from '../src/components';
 import { IngredientCategory, IngredientUnit, ShoppingItem, Ingredient } from '../src/types';
 import { normalizeName } from '../src/utils/consumption';
-import { colors, radii, spacing, elevations } from '../src/theme';
+import { radii, spacing, elevations } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useI18n } from '../src/i18n';
 
 /**
  * Compras (Compras.dc.html · Compras-Agregar.dc.html · Compras-Estados.dc.html).
@@ -49,11 +51,14 @@ type DialogState = {
 const EMPTY_FORM = { name: '', quantity: '1', unit: 'units' as IngredientUnit, category: 'other' as IngredientCategory };
 
 export default function ShoppingListScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items, pendingItems, boughtItems, addItem, toggleBought, deleteItem, clearBought, moveBoughtToInventory } =
     useShoppingList();
   const { items: inventoryItems } = useInventory();
+  const { t, tp } = useI18n();
 
   const [chooserVisible, setChooserVisible] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -64,7 +69,7 @@ export default function ShoppingListScreen() {
   const closeDialog = () => setDialog((p) => ({ ...p, visible: false }));
 
   const showError = (message: string) =>
-    setDialog({ visible: true, title: 'Algo salió', titleEmphasis: 'mal', message, type: 'error', onConfirm: closeDialog });
+    setDialog({ visible: true, title: t('screensFlow.shopping.errorTitle'), titleEmphasis: t('screensFlow.shopping.errorEmphasis'), message, type: 'error', onConfirm: closeDialog });
   const warn = (title: string, titleEmphasis: string, message: string) =>
     setDialog({ visible: true, title, titleEmphasis, message, type: 'warning', onConfirm: closeDialog });
 
@@ -75,18 +80,18 @@ export default function ShoppingListScreen() {
       // Agotado (0): se agrega sin cantidad para que elijas cuánto comprar.
       await addItem(inv.name, inv.quantity ? inv.quantity : null, inv.unit, inv.category);
     } catch {
-      showError('No se pudo agregar el producto a la lista.');
+      showError(t('screensFlow.shopping.addFailed'));
     }
   };
 
   const handleSaveForm = async () => {
     const trimmed = form.name.trim();
-    if (!trimmed) return warn('Falta el', 'nombre', 'Escribe el nombre del producto que vas a comprar.');
-    if (trimmed.length > 60) return warn('Nombre muy', 'largo', 'El nombre no puede pasar de 60 caracteres.');
+    if (!trimmed) return warn(t('screensFlow.shopping.noNameTitle'), t('screensFlow.shopping.noNameEmphasis'), t('screensFlow.shopping.noNameMessage'));
+    if (trimmed.length > 60) return warn(t('screensFlow.shopping.nameTooLongTitle'), t('screensFlow.shopping.nameTooLongEmphasis'), t('screensFlow.shopping.nameTooLongMessage'));
     let qty: number | null = null;
     if (form.quantity.trim()) {
       const q = parseFloat(form.quantity.trim().replace(',', '.'));
-      if (isNaN(q) || q <= 0 || q > 99999) return warn('Cantidad', 'inválida', 'Usa un número mayor que 0 y menor que 99 999.');
+      if (isNaN(q) || q <= 0 || q > 99999) return warn(t('screensFlow.shopping.quantityInvalidTitle'), t('screensFlow.shopping.quantityInvalidEmphasis'), t('screensFlow.shopping.quantityInvalidMessage'));
       qty = q;
     }
     try {
@@ -94,7 +99,7 @@ export default function ShoppingListScreen() {
       setFormVisible(false);
       setForm(EMPTY_FORM);
     } catch {
-      showError('No se pudo agregar el producto a la lista.');
+      showError(t('screensFlow.shopping.addFailed'));
     }
   };
 
@@ -102,18 +107,18 @@ export default function ShoppingListScreen() {
   const confirmRemove = (item: ShoppingItem) =>
     setDialog({
       visible: true,
-      title: '¿Quitar',
+      title: t('screensFlow.shopping.removeTitle'),
       titleEmphasis: `${item.name}?`,
-      message: 'Se quitará de tu lista de compras.',
+      message: t('screensFlow.shopping.removeMessage'),
       type: 'error',
       iconName: 'trash-outline',
-      confirmText: 'Quitar',
+      confirmText: t('screensFlow.shopping.removeConfirm'),
       confirmTone: 'danger',
-      cancelText: 'Cancelar',
+      cancelText: t('common.cancel'),
       onCancel: closeDialog,
       onConfirm: () => {
         closeDialog();
-        deleteItem(item.id).catch(() => showError('No se pudo quitar el producto.'));
+        deleteItem(item.id).catch(() => showError(t('screensFlow.shopping.removeFailed')));
       },
     });
 
@@ -121,18 +126,18 @@ export default function ShoppingListScreen() {
     const n = boughtItems.length;
     setDialog({
       visible: true,
-      title: '¿Limpiar',
-      titleEmphasis: n === 1 ? '1 comprado?' : `${n} comprados?`,
-      message: 'Se quitarán de la lista sin pasarlos a tu despensa.',
+      title: t('screensFlow.shopping.clearTitle'),
+      titleEmphasis: tp('screensFlow.shopping.clearEmphasis', n),
+      message: t('screensFlow.shopping.clearMessage'),
       type: 'error',
       iconName: 'trash-outline',
-      confirmText: 'Limpiar',
+      confirmText: t('screensFlow.shopping.clearConfirm'),
       confirmTone: 'danger',
-      cancelText: 'Cancelar',
+      cancelText: t('common.cancel'),
       onCancel: closeDialog,
       onConfirm: () => {
         closeDialog();
-        clearBought().catch(() => showError('No se pudo limpiar la lista.'));
+        clearBought().catch(() => showError(t('screensFlow.shopping.clearFailed')));
       },
     });
   };
@@ -145,14 +150,14 @@ export default function ShoppingListScreen() {
       const moved = await moveBoughtToInventory();
       setDialog({
         visible: true,
-        title: '¡Despensa',
-        titleEmphasis: 'actualizada!',
-        message: `Pasaste ${moved} ${moved === 1 ? 'producto' : 'productos'} a tu despensa. Les pusimos una fecha de vencimiento estimada que puedes cambiar.`,
+        title: t('screensFlow.shopping.movedTitle'),
+        titleEmphasis: t('screensFlow.shopping.movedEmphasis'),
+        message: tp('screensFlow.shopping.movedMessage', moved),
         type: 'success',
         hero: true,
         actionsLayout: 'stacked',
-        confirmText: 'Ver despensa',
-        cancelText: 'Seguir en compras',
+        confirmText: t('screensFlow.shopping.viewPantry'),
+        cancelText: t('screensFlow.shopping.stayShopping'),
         onCancel: closeDialog,
         onConfirm: () => {
           closeDialog();
@@ -160,7 +165,7 @@ export default function ShoppingListScreen() {
         },
       });
     } catch {
-      showError('No se pudieron pasar los productos a tu despensa.');
+      showError(t('screensFlow.shopping.moveFailed'));
     } finally {
       setIsMoving(false);
     }
@@ -175,20 +180,20 @@ export default function ShoppingListScreen() {
         visible={chooserVisible}
         onClose={() => setChooserVisible(false)}
         variant="choices"
-        title="Agregar a la"
-        titleEmphasis="lista"
-        description="¿Cómo deseas agregar este producto?"
+        title={t('screensFlow.shopping.chooserTitle')}
+        titleEmphasis={t('screensFlow.shopping.chooserEmphasis')}
+        description={t('screensFlow.shopping.chooserDescription')}
         actions={[
           {
-            label: 'Elegir de mi despensa',
-            description: 'Repón algo que ya tienes o se está acabando',
+            label: t('screensFlow.shopping.fromPantry'),
+            description: t('screensFlow.shopping.fromPantryDescription'),
             icon: 'basket-outline',
             tone: colors.categories.vegetable,
             onPress: () => setPickerVisible(true),
           },
           {
-            label: 'Crear producto nuevo',
-            description: 'Escribe el nombre, cantidad y categoría',
+            label: t('screensFlow.shopping.newProduct'),
+            description: t('screensFlow.shopping.newProductDescription'),
             icon: 'add',
             tone: { background: colors.primaryContainer, text: colors.onPrimaryContainer },
             onPress: () => {
@@ -235,17 +240,17 @@ export default function ShoppingListScreen() {
     return (
       <AppScreen style={styles.screen}>
         <View style={styles.header}>
-          <ScreenHeader title="Lista de" emphasis="compras" />
+          <ScreenHeader title={t('screensFlow.shopping.headerTitle')} emphasis={t('screensFlow.shopping.headerEmphasis')} />
         </View>
         <View style={[styles.emptyWrap, { paddingBottom: getBottomContentPadding(insets.bottom) }]}>
           <EmptyState
-            title="No tienes compras"
-            titleEmphasis="pendientes"
-            description="Agrega productos aquí o desde los ingredientes que te falten en cualquier receta."
+            title={t('screensFlow.shopping.emptyTitle')}
+            titleEmphasis={t('screensFlow.shopping.emptyEmphasis')}
+            description={t('screensFlow.shopping.emptyDescription')}
             iconName="cart-outline"
             tone="brand"
             blobDotColors={[colors.secondaryContainer, colors.categories.grain.background]}
-            actionLabel="Agregar producto"
+            actionLabel={t('screensFlow.shopping.addProduct')}
             actionIconName="add"
             onAction={openChooser}
           />
@@ -264,23 +269,23 @@ export default function ShoppingListScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title="Lista de" emphasis="compras" subtitle="Marca lo que compres y pásalo a tu despensa" />
+        <ScreenHeader title={t('screensFlow.shopping.headerTitle')} emphasis={t('screensFlow.shopping.headerEmphasis')} subtitle={t('screensFlow.shopping.headerSubtitle')} />
 
         <View style={styles.tiles}>
-          <CountTile label="Por comprar" value={pendingItems.length} tone={{ background: colors.primaryContainer, text: colors.onPrimaryContainer }} />
-          <CountTile label="Comprados" value={boughtItems.length} tone={colors.functional.fresh} />
+          <CountTile label={t('screensFlow.shopping.tileToBuy')} value={pendingItems.length} tone={{ background: colors.primaryContainer, text: colors.onPrimaryContainer }} />
+          <CountTile label={t('screensFlow.shopping.tileBought')} value={boughtItems.length} tone={colors.functional.fresh} />
         </View>
 
-        <DashedAddButton label="Agregar producto a la lista" onPress={openChooser} />
+        <DashedAddButton label={t('screensFlow.shopping.addToList')} onPress={openChooser} />
 
         <AppText variant="sectionTitle" style={styles.sectionTitle} accessibilityRole="header">
-          {'Por comprar '}
+          {t('screensFlow.shopping.sectionToBuy')}
           <AppText weight="regular" color={colors.textSecondary}>{`· ${pendingItems.length}`}</AppText>
         </AppText>
         <View style={styles.list}>
           {pendingItems.length === 0 ? (
             <AppText variant="bodySmall" color={colors.textSecondary}>
-              Todo comprado. Pásalo a tu despensa con el botón de abajo.
+              {t('screensFlow.shopping.allBoughtHint')}
             </AppText>
           ) : (
             pendingItems.map((item) => (
@@ -293,17 +298,17 @@ export default function ShoppingListScreen() {
           <>
             <View style={styles.boughtHeader}>
               <AppText variant="sectionTitle" color={colors.functional.fresh.text} style={styles.flex} accessibilityRole="header">
-                {'Comprados '}
+                {t('screensFlow.shopping.sectionBought')}
                 <AppText weight="regular" color={colors.functional.fresh.text}>{`· ${boughtItems.length}`}</AppText>
               </AppText>
               <Pressable
                 onPress={confirmClear}
                 style={({ pressed }) => [styles.clear, pressed && styles.clearPressed]}
                 accessibilityRole="button"
-                accessibilityLabel="Limpiar productos comprados"
+                accessibilityLabel={t('screensFlow.shopping.clearA11y')}
               >
                 <AppText variant="bodySmall" weight="semibold" color={colors.primary}>
-                  Limpiar
+                  {t('screensFlow.shopping.clear')}
                 </AppText>
               </Pressable>
             </View>
@@ -319,7 +324,7 @@ export default function ShoppingListScreen() {
       {boughtItems.length > 0 && (
         <View style={[styles.moveWrap, { bottom: moveButtonBottom }]} pointerEvents="box-none">
           <PrimaryButton
-            title={`Pasar ${boughtItems.length} a mi despensa`}
+            title={t('screensFlow.shopping.moveButton', { count: boughtItems.length })}
             iconName="basket-outline"
             onPress={handleMove}
             isLoading={isMoving}
@@ -333,7 +338,7 @@ export default function ShoppingListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   flex: { flex: 1 },
   screen: {
     backgroundColor: colors.background,
@@ -388,4 +393,4 @@ const styles = StyleSheet.create({
     minHeight: 56,
     ...elevations.lg,
   },
-});
+}));

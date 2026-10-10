@@ -3,7 +3,9 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { IngredientCategory } from '../types';
-import { colors, radii, CATEGORY_LIST } from '../theme';
+import { radii, CATEGORY_LIST } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * CategoryPicker — Despensa-Formulario.dc.html
@@ -18,6 +20,9 @@ export type CategoryPickerProps = {
 const VISIBLE = 5;
 
 export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t, tp } = useI18n();
   const selectedIndex = CATEGORY_LIST.findIndex((c) => c.key === value);
   // Si la categoría elegida está entre las ocultas, se arranca desplegado.
   const [expanded, setExpanded] = useState(selectedIndex >= VISIBLE);
@@ -25,7 +30,7 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
   const hiddenCount = CATEGORY_LIST.length - VISIBLE;
 
   return (
-    <View style={styles.grid} accessibilityRole="radiogroup" accessibilityLabel="Categoría">
+    <View style={styles.grid} accessibilityRole="radiogroup" accessibilityLabel={t('molecules.categoryPicker.groupA11y')}>
       {items.map((c) => {
         const selected = c.key === value;
         const tone = colors.categories[c.key];
@@ -55,17 +60,17 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
           onPress={() => setExpanded(true)}
           style={({ pressed }) => [styles.cell, { backgroundColor: colors.surfaceVariant }, pressed && styles.pressed]}
           accessibilityRole="button"
-          accessibilityLabel={`Ver ${hiddenCount} categorías más`}
+          accessibilityLabel={tp('molecules.categoryPicker.seeMoreA11y', hiddenCount)}
         >
           <Ionicons name="ellipsis-horizontal" size={20} color={colors.textPrimary} />
-          <AppText variant="metadata" color={colors.textPrimary}>{`${hiddenCount} más`}</AppText>
+          <AppText variant="metadata" color={colors.textPrimary}>{t('molecules.categoryPicker.more', { count: hiddenCount })}</AppText>
         </Pressable>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -91,4 +96,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
   },
-});
+}));

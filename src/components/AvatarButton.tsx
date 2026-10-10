@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radii } from '../theme';
+import { spacing, radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * AvatarButton — botón de perfil de 48 dp (Inicio.dc.html): frambuesa claro con icono,
@@ -15,6 +16,8 @@ export type AvatarButtonProps = {
 };
 
 export function AvatarButton({ uri, signedIn = false, onPress, accessibilityLabel }: AvatarButtonProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -31,7 +34,7 @@ export function AvatarButton({ uri, signedIn = false, onPress, accessibilityLabe
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   button: {
     width: spacing.touchTargetMin,
     height: spacing.touchTargetMin,
@@ -48,4 +51,4 @@ const styles = StyleSheet.create({
     width: spacing.touchTargetMin,
     height: spacing.touchTargetMin,
   },
-});
+}));

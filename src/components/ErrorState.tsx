@@ -3,7 +3,9 @@ import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { SecondaryButton } from './SecondaryButton';
 import { IllustrationBlob } from './IllustrationBlob';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * ErrorState — Componentes.dc.html / Despensa-Estados.dc.html
@@ -17,9 +19,12 @@ export type ErrorStateProps = {
 };
 
 export function ErrorState({ title: titleProp, titleEmphasis: emphasisProp, message, onRetry }: ErrorStateProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
   // Si la pantalla pasa su propio título, no se le agrega el énfasis por defecto.
-  const title = titleProp ?? 'Algo salió';
-  const titleEmphasis = titleProp === undefined ? emphasisProp ?? 'mal' : emphasisProp;
+  const title = titleProp ?? t('molecules.errorState.defaultTitle');
+  const titleEmphasis = titleProp === undefined ? emphasisProp ?? t('molecules.errorState.defaultEmphasis') : emphasisProp;
   return (
     <View style={styles.container} accessibilityRole="alert">
       <IllustrationBlob iconName="alert-circle-outline" tone="error" size="md" />
@@ -31,13 +36,13 @@ export function ErrorState({ title: titleProp, titleEmphasis: emphasisProp, mess
         {message}
       </AppText>
       <View style={styles.actions}>
-        <SecondaryButton title="Reintentar" iconName="refresh-outline" variant="outline" onPress={onRetry} />
+        <SecondaryButton title={t('molecules.errorState.retry')} iconName="refresh-outline" variant="outline" onPress={onRetry} />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -53,4 +58,4 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     marginTop: 6,
   },
-});
+}));

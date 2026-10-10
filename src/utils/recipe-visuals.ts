@@ -1,10 +1,11 @@
-import { colors } from '../theme';
+import type { ThemeColors } from '../theme/colors';
+import { t, tp } from '../i18n';
 
 /**
  * Franja pastel para recetas sin foto (RecipeCard, RecipeMiniCard, TodayRecipeCard).
  * Se elige de forma estable según el id: la misma receta siempre tiene el mismo color.
  */
-const BANNERS = [
+const bannersFor = (colors: ThemeColors) => [
   { bg: colors.primaryContainer, fg: colors.primary },
   { bg: colors.categories.dairy.background, fg: colors.categories.dairy.text },
   { bg: colors.categories.vegetable.background, fg: colors.categories.vegetable.text },
@@ -12,18 +13,23 @@ const BANNERS = [
   { bg: colors.categories.legume.background, fg: colors.categories.legume.text },
 ] as const;
 
-export function recipeBanner(id: string): { bg: string; fg: string } {
+export function recipeBanner(colors: ThemeColors, id: string): { bg: string; fg: string } {
+  const BANNERS = bannersFor(colors);
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   return BANNERS[h % BANNERS.length];
 }
 
-export const DIFFICULTY_LABELS = { easy: 'Fácil', medium: 'Media', hard: 'Difícil' } as const;
+export const DIFFICULTY_LABELS = {
+  get easy() { return t('misc.difficulty.easy'); },
+  get medium() { return t('misc.difficulty.medium'); },
+  get hard() { return t('misc.difficulty.hard'); },
+} as const;
 
 /** «Falta 1» · «Faltan 3» · «Tienes todo» */
 export function missingLabel(missing: number): string {
-  if (missing === 0) return 'Tienes todo';
-  return missing === 1 ? 'Falta 1' : `Faltan ${missing}`;
+  if (missing === 0) return t('misc.recipeCard.noneMissing');
+  return tp('misc.recipeCard.missing', missing);
 }
 
 /**

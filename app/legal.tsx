@@ -3,16 +3,21 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, IconButton, SegmentedControl, LegalDocument } from '../src/components';
-import { TERMS, PRIVACY, LEGAL_UPDATED_AT } from '../src/content/legal';
-import { colors, spacing } from '../src/theme';
+import { TERMS, PRIVACY, legalUpdatedAt } from '../src/content/legal';
+import { spacing } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useI18n } from '../src/i18n';
 
 /** Legal (Legal.dc.html): pestañas Términos / Privacidad. Se abre desde la Bienvenida y desde Configuración. */
 export default function LegalScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<'terms' | 'privacy'>(params.tab === 'privacy' ? 'privacy' : 'terms');
   const terms = tab === 'terms';
+  const { t } = useI18n();
 
   return (
     <View style={styles.screen}>
@@ -24,31 +29,31 @@ export default function LegalScreen() {
           <IconButton
             iconName="chevron-back"
             variant="white"
-            accessibilityLabel="Volver"
+            accessibilityLabel={t('screensFlow.legal.backA11y')}
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
           />
-          <AppText variant="sectionTitle">Legal</AppText>
+          <AppText variant="sectionTitle">{t('screensFlow.legal.title')}</AppText>
         </View>
 
         <SegmentedControl
           role="tab"
           rail="container"
-          accessibilityLabel="Documentos legales"
+          accessibilityLabel={t('screensFlow.legal.tabsA11y')}
           value={tab}
           onChange={setTab}
           options={[
-            { value: 'terms', label: 'Términos' },
-            { value: 'privacy', label: 'Privacidad' },
+            { value: 'terms', label: t('screensFlow.legal.tabTerms') },
+            { value: 'privacy', label: t('screensFlow.legal.tabPrivacy') },
           ]}
         />
 
         <View style={styles.titleBlock}>
           <AppText weight="light" style={styles.title} accessibilityRole="header">
-            {terms ? 'Términos y ' : 'Política de '}
-            <AppText weight="semibold">{terms ? 'condiciones' : 'privacidad'}</AppText>
+            {terms ? t('screensFlow.legal.termsTitle') : t('screensFlow.legal.privacyTitle')}
+            <AppText weight="semibold">{terms ? t('screensFlow.legal.termsTitleBold') : t('screensFlow.legal.privacyTitleBold')}</AppText>
           </AppText>
           <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
-            {`Última actualización: ${LEGAL_UPDATED_AT}`}
+            {t('screensFlow.legal.lastUpdated', { date: legalUpdatedAt() })}
           </AppText>
         </View>
 
@@ -58,7 +63,7 @@ export default function LegalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -79,4 +84,4 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 34,
   },
-});
+}));

@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useState, useEffect, useCallback } from 'react';
 import { AuthService } from '../services/auth-service';
 import { AuthSession, User, AsyncStatus } from '../types';
@@ -35,7 +36,7 @@ export function useAuth() {
       setStatus('success');
       return res;
     } catch (err: any) {
-      const msg = err?.message || 'Error al iniciar sesión';
+      const msg = err?.message || t('data.auth.loginError');
       setError(msg);
       setStatus('error');
       throw err;
@@ -50,7 +51,7 @@ export function useAuth() {
       setStatus('success');
       return res;
     } catch (err: any) {
-      const msg = err?.message || 'Error al crear cuenta';
+      const msg = err?.message || t('data.auth.createAccountError');
       setError(msg);
       setStatus('error');
       throw err;

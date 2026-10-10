@@ -3,8 +3,11 @@ import { View, StyleSheet, Pressable, Animated, Easing, Image } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { Recipe } from '../types';
 import { AppText } from './AppText';
-import { colors, radii, spacing } from '../theme';
+import { radii, spacing } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { recipeBanner, DIFFICULTY_LABELS, missingLabel as missingText } from '../utils/recipe-visuals';
+import { useI18n } from '../i18n';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
  * RecipeCard — Organismos.dc.html
@@ -35,12 +38,16 @@ export function RecipeCard({
   isSelected = false,
   onToggleSelect,
 }: RecipeCardProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
+  const reduceMotion = useReduceMotion();
   const diff = colors.difficulty[recipe.difficulty] || colors.difficulty.easy;
   const diffLabel = DIFFICULTY_LABELS[recipe.difficulty] || DIFFICULTY_LABELS.easy;
   const available = recipe.availableIngredients.length;
   const total = available + recipe.missingIngredients.length;
   const missing = recipe.missingIngredients.length;
-  const banner = recipeBanner(recipe.id);
+  const banner = recipeBanner(colors, recipe.id);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -50,7 +57,10 @@ export function RecipeCard({
   const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    Animated.parallel([
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+    } else Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 280, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
@@ -60,11 +70,11 @@ export function RecipeCard({
   }, []);
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, { toValue: 0.97, tension: 300, friction: 20, useNativeDriver: true }).start();
+    if (!reduceMotion) Animated.spring(scaleAnim, { toValue: 0.97, tension: 300, friction: 20, useNativeDriver: true }).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, tension: 200, friction: 14, useNativeDriver: true }).start();
+    if (!reduceMotion) Animated.spring(scaleAnim, { toValue: 1, tension: 200, friction: 14, useNativeDriver: true }).start();
     if (isLongPressActive.current) {
       longPressTimeout.current = setTimeout(() => {
         isLongPressActive.current = false;
@@ -78,7 +88,7 @@ export function RecipeCard({
   };
 
   const handleSavePress = () => {
-    Animated.sequence([
+    if (!reduceMotion) Animated.sequence([
       Animated.timing(heartScale, { toValue: 1.4, duration: 80, useNativeDriver: true }),
       Animated.spring(heartScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
     ]).start();
@@ -105,7 +115,7 @@ export function RecipeCard({
         style={styles.card}
         accessibilityRole="button"
         accessibilityState={isSelectMode ? { selected: isSelected } : undefined}
-        accessibilityLabel={`Receta ${recipe.title}, ${recipe.matchScore}% con tu despensa, dificultad ${diffLabel}, ${missingLabel}`}
+        accessibilityLabel={t('organisms.recipeCard.a11y', { title: recipe.title, match: recipe.matchScore, difficulty: diffLabel, missing: missingLabel })}
       >
         {/* ── Franja superior ── */}
         <View style={[styles.banner, { backgroundColor: banner.bg }]}>
@@ -126,7 +136,7 @@ export function RecipeCard({
               style={styles.checkboxHit}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isSelected }}
-              accessibilityLabel={`Seleccionar receta ${recipe.title}`}
+              accessibilityLabel={t('organisms.recipeCard.selectA11y', { title: recipe.title })}
             >
               <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
                 {isSelected && <Ionicons name="checkmark" size={16} color={colors.onInk} />}
@@ -136,7 +146,7 @@ export function RecipeCard({
             <View style={styles.matchBadge}>
               <Ionicons name="sparkles" size={14} color={colors.onTertiaryContainer} />
               <AppText variant="metadata" weight="semibold" color={colors.onTertiaryContainer}>
-                {`${recipe.matchScore} % con tu despensa`}
+                {t('organisms.recipeCard.matchBadge', { match: recipe.matchScore })}
               </AppText>
             </View>
           )}
@@ -149,7 +159,7 @@ export function RecipeCard({
                   style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: recipe.isSaved }}
-                  accessibilityLabel={recipe.isSaved ? 'Quitar de guardadas' : 'Guardar receta'}
+                  accessibilityLabel={recipe.isSaved ? t('organisms.recipeCard.unsaveA11y') : t('organisms.recipeCard.saveA11y')}
                 >
                   <Animated.View style={{ transform: [{ scale: heartScale }] }}>
                     <Ionicons
@@ -179,7 +189,7 @@ export function RecipeCard({
             {recipe.prepTimeMinutes !== null && (
               <View style={styles.metaItem}>
                 <Ionicons name="time-outline" size={16} color={colors.textPrimary} />
-                <AppText variant="metadata">{`${recipe.prepTimeMinutes} min`}</AppText>
+                <AppText variant="metadata">{t('organisms.recipeCard.minutes', { count: recipe.prepTimeMinutes ?? 0 })}</AppText>
               </View>
             )}
             <View style={styles.metaItem}>
@@ -201,7 +211,7 @@ export function RecipeCard({
             {recipe.servings !== null && !isSelectMode && (
               <View style={styles.metaItem}>
                 <Ionicons name="people-outline" size={16} color={colors.textPrimary} />
-                <AppText variant="metadata">{`${recipe.servings} porc.`}</AppText>
+                <AppText variant="metadata">{t('organisms.recipeCard.servings', { count: recipe.servings ?? 0 })}</AppText>
               </View>
             )}
             {isSelectMode && missing > 0 && (
@@ -214,7 +224,7 @@ export function RecipeCard({
           {!isSelectMode && total > 0 && (
             <View style={styles.progress}>
               <View style={styles.progressHead}>
-                <AppText variant="metadata" weight="semibold">{`Tienes ${available} de ${total} ingredientes`}</AppText>
+                <AppText variant="metadata" weight="semibold">{t('organisms.recipeCard.progress', { available, total })}</AppText>
                 <AppText
                   variant="metadata"
                   weight="semibold"
@@ -250,7 +260,7 @@ export function RecipeCard({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   wrapper: {
     marginBottom: spacing.md,
   },
@@ -405,4 +415,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.ink,
   },
-});
+}));

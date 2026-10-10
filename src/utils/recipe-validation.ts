@@ -1,4 +1,5 @@
 import { Recipe, IngredientValidationResult, RecipeDifficulty } from '../types';
+import { t } from '../i18n';
 
 /**
  * Valida los ingredientes de una receta frente al inventario actual
@@ -17,12 +18,12 @@ export function validateRecipeIngredients(recipe: Recipe): IngredientValidationR
       availableCount,
       missingCount,
       missingItems,
-      friendlyMessage: 'No cuentas con todos los ingredientes necesarios para esta receta.',
+      friendlyMessage: t('misc.recipeValidation.missingRequired'),
       // Aunque falten ingredientes, se descuentan los que sí tienes (decisión de Stehven, 28-09-2026).
       inventoryDeductionNotice:
         availableCount > 0
-          ? 'Se descontarán de tu despensa solo los ingredientes que tienes; los faltantes no.'
-          : 'No tienes ninguno de estos ingredientes, así que no se descontará nada de tu despensa.',
+          ? t('misc.recipeValidation.deductOnlyHave')
+          : t('misc.recipeValidation.deductNone'),
       willDeductFromInventory: availableCount > 0,
     };
   }
@@ -34,8 +35,8 @@ export function validateRecipeIngredients(recipe: Recipe): IngredientValidationR
       availableCount,
       missingCount,
       missingItems,
-      friendlyMessage: 'Te faltan algunos ingredientes opcionales, pero puedes prepararla sin problemas.',
-      inventoryDeductionNotice: 'Se descontarán únicamente los ingredientes utilizados de tu inventario.',
+      friendlyMessage: t('misc.recipeValidation.missingOptional'),
+      inventoryDeductionNotice: t('misc.recipeValidation.deductUsedOnly'),
       willDeductFromInventory: true,
     };
   }
@@ -46,8 +47,8 @@ export function validateRecipeIngredients(recipe: Recipe): IngredientValidationR
     availableCount,
     missingCount: 0,
     missingItems: [],
-    friendlyMessage: '¡Tienes todos los ingredientes listos!',
-    inventoryDeductionNotice: 'Los ingredientes consumidos se descontarán automáticamente de tu inventario.',
+    friendlyMessage: t('misc.recipeValidation.complete'),
+    inventoryDeductionNotice: t('misc.recipeValidation.deductAll'),
     willDeductFromInventory: true,
   };
 }
@@ -117,8 +118,8 @@ export function checkIngredientSelectionCoherence(
       isValid: false,
       isSingleIngredient: false,
       isCondimentOnly: false,
-      message: 'Selecciona al menos un ingrediente para crear recetas.',
-      badgeText: 'Sin ingredientes',
+      message: t('misc.recipeValidation.selectAtLeastOne'),
+      badgeText: t('misc.recipeValidation.noIngredients'),
       badgeType: 'warning',
     };
   }
@@ -134,8 +135,8 @@ export function checkIngredientSelectionCoherence(
         isSingleIngredient: true,
         ingredientName: single.name,
         isCondimentOnly: true,
-        message: `Has seleccionado únicamente "${single.name}" (sazonador/condimento). El Chef IA sugerirá complementos básicos, pero es recomendable añadir un alimento base (proteína, vegetal o grano).`,
-        badgeText: 'Condimento único (Se sugiere sumar base)',
+        message: t('misc.recipeValidation.condimentMessage', { name: single.name }),
+        badgeText: t('misc.recipeValidation.condimentBadge'),
         badgeType: 'warning',
       };
     }
@@ -145,8 +146,8 @@ export function checkIngredientSelectionCoherence(
       isSingleIngredient: true,
       ingredientName: single.name,
       isCondimentOnly: false,
-      message: `"${single.name}" será el ingrediente estrella. El Chef IA creará recetas coherentes y complementará con básicos de cocina.`,
-      badgeText: '1 ingrediente coherente',
+      message: t('misc.recipeValidation.starMessage', { name: single.name }),
+      badgeText: t('misc.recipeValidation.starBadge'),
       badgeType: 'info',
     };
   }
@@ -155,8 +156,8 @@ export function checkIngredientSelectionCoherence(
     isValid: true,
     isSingleIngredient: false,
     isCondimentOnly: false,
-    message: `${ingredients.length} ingredientes listos para combinar armónicamente.`,
-    badgeText: `${ingredients.length} ingredientes`,
+    message: t('misc.recipeValidation.manyMessage', { count: ingredients.length }),
+    badgeText: t('misc.recipeValidation.manyBadge', { count: ingredients.length }),
     badgeType: 'success',
   };
 }

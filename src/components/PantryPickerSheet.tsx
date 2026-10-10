@@ -8,9 +8,12 @@ import { IconButton } from './IconButton';
 import { SearchInput } from './SearchInput';
 import { DialogTitle } from './DialogTitle';
 import { SecondaryButton } from './SecondaryButton';
-import { colors, radii, spacing, elevations, getCategoryConfig } from '../theme';
+import { radii, spacing, elevations, getCategoryConfig } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
 import { formatQuantity } from '../utils/units';
 import { daysUntil } from '../utils/dates';
+import { useI18n, type t as TFn } from '../i18n';
 
 /**
  * PantryPickerSheet — «Elegir de mi despensa» (Compras). Lo agotado y lo que vence primero va arriba.
@@ -24,16 +27,26 @@ export type PantryPickerSheetProps = {
   onClose: () => void;
 };
 
-function stockLabel(item: Ingredient): { text: string; tone: { background: string; text: string } } {
-  if (item.quantity === 0) return { text: 'Sin stock', tone: colors.functional.expired };
+function stockLabel(
+  colors: ThemeColors,
+  item: Ingredient,
+  t: typeof TFn
+): { text: string; tone: { background: string; text: string } } {
+  if (item.quantity === 0) return { text: t('sheets.pantryPicker.noStock'), tone: colors.functional.expired };
   const d = daysUntil(item.expirationDate);
-  const qty = item.quantity !== null ? formatQuantity(item.quantity, item.unit) : 'Sin cantidad';
-  if (d !== null && d < 0) return { text: `${qty} · vencido`, tone: colors.functional.expired };
-  if (d !== null && d <= 3) return { text: `${qty} · vence ${d === 0 ? 'hoy' : `en ${d} d`}`, tone: colors.functional.expiringSoon };
+  const qty = item.quantity !== null ? formatQuantity(item.quantity, item.unit) : t('sheets.pantryPicker.noQuantity');
+  if (d !== null && d < 0) return { text: t('sheets.pantryPicker.expired', { qty }), tone: colors.functional.expired };
+  if (d !== null && d <= 3) {
+    const text = d === 0 ? t('sheets.pantryPicker.expiresToday', { qty }) : t('sheets.pantryPicker.expiresIn', { qty, count: d });
+    return { text, tone: colors.functional.expiringSoon };
+  }
   return { text: qty, tone: { background: colors.surfaceVariant, text: colors.textSecondary } };
 }
 
 export function PantryPickerSheet({ visible, items, isInList, onPick, onClose }: PantryPickerSheetProps) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
 
@@ -50,19 +63,19 @@ export function PantryPickerSheet({ visible, items, isInList, onPick, onClose }:
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Cerrar" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={t('common.close')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]} accessibilityViewIsModal>
           <View style={styles.handle} />
           <View style={styles.header}>
             <View style={styles.flex}>
-              <DialogTitle title="Elegir de mi" emphasis="despensa" size={24} lineHeight={30} />
+              <DialogTitle title={t('sheets.pantryPicker.title')} emphasis={t('sheets.pantryPicker.titleEmphasis')} size={24} lineHeight={30} />
               <AppText variant="bodySmall" color={colors.textSecondary}>
-                Lo agotado y lo que vence pronto aparece primero
+                {t('sheets.pantryPicker.hint')}
               </AppText>
             </View>
-            <IconButton iconName="close" variant="neutral" accessibilityLabel="Cerrar" onPress={onClose} style={styles.closeBtn} />
+            <IconButton iconName="close" variant="neutral" accessibilityLabel={t('common.close')} onPress={onClose} style={styles.closeBtn} />
           </View>
-          <SearchInput value={query} onChangeText={setQuery} placeholder="Buscar en tu despensa…" />
+          <SearchInput value={query} onChangeText={setQuery} placeholder={t('sheets.pantryPicker.searchPlaceholder')} />
           <FlatList
             data={sorted}
             keyExtractor={(i) => i.id}
@@ -73,14 +86,14 @@ export function PantryPickerSheet({ visible, items, isInList, onPick, onClose }:
               const cfg = getCategoryConfig(item.category);
               const tone = colors.categories[item.category] || colors.categories.other;
               const added = isInList(item);
-              const stock = stockLabel(item);
+              const stock = stockLabel(colors, item, t);
               return (
                 <Pressable
                   onPress={() => !added && onPick(item)}
                   style={({ pressed }) => [styles.row, pressed && !added && styles.rowPressed]}
                   accessibilityRole="button"
                   accessibilityState={{ disabled: added }}
-                  accessibilityLabel={added ? `${item.name}, ya está en la lista` : `Agregar ${item.name} a compras`}
+                  accessibilityLabel={added ? t('sheets.pantryPicker.inListA11y', { name: item.name }) : t('sheets.pantryPicker.addA11y', { name: item.name })}
                 >
                   <View style={[styles.icon, { backgroundColor: tone.background }]}>
                     <Ionicons name={cfg.icon} size={20} color={tone.text} />
@@ -103,18 +116,18 @@ export function PantryPickerSheet({ visible, items, isInList, onPick, onClose }:
             }}
             ListEmptyComponent={
               <AppText variant="bodySmall" color={colors.textSecondary} align="center" style={styles.empty}>
-                {query.trim() ? 'No hay alimentos que coincidan.' : 'Tu despensa está vacía.'}
+                {query.trim() ? t('sheets.pantryPicker.noMatches') : t('sheets.pantryPicker.empty')}
               </AppText>
             }
           />
-          <SecondaryButton title="Listo" variant="outline" onPress={onClose} />
+          <SecondaryButton title={t('sheets.pantryPicker.done')} variant="outline" onPress={onClose} />
         </View>
       </View>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   flex: { flex: 1, gap: 4 },
   overlay: {
     flex: 1,
@@ -193,4 +206,4 @@ const styles = StyleSheet.create({
   empty: {
     paddingVertical: 24,
   },
-});
+}));

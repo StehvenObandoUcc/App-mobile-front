@@ -5,8 +5,9 @@ import { ShoppingItem } from '../types';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
 import { CategoryTag } from './CategoryTag';
-import { colors } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { formatQuantity } from '../utils/units';
+import { useI18n } from '../i18n';
 
 /**
  * ShoppingItemRow — producto de la lista de compras (Compras.dc.html).
@@ -20,6 +21,9 @@ export type ShoppingItemRowProps = {
 };
 
 export function ShoppingItemRow({ item, onToggle, onRemove }: ShoppingItemRowProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
   const bought = item.isBought;
   const qty = item.quantity !== null ? formatQuantity(item.quantity, item.unit) : null;
   return (
@@ -29,7 +33,7 @@ export function ShoppingItemRow({ item, onToggle, onRemove }: ShoppingItemRowPro
         style={styles.checkArea}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: bought }}
-        accessibilityLabel={`Marcar ${item.name} como comprado`}
+        accessibilityLabel={t('organisms.shoppingItemRow.markBoughtA11y', { name: item.name })}
       >
         {bought ? (
           <View style={styles.checkOn}>
@@ -56,7 +60,7 @@ export function ShoppingItemRow({ item, onToggle, onRemove }: ShoppingItemRowPro
             <View style={styles.source}>
               <Ionicons name="restaurant-outline" size={12} color={colors.textSecondary} />
               <AppText variant="caption" weight="regular" color={colors.textSecondary} numberOfLines={1} style={styles.sourceText}>
-                {`Receta: ${item.recipeSource}`}
+                {t('organisms.shoppingItemRow.recipeSource', { name: item.recipeSource ?? '' })}
               </AppText>
             </View>
           )}
@@ -74,14 +78,14 @@ export function ShoppingItemRow({ item, onToggle, onRemove }: ShoppingItemRowPro
         variant="ghost"
         iconSize={19}
         iconColor={bought ? colors.textSecondary : colors.m3.error}
-        accessibilityLabel={`Quitar ${item.name}`}
+        accessibilityLabel={t('organisms.shoppingItemRow.removeA11y', { name: item.name })}
         onPress={onRemove}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   row: {
     minHeight: 72,
     flexDirection: 'row',
@@ -146,4 +150,4 @@ const styles = StyleSheet.create({
   qty: {
     paddingHorizontal: 4,
   },
-});
+}));

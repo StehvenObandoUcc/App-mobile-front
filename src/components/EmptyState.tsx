@@ -5,7 +5,8 @@ import { AppText } from './AppText';
 import { PrimaryButton, ButtonTone } from './PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
 import { IllustrationBlob, BlobTone } from './IllustrationBlob';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * EmptyState — Componentes.dc.html / Despensa-Estados.dc.html
@@ -45,6 +46,8 @@ export function EmptyState({
   secondaryActionLabel,
   onSecondaryAction,
 }: EmptyStateProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const hasPrimary = Boolean(actionLabel && onAction);
   const hasSecondary = Boolean(secondaryActionLabel && onSecondaryAction);
 
@@ -75,7 +78,7 @@ export function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -95,4 +98,4 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 6,
   },
-});
+}));

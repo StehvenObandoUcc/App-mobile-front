@@ -1,10 +1,15 @@
+import { t } from '../i18n';
+import { misc as esMisc } from '../i18n/es/misc';
+import { misc as enMisc } from '../i18n/en/misc';
+
 export type ErrorContext = 'scan' | 'recipes';
 
-export const NETWORK_ERROR_MESSAGE = 'No hay conexión a internet. Revisa tu red e intenta de nuevo.';
+/** Texto de falta de conexión en español (referencia). Para comprobarlo en cualquier idioma usa isNetworkErrorMessage. */
+export const NETWORK_ERROR_MESSAGE = esMisc.errors.network;
 
-/** true si el mensaje (ya traducido) es el de falta de conexión. */
+/** true si el mensaje (ya traducido, en español o inglés) es el de falta de conexión. */
 export function isNetworkErrorMessage(message: string | null | undefined): boolean {
-  return message === NETWORK_ERROR_MESSAGE;
+  return message === esMisc.errors.network || message === enMisc.errors.network;
 }
 
 /**
@@ -22,31 +27,31 @@ export function getFriendlyErrorMessage(
     String(error?.message || '').toLowerCase().includes('network request failed');
 
   if (isNetwork) {
-    return NETWORK_ERROR_MESSAGE;
+    return t('misc.errors.network');
   }
 
   const status = error?.status;
 
   if (status === 429) {
-    return 'Estamos procesando muchas solicitudes. Espera un momento y vuelve a intentar.';
+    return t('misc.errors.rateLimit');
   }
 
   if (context === 'scan') {
     if (status === 504) {
-      return 'El análisis tardó demasiado. Verifica tu conexión e intenta de nuevo.';
+      return t('misc.errors.scanTimeout');
     }
     if (status === 502) {
-      return 'No pudimos analizar tu foto. Intenta de nuevo en unos segundos.';
+      return t('misc.errors.scanBadGateway');
     }
-    return 'No pudimos analizar tu foto. Intenta con mejor iluminación o más de cerca.';
+    return t('misc.errors.scanGeneric');
   }
 
   if (context === 'recipes') {
     if (status === 502 || status === 504) {
-      return 'No pudimos generar tus recetas en este momento. Intenta con menos recetas o vuelve a intentarlo.';
+      return t('misc.errors.recipesGenerate');
     }
-    return 'No pudimos generar tus recetas en este momento. Intenta con menos recetas o vuelve a intentarlo.';
+    return t('misc.errors.recipesGenerate');
   }
 
-  return 'Ocurrió un error inesperado. Por favor intenta de nuevo.';
+  return t('misc.errors.unexpected');
 }

@@ -45,31 +45,33 @@ import { loadAppSettings } from '../src/storage/app-settings';
 import { isServerReachable } from '../src/services/api-client';
 import { isNetworkErrorMessage } from '../src/utils/error-messages';
 import { useOutboxStatus } from '../src/hooks/useOutboxStatus';
-import { colors, spacing } from '../src/theme';
+import { spacing } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useI18n } from '../src/i18n';
 
 type FilterTab = 'all' | 'high_match' | 'quick' | 'saved';
 
 // Estilos del enfoque «Personalizada y creativa» (sub-opciones del Chef IA).
 const CUSTOM_STYLE_OPTIONS = [
-  { key: 'Gourmet', label: 'Gourmet', iconName: 'sparkles-outline' },
-  { key: 'Cena Ligera', label: 'Cena ligera', iconName: 'leaf-outline' },
-  { key: 'Guiso o Sopa', label: 'Guiso o sopa', iconName: 'water-outline' },
-  { key: 'Al Horno', label: 'Al horno', iconName: 'flame-outline' },
-  { key: 'Dulce o Postre', label: 'Dulce o postre', iconName: 'cafe-outline' },
+  { key: 'Gourmet', labelKey: 'screensMain.recipes.style.gourmet', iconName: 'sparkles-outline' },
+  { key: 'Cena Ligera', labelKey: 'screensMain.recipes.style.lightDinner', iconName: 'leaf-outline' },
+  { key: 'Guiso o Sopa', labelKey: 'screensMain.recipes.style.stew', iconName: 'water-outline' },
+  { key: 'Al Horno', labelKey: 'screensMain.recipes.style.baked', iconName: 'flame-outline' },
+  { key: 'Dulce o Postre', labelKey: 'screensMain.recipes.style.dessert', iconName: 'cafe-outline' },
 ] as const;
 
-const SORT_OPTIONS: { key: RecipeSortOption; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'createdAt_desc', label: 'Más recientes', icon: 'time-outline' },
-  { key: 'matchScore_desc', label: 'Mayor coincidencia', icon: 'sparkles-outline' },
-  { key: 'prepTime_asc', label: 'Más rápidas', icon: 'flash-outline' },
-  { key: 'difficulty_asc', label: 'Menor dificultad', icon: 'trending-down-outline' },
+const SORT_OPTIONS: { key: RecipeSortOption; labelKey: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'createdAt_desc', labelKey: 'screensMain.recipes.sort.recent', icon: 'time-outline' },
+  { key: 'matchScore_desc', labelKey: 'screensMain.recipes.sort.match', icon: 'sparkles-outline' },
+  { key: 'prepTime_asc', labelKey: 'screensMain.recipes.sort.quick', icon: 'flash-outline' },
+  { key: 'difficulty_asc', labelKey: 'screensMain.recipes.sort.easiest', icon: 'trending-down-outline' },
 ];
 
-const DIFFICULTY_FILTERS: { key: RecipeDifficultyFilter; label: string }[] = [
-  { key: 'all', label: 'Cualquier dificultad' },
-  { key: 'easy', label: 'Fácil' },
-  { key: 'medium', label: 'Media' },
-  { key: 'hard', label: 'Difícil' },
+const DIFFICULTY_FILTERS: { key: RecipeDifficultyFilter; labelKey: string }[] = [
+  { key: 'all', labelKey: 'screensMain.recipes.difficultyFilter.any' },
+  { key: 'easy', labelKey: 'screensMain.recipes.difficultyFilter.easy' },
+  { key: 'medium', labelKey: 'screensMain.recipes.difficultyFilter.medium' },
+  { key: 'hard', labelKey: 'screensMain.recipes.difficultyFilter.hard' },
 ];
 
 const DEFAULT_CHEF: Omit<ChefIaValues, 'ingredientIds'> = {
@@ -83,6 +85,9 @@ const DEFAULT_CHEF: Omit<ChefIaValues, 'ingredientIds'> = {
 };
 
 export default function RecipesScreen() {
+  const { colors } = useTheme();
+  const { t, tp } = useI18n();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items } = useInventory();
@@ -128,7 +133,7 @@ export default function RecipesScreen() {
     iconName?: keyof typeof Ionicons.glyphMap;
     confirmText?: string;
     onConfirm: () => void;
-  }>({ visible: false, title: '', message: '', type: 'info', confirmText: 'Entendido', onConfirm: () => {} });
+  }>({ visible: false, title: '', message: '', type: 'info', confirmText: t('common.gotIt'), onConfirm: () => {} });
 
   const closeDialog = () => setDialogConfig((prev) => ({ ...prev, visible: false }));
 
@@ -174,9 +179,9 @@ export default function RecipesScreen() {
 
   const timeHint =
     chef.focus === 'quick'
-      ? 'En modo Express el máximo es 20 min'
+      ? t('screensMain.recipes.timeHintExpress')
       : chef.difficulty === 'hard'
-        ? 'Las recetas difíciles necesitan al menos 30 min'
+        ? t('screensMain.recipes.timeHintHard')
         : null;
 
   const handleGenerate = async () => {
@@ -185,11 +190,11 @@ export default function RecipesScreen() {
       setTimeout(() => {
         setDialogConfig({
           visible: true,
-          title: 'Despensa vacía',
-          message: 'Añade al menos un alimento a tu despensa para que el Chef IA pueda crear recetas con lo que tienes.',
+          title: t('screensMain.recipes.emptyPantryTitle'),
+          message: t('screensMain.recipes.emptyPantryMessage'),
           type: 'warning',
           iconName: 'basket-outline',
-          confirmText: 'Entendido',
+          confirmText: t('common.gotIt'),
           onConfirm: closeDialog,
         });
       }, 300);
@@ -198,10 +203,10 @@ export default function RecipesScreen() {
     if (chosenIngredients.length === 0) {
       setDialogConfig({
         visible: true,
-        title: 'Elige tus ingredientes',
-        message: 'Selecciona al menos un alimento de tu despensa para crear recetas.',
+        title: t('screensMain.recipes.pickTitle'),
+        message: t('screensMain.recipes.pickMessage'),
         type: 'warning',
-        confirmText: 'Entendido',
+        confirmText: t('common.gotIt'),
         onConfirm: closeDialog,
       });
       return;
@@ -237,12 +242,12 @@ export default function RecipesScreen() {
       setTimeout(() => {
         setDialogConfig({
           visible: true,
-          title: `¡${n} ${n === 1 ? 'receta' : 'recetas'}`,
-          titleEmphasis: 'listas!',
-          message: `El Chef IA creó ${n === 1 ? 'una receta' : `${n} recetas`} con tus ingredientes.`,
+          title: t('screensMain.recipes.readyTitle', { count: n, noun: tp('screensMain.shared.recipe', n) }),
+          titleEmphasis: t('screensMain.recipes.readyEmphasis'),
+          message: tp('screensMain.recipes.readyMessage', n),
           type: 'success',
           iconName: 'sparkles',
-          confirmText: 'Ver recetas',
+          confirmText: t('screensMain.recipes.viewRecipes'),
           onConfirm: closeDialog,
         } as typeof dialogConfig);
       }, 350);
@@ -256,11 +261,11 @@ export default function RecipesScreen() {
       setTimeout(() => {
         setDialogConfig({
           visible: true,
-          title: 'No se pudieron generar',
-          titleEmphasis: 'recetas',
-          message: err?.message || 'Ocurrió un error al comunicarse con el Chef IA. Intenta de nuevo más tarde.',
+          title: t('screensMain.recipes.genErrorTitle'),
+          titleEmphasis: t('screensMain.recipes.genErrorEmphasis'),
+          message: err?.message || t('screensMain.recipes.genErrorFallback'),
           type: 'error',
-          confirmText: 'Entendido',
+          confirmText: t('common.gotIt'),
           onConfirm: closeDialog,
         } as typeof dialogConfig);
       }, 350);
@@ -271,13 +276,13 @@ export default function RecipesScreen() {
 
   const progressSteps = useMemo(
     () => [
-      `Revisé tus ${chosenIngredients.length} ${chosenIngredients.length === 1 ? 'ingrediente' : 'ingredientes'}`,
+      t('screensMain.recipes.step1', { count: chosenIngredients.length, noun: tp('screensMain.shared.ingredient', chosenIngredients.length) }),
       chef.focus === 'waste_reduction'
-        ? 'Prioricé lo que vence pronto'
+        ? t('screensMain.recipes.step2Waste')
         : chef.focus === 'quick'
-          ? `Ajusté todo a ${chef.time} min o menos`
-          : 'Busqué combinaciones creativas',
-      `Escribiendo ${chef.count} ${chef.count === 1 ? 'receta' : 'recetas'}…`,
+          ? t('screensMain.recipes.step2Quick', { minutes: chef.time })
+          : t('screensMain.recipes.step2Custom'),
+      t('screensMain.recipes.step3', { count: chef.count, noun: tp('screensMain.shared.recipe', chef.count) }),
     ],
     [chosenIngredients.length, chef.focus, chef.time, chef.count]
   );
@@ -307,11 +312,11 @@ export default function RecipesScreen() {
     const count = selectedIds.size;
     setConfirmModal({
       visible: true,
-      title: '¿Eliminar',
-      titleEmphasis: `${count} ${count === 1 ? 'receta' : 'recetas'}?`,
-      description: 'Se quitarán de tu colección. Esta acción no se puede deshacer.',
+      title: t('screensMain.shared.deleteTitle'),
+      titleEmphasis: t('screensMain.shared.countEmphasis', { count, noun: tp('screensMain.shared.recipe', count) }),
+      description: t('screensMain.recipes.deleteManyDesc'),
       confirmDestructive: true,
-      confirmText: 'Eliminar',
+      confirmText: t('common.delete'),
       onConfirm: async () => {
         await deleteRecipes(Array.from(selectedIds));
         handleCancelSelection();
@@ -322,11 +327,11 @@ export default function RecipesScreen() {
   const handleDeleteRecipe = (recipe: Recipe) => {
     setConfirmModal({
       visible: true,
-      title: '¿Eliminar esta',
-      titleEmphasis: 'receta?',
-      description: `«${recipe.title}» se quitará de tu colección.`,
+      title: t('screensMain.recipes.deleteOneTitle'),
+      titleEmphasis: t('screensMain.recipes.deleteOneEmphasis'),
+      description: t('screensMain.recipes.deleteOneDesc', { title: recipe.title }),
       confirmDestructive: true,
-      confirmText: 'Eliminar',
+      confirmText: t('common.delete'),
       onConfirm: async () => {
         await deleteRecipe(recipe.id);
       },
@@ -351,7 +356,7 @@ export default function RecipesScreen() {
     setSelectedIds(allSelected ? new Set() : new Set(filteredRecipes.map((r) => r.id)));
 
   const readyCount = recipes.filter((r) => r.missingIngredients.length === 0).length;
-  const sortLabel = SORT_OPTIONS.find((o) => o.key === sortBy)?.label ?? 'Más recientes';
+  const sortLabel = t(SORT_OPTIONS.find((o) => o.key === sortBy)?.labelKey ?? 'screensMain.recipes.sort.recent');
   const diffFilter = DIFFICULTY_FILTERS.find((d) => d.key === difficultyFilter)!;
   const diffTone = difficultyFilter === 'all' ? null : colors.difficulty[difficultyFilter];
 
@@ -386,12 +391,12 @@ export default function RecipesScreen() {
       ) : (
         <>
           <ScreenHeader
-            title="Mis"
-            emphasis="Recetas"
+            title={t('screensMain.recipes.title')}
+            emphasis={t('screensMain.recipes.emphasis')}
             subtitle={
               recipes.length === 0
-                ? 'Inspiración según lo que hay en tu despensa'
-                : `${recipes.length} ${recipes.length === 1 ? 'receta' : 'recetas'} · ${readyCount} ${readyCount === 1 ? 'lista' : 'listas'} para cocinar hoy`
+                ? t('screensMain.recipes.subtitleEmpty')
+                : t('screensMain.recipes.subtitle', { count: recipes.length, noun: tp('screensMain.shared.recipe', recipes.length), ready: readyCount, readyWord: tp('screensMain.recipes.readyWord', readyCount) })
             }
           />
 
@@ -411,8 +416,8 @@ export default function RecipesScreen() {
           <SearchInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Buscar recetas o ingredientes…"
-            accessibilityLabel="Buscar recetas"
+            placeholder={t('screensMain.recipes.searchPlaceholder')}
+            accessibilityLabel={t('screensMain.recipes.searchA11y')}
           />
 
           <ScrollView
@@ -421,10 +426,10 @@ export default function RecipesScreen() {
             style={styles.chipsScroll}
             contentContainerStyle={styles.chips}
           >
-            <Chip label="Todas" variant="filter" selected={activeTab === 'all'} onPress={() => setActiveTab('all')} />
-            <Chip label="Mayor coincidencia" variant="filter" selected={activeTab === 'high_match'} onPress={() => setActiveTab('high_match')} />
-            <Chip label="Rápidas ≤ 20 min" variant="filter" selected={activeTab === 'quick'} onPress={() => setActiveTab('quick')} />
-            <Chip label="Guardadas" variant="filter" selected={activeTab === 'saved'} onPress={() => setActiveTab('saved')} />
+            <Chip label={t('screensMain.recipes.tabAll')} variant="filter" selected={activeTab === 'all'} onPress={() => setActiveTab('all')} />
+            <Chip label={t('screensMain.recipes.tabHighMatch')} variant="filter" selected={activeTab === 'high_match'} onPress={() => setActiveTab('high_match')} />
+            <Chip label={t('screensMain.recipes.tabQuick')} variant="filter" selected={activeTab === 'quick'} onPress={() => setActiveTab('quick')} />
+            <Chip label={t('screensMain.recipes.tabSaved')} variant="filter" selected={activeTab === 'saved'} onPress={() => setActiveTab('saved')} />
           </ScrollView>
 
           <View style={styles.tools}>
@@ -432,7 +437,7 @@ export default function RecipesScreen() {
               onPress={() => setPicker('sort')}
               style={styles.tool}
               accessibilityRole="button"
-              accessibilityLabel={`Ordenar: ${sortLabel}`}
+              accessibilityLabel={t('screensMain.recipes.sortA11y', { label: sortLabel })}
             >
               <Ionicons name="swap-vertical" size={18} color={colors.textPrimary} />
               <AppText variant="bodySmall" weight="semibold">{sortLabel}</AppText>
@@ -441,14 +446,14 @@ export default function RecipesScreen() {
               onPress={() => setPicker('difficulty')}
               style={styles.tool}
               accessibilityRole="button"
-              accessibilityLabel={`Filtrar por dificultad: ${diffFilter.label}`}
+              accessibilityLabel={t('screensMain.recipes.difficultyA11y', { label: t(diffFilter.labelKey) })}
             >
               <DifficultyMeter
                 level={diffTone ? diffTone.level : 2}
                 segment={diffTone ? diffTone.segment : colors.borderStrong}
                 empty={colors.m3.surfaceContainerHighest}
               />
-              <AppText variant="bodySmall" weight="semibold">{diffFilter.label}</AppText>
+              <AppText variant="bodySmall" weight="semibold">{t(diffFilter.labelKey)}</AppText>
             </Pressable>
           </View>
           </>
@@ -472,9 +477,9 @@ export default function RecipesScreen() {
 
       {status === 'error' && (
         <ErrorState
-          title="No pudimos"
-          titleEmphasis="cargar tus recetas"
-          message={error || 'Tu despensa sigue disponible sin conexión. Reintenta cuando vuelva la red.'}
+          title={t('screensMain.recipes.loadErrorTitle')}
+          titleEmphasis={t('screensMain.recipes.loadErrorEmphasis')}
+          message={error || t('screensMain.recipes.loadErrorFallback')}
           onRetry={reload}
         />
       )}
@@ -484,13 +489,13 @@ export default function RecipesScreen() {
           {listHeader}
           <View style={styles.offlineState}>
             <EmptyState
-              title="El Chef IA necesita"
-              titleEmphasis="conexión"
-              description="Tus recetas guardadas y tu despensa siguen disponibles sin internet."
+              title={t('screensMain.recipes.offlineTitle')}
+              titleEmphasis={t('screensMain.recipes.offlineEmphasis')}
+              description={t('screensMain.recipes.offlineDesc')}
               iconName="cloud-offline-outline"
               tone="ai"
               blobSize="md"
-              secondaryActionLabel="Ver recetas guardadas"
+              secondaryActionLabel={t('screensMain.recipes.viewSaved')}
               onSecondaryAction={() => {
                 setAiOffline(false);
                 setActiveTab('saved');
@@ -516,29 +521,29 @@ export default function RecipesScreen() {
           ListEmptyComponent={
             recipes.length === 0 ? (
               <EmptyState
-                title="Aún no tienes"
-                titleEmphasis="recetas"
-                description="Genera tus primeras recetas con el Chef IA a partir de lo que hay en tu despensa."
+                title={t('screensMain.recipes.noRecipesTitle')}
+                titleEmphasis={t('screensMain.recipes.noRecipesEmphasis')}
+                description={t('screensMain.recipes.noRecipesDesc')}
                 iconName="restaurant-outline"
                 tone="brand"
                 blobDotColors={[colors.tertiaryContainer, 'transparent']}
-                actionLabel="Generar con IA"
+                actionLabel={t('screensMain.recipes.generateWithAi')}
                 actionTone="ai"
                 actionIconName="sparkles"
                 onAction={handleOpenAiModal}
               />
             ) : (
               <EmptyState
-                title={activeTab === 'saved' ? 'Aún no guardas' : 'Sin recetas que'}
-                titleEmphasis={activeTab === 'saved' ? 'recetas' : 'coincidan'}
+                title={activeTab === 'saved' ? t('screensMain.recipes.savedTitle') : t('screensMain.recipes.noMatchTitle')}
+                titleEmphasis={activeTab === 'saved' ? t('screensMain.recipes.savedEmphasis') : t('screensMain.recipes.noMatchEmphasis')}
                 description={
                   activeTab === 'saved'
-                    ? 'Toca el corazón de una receta para guardarla aquí.'
-                    : 'Prueba otra búsqueda o cambia el filtro.'
+                    ? t('screensMain.recipes.savedDesc')
+                    : t('screensMain.recipes.noMatchDesc')
                 }
                 iconName={activeTab === 'saved' ? 'heart-outline' : 'search-outline'}
                 tone="neutral"
-                secondaryActionLabel="Ver todas"
+                secondaryActionLabel={t('screensMain.recipes.seeAllRecipes')}
                 onSecondaryAction={() => {
                   setSearchQuery('');
                   setActiveTab('all');
@@ -555,7 +560,7 @@ export default function RecipesScreen() {
         <Fab
           iconName="sparkles"
           tone="ai"
-          accessibilityLabel="Generar recetas con el Chef IA"
+          accessibilityLabel={t('screensMain.recipes.fabA11y')}
           onPress={handleOpenAiModal}
           style={{
             right: spacing.screenGutter,
@@ -567,7 +572,7 @@ export default function RecipesScreen() {
       {isSelectMode && (
         <SelectionActionBar
           count={selectedIds.size}
-          itemNoun="recetas"
+          itemNoun={t('screensMain.recipes.itemNoun')}
           onCancel={handleCancelSelection}
           onDelete={handleDeleteSelected}
         />
@@ -587,38 +592,38 @@ export default function RecipesScreen() {
         coherence={
           chef.ingredientIds.size === 1 ? { message: coherence.message, isWarning: coherence.isCondimentOnly } : null
         }
-        styleOptions={CUSTOM_STYLE_OPTIONS}
+        styleOptions={CUSTOM_STYLE_OPTIONS.map((o) => ({ key: o.key, label: t(o.labelKey), iconName: o.iconName }))}
         onGenerate={handleGenerate}
         onClose={() => setIsAiModalOpen(false)}
       />
 
       <AiProgressScreen
         visible={isGenerating}
-        title="El Chef está"
-        emphasis="cocinando ideas"
+        title={t('screensMain.recipes.chefTitle')}
+        emphasis={t('screensMain.recipes.chefEmphasis')}
         steps={progressSteps}
         onCancel={() => {
           cancelledRef.current = true;
           setIsGenerating(false);
         }}
-        cancelLabel="Dejar de esperar"
+        cancelLabel={t('screensMain.recipes.chefCancel')}
       />
 
       {/* ── Ordenar / Dificultad ── */}
       <ActionSheetModal
         visible={picker !== null}
         onClose={() => setPicker(null)}
-        title={picker === 'sort' ? 'Ordenar recetas' : 'Filtrar por dificultad'}
+        title={picker === 'sort' ? t('screensMain.recipes.sortTitle') : t('screensMain.recipes.difficultyTitle')}
         variant="action_sheet"
         actions={
           picker === 'sort'
             ? SORT_OPTIONS.map((o) => ({
-                label: o.key === sortBy ? `${o.label}  ✓` : o.label,
+                label: o.key === sortBy ? `${t(o.labelKey)}  ✓` : t(o.labelKey),
                 icon: o.icon,
                 onPress: () => setSortBy(o.key),
               }))
             : DIFFICULTY_FILTERS.map((d) => ({
-                label: d.key === difficultyFilter ? `${d.label}  ✓` : d.label,
+                label: d.key === difficultyFilter ? `${t(d.labelKey)}  ✓` : t(d.labelKey),
                 icon: d.key === 'all' ? 'apps-outline' : 'speedometer-outline',
                 onPress: () => setDifficultyFilter(d.key),
               }))
@@ -652,7 +657,7 @@ export default function RecipesScreen() {
 }
 
 // Recetas.dc.html: margen 20, 16 entre bloques del encabezado, 14 entre tarjetas.
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   offlineWrap: {
     flex: 1,
   },
@@ -692,4 +697,4 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 4,
   },
-});
+}));

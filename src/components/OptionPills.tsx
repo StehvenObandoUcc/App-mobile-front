@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { AppText } from './AppText';
-import { colors, radii, spacing } from '../theme';
+import { radii, spacing } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * OptionPills — fila de opciones de igual ancho, 48 dp (tiempo máximo del Chef IA).
@@ -15,6 +16,8 @@ export type OptionPillsProps<V extends string | number> = {
 };
 
 export function OptionPills<V extends string | number>({ options, value, onChange, accessibilityLabel }: OptionPillsProps<V>) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel={accessibilityLabel}>
       {options.map((o) => {
@@ -47,7 +50,7 @@ export function OptionPills<V extends string | number>({ options, value, onChang
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   row: {
     flexDirection: 'row',
     gap: 8,
@@ -73,4 +76,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
   },
-});
+}));

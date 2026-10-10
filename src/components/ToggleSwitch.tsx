@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Pressable, Animated, Easing } from 'react-native';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
  * ToggleSwitch — interruptor M3 (Configuracion.dc.html). 52×32.
@@ -16,10 +18,17 @@ export type ToggleSwitchProps = {
 };
 
 export function ToggleSwitch({ value, onChange, disabled = false, accessibilityLabel, accessibilityHint }: ToggleSwitchProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const reduceMotion = useReduceMotion();
   const v = useRef(new Animated.Value(value ? 1 : 0)).current;
   useEffect(() => {
+    if (reduceMotion) {
+      v.setValue(value ? 1 : 0);
+      return;
+    }
     Animated.timing(v, { toValue: value ? 1 : 0, duration: 200, easing: Easing.bezier(0.2, 0, 0, 1), useNativeDriver: true }).start();
-  }, [value, v]);
+  }, [value, v, reduceMotion]);
 
   return (
     <Pressable
@@ -51,7 +60,7 @@ export function ToggleSwitch({ value, onChange, disabled = false, accessibilityL
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   track: {
     width: 52,
     height: 32,
@@ -76,4 +85,4 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.45,
   },
-});
+}));

@@ -4,7 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
 import { SecondaryButton } from './SecondaryButton';
-import { colors, radii, spacing, elevations } from '../theme';
+import { radii, spacing, elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * Piezas del detalle de receta (Receta-Detalle.dc.html).
@@ -14,6 +16,8 @@ import { colors, radii, spacing, elevations } from '../theme';
 
 // ── AiBadge ───────────────────────────────────────────────────────────────────
 export function AiBadge({ label, size = 'md' }: { label: string; size?: 'sm' | 'md' }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={[styles.aiBadge, size === 'sm' ? styles.aiBadgeSm : styles.aiBadgeMd]}>
       <Ionicons name="sparkles" size={size === 'sm' ? 12 : 14} color={colors.onTertiaryContainer} />
@@ -35,6 +39,8 @@ export type RecipeCoverProps = {
 };
 
 export function RecipeCover({ banner, imageUri, isSaved, topInset, onBack, onToggleSave }: RecipeCoverProps) {
+  const styles = useStyles();
+  const { t } = useI18n();
   return (
     <View style={[styles.cover, { backgroundColor: banner.bg, height: 270 + topInset }]}>
       {imageUri ? (
@@ -48,11 +54,11 @@ export function RecipeCover({ banner, imageUri, isSaved, topInset, onBack, onTog
         </>
       )}
       <View style={[styles.coverBar, { top: 20 + topInset }]}>
-        <IconButton iconName="chevron-back" variant="white" accessibilityLabel="Volver" onPress={onBack} style={styles.coverBtn} />
+        <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('common.back')} onPress={onBack} style={styles.coverBtn} />
         <IconButton
           iconName={isSaved ? 'heart' : 'heart-outline'}
           variant="surface"
-          accessibilityLabel={isSaved ? 'Quitar de guardadas' : 'Guardar receta'}
+          accessibilityLabel={isSaved ? t('organisms.recipeDetailParts.unsaveA11y') : t('organisms.recipeDetailParts.saveA11y')}
           onPress={onToggleSave}
           style={styles.coverBtn}
         />
@@ -71,6 +77,8 @@ export type StatTileProps = {
 };
 
 export function StatTile({ value, label, iconName, top, tone }: StatTileProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const fg = tone?.text ?? colors.textPrimary;
   return (
     <View style={[styles.stat, { backgroundColor: tone?.background ?? colors.surface }]} accessible accessibilityLabel={`${value} ${label}`}>
@@ -89,6 +97,9 @@ export function StatTile({ value, label, iconName, top, tone }: StatTileProps) {
 export type IngredientRow = { id: string; name: string; quantity: string; badge?: { label: string; tone: { background: string; text: string } } };
 
 export function RecipeIngredientsCard({ available, total, rows }: { available: number; total: number; rows: IngredientRow[] }) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   const [expanded, setExpanded] = useState(false);
   const VISIBLE = 3;
   const collapsed = !expanded && rows.length > VISIBLE + 1;
@@ -99,9 +110,9 @@ export function RecipeIngredientsCard({ available, total, rows }: { available: n
     <View style={styles.section}>
       <View style={styles.sectionHead}>
         <AppText variant="sectionTitle" accessibilityRole="header">
-          Ingredientes
+          {t('organisms.recipeDetailParts.ingredientsTitle')}
         </AppText>
-        <AppText variant="bodySmall" weight="semibold" color={colors.functional.fresh.text}>{`Tienes ${available} de ${total}`}</AppText>
+        <AppText variant="bodySmall" weight="semibold" color={colors.functional.fresh.text}>{t('organisms.recipeDetailParts.hasOf', { available, total })}</AppText>
       </View>
       {total > 0 && (
         <View style={styles.segments}>
@@ -139,11 +150,11 @@ export function RecipeIngredientsCard({ available, total, rows }: { available: n
                 <Ionicons name="checkmark" size={14} color={colors.functional.fresh.text} />
               </View>
               <AppText variant="body" style={styles.ingName} numberOfLines={1}>
-                {`${rest[0].name} y ${rest.length - 1} más`}
+                {t('organisms.recipeDetailParts.andMore', { name: rest[0].name, count: rest.length - 1 })}
               </AppText>
-              <Pressable onPress={() => setExpanded(true)} style={styles.link} accessibilityRole="button" accessibilityLabel="Ver todos los ingredientes">
+              <Pressable onPress={() => setExpanded(true)} style={styles.link} accessibilityRole="button" accessibilityLabel={t('organisms.recipeDetailParts.viewAllA11y')}>
                 <AppText variant="bodySmall" weight="semibold" color={colors.primary}>
-                  Ver todos
+                  {t('organisms.recipeDetailParts.viewAll')}
                 </AppText>
               </Pressable>
             </View>
@@ -158,12 +169,15 @@ export function RecipeIngredientsCard({ available, total, rows }: { available: n
 export type MissingRow = { id: string; name: string; quantity: string; optional: boolean; substitutions: string[] };
 
 export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: MissingRow[]; onAddToShopping: () => void }) {
+  const { colors } = useTheme();
+  const { t, tp } = useI18n();
+  const styles = useStyles();
   const tone = colors.functional.expiringSoon;
   const n = rows.length;
   return (
     <View style={[styles.missing, { backgroundColor: tone.background }]}>
       <AppText variant="bodySmall" weight="semibold" color={tone.text}>
-        {n === 1 ? 'Te falta 1 ingrediente' : `Te faltan ${n} ingredientes`}
+        {tp('organisms.recipeDetailParts.missing', n)}
       </AppText>
       {rows.map((r) => (
         <View key={r.id} style={styles.missingItem}>
@@ -171,11 +185,11 @@ export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: Missin
           <View style={styles.missingTexts}>
             <AppText variant="body" weight="semibold">
               {r.name}
-              {r.optional ? <AppText weight="regular" color={colors.textSecondary}> · opcional</AppText> : null}
+              {r.optional ? <AppText weight="regular" color={colors.textSecondary}> · {t('organisms.recipeDetailParts.optional')}</AppText> : null}
             </AppText>
             {r.substitutions.length > 0 && (
               <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
-                {`Puedes usar: ${r.substitutions.join(' o ')}`}
+                {t('organisms.recipeDetailParts.canUse', { list: r.substitutions.join(t('organisms.recipeDetailParts.orJoin')) })}
               </AppText>
             )}
           </View>
@@ -185,7 +199,7 @@ export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: Missin
         </View>
       ))}
       <SecondaryButton
-        title={n === 1 ? 'Añadir faltante a compras' : 'Añadir faltantes a compras'}
+        title={tp('organisms.recipeDetailParts.addMissing', n)}
         iconName="cart-outline"
         onPress={onAddToShopping}
         style={styles.missingBtn}
@@ -198,6 +212,9 @@ export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: Missin
 export type StepState = 'done' | 'current' | 'pending';
 
 export function StepItem({ index, text, state, onPress }: { index: number; text: string; state: StepState; onPress: () => void }) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   const done = state === 'done';
   return (
     <Pressable
@@ -205,7 +222,7 @@ export function StepItem({ index, text, state, onPress }: { index: number; text:
       style={({ pressed }) => [styles.step, done && styles.stepDone, pressed && { opacity: 0.9 }]}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: done }}
-      accessibilityLabel={`Paso ${index}${state === 'current' ? ', paso actual' : ''}: ${text}`}
+      accessibilityLabel={state === 'current' ? t('organisms.recipeDetailParts.stepCurrentA11y', { index, text }) : t('organisms.recipeDetailParts.stepA11y', { index, text })}
     >
       <View style={[styles.stepNum, done ? styles.stepNumDone : state === 'current' ? styles.stepNumCurrent : styles.stepNumPending]}>
         {done ? (
@@ -231,12 +248,15 @@ export function StepItem({ index, text, state, onPress }: { index: number; text:
 // ── StickyActionBar ───────────────────────────────────────────────────────────
 /** StepsLoading — «El Chef IA está escribiendo los pasos…» + dos pasos fantasma (Recetas-Estados · D). */
 export function StepsLoading() {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   return (
     <View style={styles.stepsLoadingWrap} accessibilityLiveRegion="polite" accessibilityState={{ busy: true }}>
       <View style={styles.stepsLoadingBanner}>
         <ActivityIndicator color={colors.tertiary} />
         <AppText variant="body" weight="medium" color={colors.onTertiaryContainer} style={styles.stepsLoadingText}>
-          El Chef IA está escribiendo los pasos…
+          {t('organisms.recipeDetailParts.chefWriting')}
         </AppText>
       </View>
       {[1, 0.7].map((o) => (
@@ -253,6 +273,8 @@ export function StepsLoading() {
 }
 
 export function StickyActionBar({ note, bottomInset, children }: { note?: string; bottomInset: number; children: React.ReactNode }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={[styles.sticky, { paddingBottom: Math.max(bottomInset + 12, 28) }]}>
       {note ? (
@@ -268,7 +290,7 @@ export function StickyActionBar({ note, bottomInset, children }: { note?: string
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   stepsLoadingWrap: {
     gap: 14,
   },
@@ -448,7 +470,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: colors.difficulty.medium.segment,
+    borderColor: colors.warning,
   },
   missingTexts: {
     flex: 1,
@@ -522,4 +544,4 @@ const styles = StyleSheet.create({
   stickyNoteText: {
     flex: 1,
   },
-});
+}));

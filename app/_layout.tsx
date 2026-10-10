@@ -4,7 +4,7 @@ import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '../src/hooks/useAuth';
 import { AppBottomNav, Text } from '../src/components';
-import { colors, typography, spacing, radii } from '../src/theme';
+import { colors as lightColors, typography } from '../src/theme';
 import { primeAppPermissionsOnce } from '../src/utils/permissions';
 import { useExpiryReminderSync } from '../src/hooks/useExpiryReminderSync';
 import {
@@ -23,8 +23,22 @@ configureNotifications();
 // Fuente de marca Outfit (Despensa Tonal).
 import { useBrandFonts } from '../src/hooks/useBrandFonts';
 import { LOGO_MARK_URI } from '../src/theme/logoMark';
+import { AppPreferencesProvider, useAppPreferences } from '../src/preferences/AppPreferences';
+import { useTheme } from '../src/theme/ThemeProvider';
+import { StatusBar } from 'expo-status-bar';
 
+/** Proveedores globales: preferencias (tema, idioma, reducir animaciones) envuelven toda la app. */
 export default function Layout() {
+  return (
+    <AppPreferencesProvider>
+      <RootLayout />
+    </AppPreferencesProvider>
+  );
+}
+
+function RootLayout() {
+  const prefs = useAppPreferences();
+  const { colors, isDark } = useTheme();
   const { isAuthenticated, isHydrated } = useAuth();
   const segments = useSegments();
   const router = useRouter();
@@ -38,7 +52,7 @@ export default function Layout() {
     return () => clearTimeout(t);
   }, []);
 
-  const appReady = isHydrated && (brandFontsReady || fontWaitExpired);
+  const appReady = isHydrated && prefs.ready && (brandFontsReady || fontWaitExpired);
   useEffect(() => {
     if (appReady) SplashScreen.hideAsync().catch(() => {});
   }, [appReady]);
@@ -78,7 +92,7 @@ export default function Layout() {
       // Igual al splash nativo (mismo logo, mismo tamaño y fondo avena): el paso a la app no «salta».
       <View style={styles.splashContainer} accessibilityLabel="Food AI cargando">
         <Image source={{ uri: LOGO_MARK_URI }} style={styles.splashLogo} fadeDuration={0} />
-        <ActivityIndicator size="small" color={colors.ink} style={styles.splashSpinner} />
+        <ActivityIndicator size="small" color={lightColors.ink} style={styles.splashSpinner} />
       </View>
     );
   }
@@ -88,6 +102,7 @@ export default function Layout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.background },
@@ -140,9 +155,10 @@ export default function Layout() {
 }
 
 const styles = StyleSheet.create({
+  // El splash nativo es crema en ambos modos: esta pantalla de carga lo continúa igual.
   splashContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: lightColors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

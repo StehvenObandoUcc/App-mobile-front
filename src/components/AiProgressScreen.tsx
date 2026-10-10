@@ -5,7 +5,10 @@ import { AppText } from './AppText';
 import { SecondaryButton } from './SecondaryButton';
 import { HeroArt } from './HeroArt';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radii, spacing } from '../theme';
+import { radii, spacing } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
  * AiProgressScreen — pantalla completa de «IA trabajando» por pasos (Recetas-Estados.dc.html · A).
@@ -36,10 +39,14 @@ export function AiProgressScreen({
   iconName = 'sparkles',
   stepMs = 1400,
   onCancel,
-  cancelLabel = 'Cancelar',
+  cancelLabel,
   topSlot,
   footnote,
 }: AiProgressScreenProps) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const reduceMotion = useReduceMotion();
+  const styles = useStyles();
   const [active, setActive] = useState(0);
   const insets = useSafeAreaInsets();
 
@@ -75,7 +82,11 @@ export function AiProgressScreen({
                     <Ionicons name="checkmark" size={14} color={colors.onInk} />
                   </View>
                 ) : current ? (
-                  <ActivityIndicator size="small" color={colors.tertiary} style={styles.spinner} />
+                  reduceMotion ? (
+                    <View style={[styles.pendingDot, { borderColor: colors.tertiary }]} />
+                  ) : (
+                    <ActivityIndicator size="small" color={colors.tertiary} style={styles.spinner} />
+                  )
                 ) : (
                   <View style={styles.pendingDot} />
                 )}
@@ -98,13 +109,13 @@ export function AiProgressScreen({
           </AppText>
         )}
 
-        {onCancel && <SecondaryButton title={cancelLabel} variant="outline" onPress={onCancel} style={styles.cancel} />}
+        {onCancel && <SecondaryButton title={cancelLabel ?? t('common.cancel')} variant="outline" onPress={onCancel} style={styles.cancel} />}
       </View>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -169,4 +180,4 @@ const styles = StyleSheet.create({
   cancel: {
     alignSelf: 'stretch',
   },
-});
+}));

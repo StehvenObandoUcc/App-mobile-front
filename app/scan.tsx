@@ -10,7 +10,9 @@ import { useScan } from '../src/hooks/useScan';
 import { getTestPhotoCount, incrementTestPhotoCount, MAX_TEST_PHOTOS } from '../src/services/scan-limit';
 import { AppText, IconButton, QuotaPill, StatusScreen, AiProgressScreen } from '../src/components';
 import { ScanInput } from '../src/types';
-import { colors, radii } from '../src/theme';
+import { radii } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useI18n } from '../src/i18n';
 
 /**
  * Escaneo (Escaneo.dc.html + Escaneo-Estados.dc.html).
@@ -21,9 +23,9 @@ import { colors, radii } from '../src/theme';
  */
 type ScanView = 'camera' | 'limit' | 'error';
 
-const ANALYSIS_STEPS = ['Foto optimizada', 'Identificando ingredientes…', 'Comparando con tu despensa'];
-
 export default function ScanScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraView>(null);
@@ -38,6 +40,8 @@ export default function ScanScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const lastInputRef = useRef<ScanInput | null>(null);
   const { status, analyzeImage } = useScan();
+  const { t } = useI18n();
+  const ANALYSIS_STEPS = [t('screensFlow.scan.analysisStep1'), t('screensFlow.scan.analysisStep2'), t('screensFlow.scan.analysisStep3')];
   const autoRequestedRef = useRef(false);
 
   const goHome = () => (router.canGoBack() ? router.back() : router.replace('/'));
@@ -140,7 +144,7 @@ export default function ScanScreen() {
     setIsCapturing(true);
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
-      if (!photo?.uri) throw new Error('No se pudo capturar la fotografía');
+      if (!photo?.uri) throw new Error(t('screensFlow.scan.captureError'));
       await analyzeUri(photo.uri);
     } catch (err: any) {
       setErrorMessage(err?.message || null);
@@ -152,18 +156,18 @@ export default function ScanScreen() {
   const analyzing = (
     <AiProgressScreen
       visible={isAnalyzing}
-      title="Analizando tu"
-      emphasis="foto"
+      title={t('screensFlow.scan.analyzingTitle')}
+      emphasis={t('screensFlow.scan.analyzingEmphasis')}
       steps={ANALYSIS_STEPS}
       iconName="sparkles"
       stepMs={1600}
-      footnote="Esto tarda unos segundos. Al terminar verás lo que encontramos."
+      footnote={t('screensFlow.scan.analyzingFootnote')}
       topSlot={
         <QuotaPill
           tone="light"
           used={Math.min(testPhotoCount + 1, MAX_TEST_PHOTOS)}
           max={MAX_TEST_PHOTOS}
-          label={`Foto ${Math.min(testPhotoCount + 1, MAX_TEST_PHOTOS)} de ${MAX_TEST_PHOTOS} de prueba`}
+          label={t('screensFlow.scan.testPhotoLabel', { used: Math.min(testPhotoCount + 1, MAX_TEST_PHOTOS), max: MAX_TEST_PHOTOS })}
         />
       }
     />
@@ -174,19 +178,19 @@ export default function ScanScreen() {
     return (
       <StatusScreen
         topSlot={
-          <QuotaPill tone="warning" used={MAX_TEST_PHOTOS} max={MAX_TEST_PHOTOS} label={`${MAX_TEST_PHOTOS} de ${MAX_TEST_PHOTOS} fotos usadas`} />
+          <QuotaPill tone="warning" used={MAX_TEST_PHOTOS} max={MAX_TEST_PHOTOS} label={t('screensFlow.scan.limitUsed', { max: MAX_TEST_PHOTOS })} />
         }
         art={{
           iconName: 'scan-outline',
           blobColor: colors.functional.expiringSoon.background,
           tileColor: colors.surface,
-          iconColor: colors.difficulty.medium.segment,
+          iconColor: colors.warning,
         }}
-        title="Usaste tus"
-        emphasis={`${MAX_TEST_PHOTOS} fotos de prueba`}
-        message="Mientras tanto puedes seguir agregando alimentos a tu despensa a mano."
-        primary={{ title: 'Agregar a mano', iconName: 'add', onPress: () => router.replace({ pathname: '/inventory', params: { add: '1' } }) }}
-        secondary={{ title: 'Volver al inicio', onPress: () => router.replace('/') }}
+        title={t('screensFlow.scan.limitTitle')}
+        emphasis={t('screensFlow.scan.limitEmphasis', { max: MAX_TEST_PHOTOS })}
+        message={t('screensFlow.scan.limitMessage')}
+        primary={{ title: t('screensFlow.scan.addByHand'), iconName: 'add', onPress: () => router.replace({ pathname: '/inventory', params: { add: '1' } }) }}
+        secondary={{ title: t('screensFlow.scan.backHome'), onPress: () => router.replace('/') }}
       />
     );
   }
@@ -197,7 +201,7 @@ export default function ScanScreen() {
       <>
         <StatusScreen
           role="alert"
-          topSlot={<QuotaPill tone="light" label="Este intento no cuenta como foto de prueba" />}
+          topSlot={<QuotaPill tone="light" label={t('screensFlow.scan.errorNote')} />}
           art={{
             iconName: 'cloud-offline-outline',
             blobColor: colors.m3.errorContainer,
@@ -205,18 +209,18 @@ export default function ScanScreen() {
             iconColor: colors.m3.error,
             dotBottomColor: colors.categories.grain.background,
           }}
-          title="No pudimos"
-          emphasis="analizar tu foto"
-          message={errorMessage && !/network|fetch|timeout/i.test(errorMessage) ? errorMessage : 'Revisa tu conexión e inténtalo de nuevo.'}
+          title={t('screensFlow.scan.errorTitle')}
+          emphasis={t('screensFlow.scan.errorEmphasis')}
+          message={errorMessage && !/network|fetch|timeout/i.test(errorMessage) ? errorMessage : t('screensFlow.scan.errorNetwork')}
           primary={{
-            title: 'Reintentar análisis',
+            title: t('screensFlow.scan.retry'),
             iconName: 'refresh',
             onPress: () => {
               setView('camera');
               if (lastInputRef.current) runAnalysis(lastInputRef.current);
             },
           }}
-          secondary={{ title: 'Tomar otra foto', onPress: () => setView('camera') }}
+          secondary={{ title: t('screensFlow.scan.takeAnother'), onPress: () => setView('camera') }}
         />
         {analyzing}
       </>
@@ -238,15 +242,15 @@ export default function ScanScreen() {
           iconColor: colors.primary,
           dotTopColor: colors.categories.grain.background,
         }}
-        title="Necesitamos tu"
-        emphasis="cámara"
-        message="Con la cámara identificamos lo que tienes en tu nevera o despensa. También puedes elegir una foto de tu galería."
+        title={t('screensFlow.scan.permissionTitle')}
+        emphasis={t('screensFlow.scan.permissionEmphasis')}
+        message={t('screensFlow.scan.permissionMessage')}
         primary={
           permission.canAskAgain
-            ? { title: 'Dar permiso de cámara', iconName: 'camera-outline', onPress: requestPermission }
-            : { title: 'Abrir ajustes', iconName: 'settings-outline', onPress: () => Linking.openSettings() }
+            ? { title: t('screensFlow.scan.permissionGrant'), iconName: 'camera-outline', onPress: requestPermission }
+            : { title: t('screensFlow.scan.openSettings'), iconName: 'settings-outline', onPress: () => Linking.openSettings() }
         }
-        secondary={{ title: 'Elegir de la galería', iconName: 'images-outline', onPress: handlePickFromGallery }}
+        secondary={{ title: t('screensFlow.scan.pickFromGallery'), iconName: 'images-outline', onPress: handlePickFromGallery }}
       />
     );
   }
@@ -266,14 +270,14 @@ export default function ScanScreen() {
 
       {/* Barra superior */}
       <View style={[styles.topBar, { top: insets.top + 12 }]}>
-        <IconButton iconName="chevron-back" variant="ink" accessibilityLabel="Volver al inicio" onPress={goHome} />
+        <IconButton iconName="chevron-back" variant="ink" accessibilityLabel={t('screensFlow.scan.backHome')} onPress={goHome} />
         <View style={styles.flex} />
         {facing === 'back' && (
           <IconButton
             iconName={torchOn ? 'flash' : 'flash-off-outline'}
             variant={torchOn ? 'tonal' : 'ink'}
-            accessibilityLabel={torchOn ? 'Apagar flash' : 'Encender flash'}
-            accessibilityHint="Ilumina los alimentos cuando hay poca luz"
+            accessibilityLabel={torchOn ? t('screensFlow.scan.flashOnA11y') : t('screensFlow.scan.flashOffA11y')}
+            accessibilityHint={t('screensFlow.scan.flashHint')}
             onPress={() => setTorchOn((v) => !v)}
           />
         )}
@@ -281,21 +285,21 @@ export default function ScanScreen() {
           tone="camera"
           used={testPhotoCount}
           max={MAX_TEST_PHOTOS}
-          label={`${testPhotoCount} de ${MAX_TEST_PHOTOS} fotos`}
-          accessibilityLabel={`Fase de pruebas: ${testPhotoCount} de ${MAX_TEST_PHOTOS} fotos escaneadas`}
+          label={t('screensFlow.scan.quotaLabel', { used: testPhotoCount, max: MAX_TEST_PHOTOS })}
+          accessibilityLabel={t('screensFlow.scan.quotaA11y', { used: testPhotoCount, max: MAX_TEST_PHOTOS })}
         />
       </View>
 
       {/* Título + guía */}
       <View style={[styles.heading, { top: insets.top + 84 }]}>
         <AppText weight="light" color={colors.textInverse} style={styles.title} accessibilityRole="header">
-          {'Escanea tus '}
+          {t('screensFlow.scan.headingLight')}
           <AppText weight="semibold" color={colors.textInverse}>
-            alimentos
+            {t('screensFlow.scan.headingBold')}
           </AppText>
         </AppText>
         <AppText variant="body" color={colors.onCameraMuted} style={styles.subtitle}>
-          Encuadra los productos dentro del marco
+          {t('screensFlow.scan.frameHint')}
         </AppText>
       </View>
 
@@ -308,7 +312,7 @@ export default function ScanScreen() {
           <View style={[styles.corner, styles.cornerBR]} />
         </View>
         <View style={styles.tips}>
-          {['Con buena luz'].map((tip) => (
+          {[t('screensFlow.scan.tipGoodLight')].map((tip) => (
             <View key={tip} style={styles.tip}>
               <AppText variant="bodySmall" color={colors.textInverse} style={styles.tipText}>
                 {tip}
@@ -325,14 +329,14 @@ export default function ScanScreen() {
           variant="ink"
           iconSize={24}
           style={styles.sideBtn}
-          accessibilityLabel="Seleccionar foto de la galería"
+          accessibilityLabel={t('screensFlow.scan.galleryA11y')}
           onPress={handlePickFromGallery}
         />
         <Pressable
           onPress={handleCapture}
           style={({ pressed }) => [styles.shutter, pressed && styles.shutterPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Tomar fotografía y analizar alimentos"
+          accessibilityLabel={t('screensFlow.scan.shutterA11y')}
         >
           <View style={styles.shutterInner} />
         </Pressable>
@@ -341,7 +345,7 @@ export default function ScanScreen() {
           variant="ink"
           iconSize={24}
           style={styles.sideBtn}
-          accessibilityLabel="Cambiar entre cámara frontal y trasera"
+          accessibilityLabel={t('screensFlow.scan.flipCameraA11y')}
           onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
         />
       </View>
@@ -355,7 +359,7 @@ const CORNER = 48;
 const CORNER_WIDTH = 4;
 const CORNER_RADIUS = 22;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   flex: { flex: 1 },
   camera: {
     flex: 1,
@@ -430,7 +434,7 @@ const styles = StyleSheet.create({
     height: 32,
     paddingHorizontal: 12,
     borderRadius: radii.pill,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.bar,
     justifyContent: 'center',
   },
   tipText: {
@@ -466,4 +470,4 @@ const styles = StyleSheet.create({
     borderRadius: 33,
     backgroundColor: colors.accent,
   },
-});
+}));

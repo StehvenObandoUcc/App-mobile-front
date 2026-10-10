@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShoppingList } from '../hooks/useShoppingList';
 import { CountBadge } from './CountBadge';
 import { isBottomNavHidden, subscribeBottomNav } from '../utils/nav-visibility';
-import { colors, typography, spacing, radii, elevations } from '../theme';
+import { typography, spacing, radii, elevations } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import {
   MAIN_TABS,
   setSwipeNavigation,
@@ -15,6 +16,7 @@ import {
 
 import { AppText } from './AppText';
 import { useReduceMotion } from '../hooks/useReduceMotion';
+import { useI18n } from '../i18n';
 export const NAV_HEIGHT = 72; // Organismos.dc.html: barra flotante de 72 dp
 export const NAV_BOTTOM_OFFSET = 12;
 
@@ -38,6 +40,8 @@ function TabIcon({
   active: boolean;
   reduceMotion: boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const v = useRef(new Animated.Value(active ? 1 : 0)).current;
   useEffect(() => {
     if (reduceMotion) v.setValue(active ? 1 : 0);
@@ -46,10 +50,10 @@ function TabIcon({
   return (
     <View style={styles.iconBox}>
       <Animated.View style={[StyleSheet.absoluteFill, styles.center, { opacity: v.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]}>
-        <Ionicons name={icon} size={22} color={colors.navIconIdle} />
+        <Ionicons name={icon} size={22} color={colors.textSecondary} />
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, styles.center, { opacity: v }]}>
-        <Ionicons name={iconActive} size={22} color={colors.ink} />
+        <Ionicons name={iconActive} size={22} color={colors.primary} />
       </Animated.View>
     </View>
   );
@@ -57,13 +61,14 @@ function TabIcon({
 
 /** Etiqueta de la pestaña activa: entra con fundido y un leve desplazamiento. */
 function TabLabel({ label, reduceMotion }: { label: string; reduceMotion: boolean }) {
+  const { colors } = useTheme();
   const v = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   useEffect(() => {
     if (!reduceMotion) Animated.timing(v, { toValue: 1, duration: SLIDE_MS, delay: 60, easing: EASE, useNativeDriver: true }).start();
   }, [reduceMotion, v]);
   return (
     <Animated.View style={{ opacity: v, transform: [{ translateX: v.interpolate({ inputRange: [0, 1], outputRange: [-6, 0] }) }] }}>
-      <AppText variant="bodySmall" weight="semibold" color={colors.ink} numberOfLines={1}>
+      <AppText variant="bodySmall" weight="semibold" color={colors.textPrimary} numberOfLines={1}>
         {label}
       </AppText>
     </Animated.View>
@@ -71,10 +76,13 @@ function TabLabel({ label, reduceMotion }: { label: string; reduceMotion: boolea
 }
 
 export function AppBottomNav() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { pendingItems } = useShoppingList();
+  const { t, tp } = useI18n();
   const isNavigatingRef = useRef(false);
 
   const reduceMotion = useReduceMotion();
@@ -258,13 +266,13 @@ export function AppBottomNav() {
     active: boolean;
     badge?: number;
   }[] = [
-    { index: 0, label: 'Inicio', a11y: 'Inicio', icon: 'home-outline', iconActive: 'home', active: isHome },
-    { index: 1, label: 'Despensa', a11y: 'Despensa', icon: 'basket-outline', iconActive: 'basket', active: isInventory },
-    { index: 2, label: 'Recetas', a11y: 'Recetas', icon: 'restaurant-outline', iconActive: 'restaurant', active: isRecipes },
+    { index: 0, label: t('organisms.appBottomNav.tabHome'), a11y: t('organisms.appBottomNav.tabHome'), icon: 'home-outline', iconActive: 'home', active: isHome },
+    { index: 1, label: t('organisms.appBottomNav.tabPantry'), a11y: t('organisms.appBottomNav.tabPantry'), icon: 'basket-outline', iconActive: 'basket', active: isInventory },
+    { index: 2, label: t('organisms.appBottomNav.tabRecipes'), a11y: t('organisms.appBottomNav.tabRecipes'), icon: 'restaurant-outline', iconActive: 'restaurant', active: isRecipes },
     {
       index: 3,
-      label: 'Compras',
-      a11y: pendingItems.length > 0 ? `Compras, ${pendingItems.length} pendientes` : 'Compras',
+      label: t('organisms.appBottomNav.tabShopping'),
+      a11y: pendingItems.length > 0 ? tp('organisms.appBottomNav.shoppingPending', pendingItems.length) : t('organisms.appBottomNav.tabShopping'),
       icon: 'cart-outline',
       iconActive: 'cart',
       active: isShopping,
@@ -340,11 +348,11 @@ export function AppBottomNav() {
           onPressOut={fabOut}
           onPress={() => router.push('/scan')}
           accessibilityRole="button"
-          accessibilityLabel="Escanear alimentos con la cámara"
+          accessibilityLabel={t('organisms.appBottomNav.scanA11y')}
         >
           <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
             {/* Icono del mockup: marco de escaneo + lente circular al centro */}
-            <Ionicons name="scan-outline" size={26} color={colors.ink} />
+            <Ionicons name="scan-outline" size={26} color={colors.m3.onPrimary} />
             <View style={styles.fabLens} pointerEvents="none" />
           </Animated.View>
         </Pressable>
@@ -356,7 +364,7 @@ export function AppBottomNav() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   // Organismos.dc.html / Despensa.dc.html: barra cacao flotante de 72 dp, radio 36, márgenes 14.
   bottomNavWrapper: {
     position: 'absolute',
@@ -369,7 +377,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.ink,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radii.floatingNav,
     paddingHorizontal: spacing.sm,
     ...elevations.lg,
@@ -418,7 +428,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 19,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -428,7 +438,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: colors.ink,
+    borderColor: colors.m3.onPrimary,
   },
   badge: {
     position: 'absolute',
@@ -438,4 +448,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
   },
-});
+}));

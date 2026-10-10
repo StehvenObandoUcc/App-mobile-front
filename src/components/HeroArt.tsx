@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * HeroArt — ilustración grande de las pantallas completas (Escaneo-Estados / Recetas-Estados):
@@ -22,9 +22,13 @@ export function HeroArt({
   blobColor,
   tileColor,
   iconColor,
-  dotTopColor = colors.primaryContainer,
-  dotBottomColor = colors.secondaryContainer,
+  dotTopColor: dotTopProp,
+  dotBottomColor: dotBottomProp,
 }: HeroArtProps) {
+  const { colors } = useTheme();
+  const dotTopColor = dotTopProp ?? colors.primaryContainer;
+  const dotBottomColor = dotBottomProp ?? colors.secondaryContainer;
+  const styles = useStyles();
   return (
     <View style={styles.art} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <View style={[styles.blob, { backgroundColor: blobColor }]} />
@@ -37,7 +41,7 @@ export function HeroArt({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   art: {
     width: 190,
     height: 170,
@@ -79,5 +83,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));
 

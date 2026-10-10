@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Animated, ViewStyle, StyleProp, Easing } from 'react-native';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 export type StaggerViewProps = {
   index?: number;
@@ -22,8 +23,14 @@ export function StaggerView({
 }: StaggerViewProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(16)).current;
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      opacity.setValue(1);
+      translateY.setValue(0);
+      return;
+    }
     const delay = index * delayMs;
     Animated.parallel([
       Animated.timing(opacity, {

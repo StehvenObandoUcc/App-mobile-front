@@ -29,7 +29,9 @@ import {
   SegmentedControl,
   PhotoTagSpec,
 } from '../src/components';
-import { colors } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useReduceMotion } from '../src/hooks/useReduceMotion';
+import { useI18n, type t as TFn, type tp as TpFn } from '../src/i18n';
 
 /**
  * Bienvenida (Bienvenida-Fotos.dc.html) + Formulario (Login-Formulario.dc.html).
@@ -48,51 +50,53 @@ type Slide = {
 };
 
 // Coordenadas tomadas del mockup (lienzo de 390 × 470).
-const SLIDES: Slide[] = [
-  {
-    photo: require('../assets/onboarding/onboarding-escanea.jpg'),
-    alt: 'Nevera abierta con verduras frescas',
-    title: 'Tu despensa,',
-    emphasis: 'entendida por IA',
-    text: 'Toma una foto y reconocemos tus alimentos con su fecha de vencimiento.',
-    tags: [
-      { label: 'Repollo morado · 6 días', pill: [180, 4], line: [324, 38, 14] },
-      { label: 'Espinaca · 2 días', pill: [96, 52], line: [161, 86, 74] },
-      { label: 'Zanahoria · 5 días', pill: [6, 96], line: [44, 130, 40] },
-      { label: 'Brócoli · 4 días', pill: [236, 104], line: [267, 138, 22] },
-      { label: 'Huevos · frescos', pill: [262, 196], line: [355, 230, 88] },
-      { label: 'Queso fresco · 3 días', pill: [6, 210], line: [65, 244, 38] },
-      { label: 'Salsa de tomate · 5 días', pill: [130, 256], line: [209, 290, 12] },
-    ],
-  },
-  {
-    photo: require('../assets/onboarding/onboarding-cocina.jpg'),
-    alt: 'Plato de arroz, pollo asado y verduras',
-    title: 'Recetas con',
-    emphasis: 'lo que ya tienes',
-    text: 'El Chef IA cocina ideas con lo que vence primero, para que nada se pierda.',
-    tags: [
-      { label: '92 % con tu despensa', pill: [20, 24], tone: 'ai' },
-      { label: 'Espárragos · 2 días', pill: [120, 76], line: [149, 110, 46] },
-      { label: 'Brócoli · 4 días', pill: [6, 128], line: [57, 162, 28] },
-      { label: 'Alitas de pollo', pill: [228, 130], line: [334, 164, 48] },
-      { label: 'Arroz · 2 tazas', pill: [120, 250], line: [179, 284, 38] },
-    ],
-  },
-  {
-    photo: require('../assets/onboarding/onboarding-compra.jpg'),
-    alt: 'Canasta con tomates, calabacín y verduras',
-    title: 'Compra',
-    emphasis: 'solo lo que falta',
-    text: 'Te avisamos antes de que algo venza y armamos tu lista de compras.',
-    focusX: 0.3,
-    tags: [
-      { label: 'Zapallo amarillo · 3 u', pill: [150, 100], line: [210, 134, 92] },
-      { label: 'Calabacín · 1 u', pill: [8, 170], line: [39, 204, 54] },
-      { label: 'Tomate · 7 u', pill: [150, 262], line: [189, 296, 54] },
-    ],
-  },
-];
+function buildSlides(t: typeof TFn, tp: typeof TpFn): Slide[] {
+  return [
+    {
+      photo: require('../assets/onboarding/onboarding-escanea.jpg'),
+      alt: t('screensFlow.login.slide1Alt'),
+      title: t('screensFlow.login.slide1Title'),
+      emphasis: t('screensFlow.login.slide1Emphasis'),
+      text: t('screensFlow.login.slide1Text'),
+      tags: [
+        { label: tp('screensFlow.login.tagCabbage', 6), pill: [180, 4], line: [324, 38, 14] },
+        { label: tp('screensFlow.login.tagSpinach', 2), pill: [96, 52], line: [161, 86, 74] },
+        { label: tp('screensFlow.login.tagCarrot', 5), pill: [6, 96], line: [44, 130, 40] },
+        { label: tp('screensFlow.login.tagBroccoli', 4), pill: [236, 104], line: [267, 138, 22] },
+        { label: t('screensFlow.login.tagEggs'), pill: [262, 196], line: [355, 230, 88] },
+        { label: tp('screensFlow.login.tagCheese', 3), pill: [6, 210], line: [65, 244, 38] },
+        { label: tp('screensFlow.login.tagTomatoSauce', 5), pill: [130, 256], line: [209, 290, 12] },
+      ],
+    },
+    {
+      photo: require('../assets/onboarding/onboarding-cocina.jpg'),
+      alt: t('screensFlow.login.slide2Alt'),
+      title: t('screensFlow.login.slide2Title'),
+      emphasis: t('screensFlow.login.slide2Emphasis'),
+      text: t('screensFlow.login.slide2Text'),
+      tags: [
+        { label: t('screensFlow.login.tagPantryMatch'), pill: [20, 24], tone: 'ai' },
+        { label: tp('screensFlow.login.tagAsparagus', 2), pill: [120, 76], line: [149, 110, 46] },
+        { label: tp('screensFlow.login.tagBroccoli', 4), pill: [6, 128], line: [57, 162, 28] },
+        { label: t('screensFlow.login.tagChickenWings'), pill: [228, 130], line: [334, 164, 48] },
+        { label: tp('screensFlow.login.tagRice', 2), pill: [120, 250], line: [179, 284, 38] },
+      ],
+    },
+    {
+      photo: require('../assets/onboarding/onboarding-compra.jpg'),
+      alt: t('screensFlow.login.slide3Alt'),
+      title: t('screensFlow.login.slide3Title'),
+      emphasis: t('screensFlow.login.slide3Emphasis'),
+      text: t('screensFlow.login.slide3Text'),
+      focusX: 0.3,
+      tags: [
+        { label: tp('screensFlow.login.tagSquash', 3), pill: [150, 100], line: [210, 134, 92] },
+        { label: tp('screensFlow.login.tagZucchini', 1), pill: [8, 170], line: [39, 204, 54] },
+        { label: tp('screensFlow.login.tagTomato', 7), pill: [150, 262], line: [189, 296, 54] },
+      ],
+    },
+  ];
+}
 
 type DialogState = {
   visible: boolean;
@@ -105,10 +109,15 @@ type DialogState = {
 };
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height: screenH } = useWindowDimensions();
   const { isAuthenticated, login, register, status, error } = useAuth();
+  const { t, tp } = useI18n();
+  const reduceMotion = useReduceMotion();
+  const SLIDES = buildSlides(t, tp);
 
   useEffect(() => {
     if (isAuthenticated) router.replace('/');
@@ -130,7 +139,7 @@ export default function LoginScreen() {
   const photoH = Math.min(470 * (width / 390), screenH * 0.56);
 
   const goTo = (i: number) => {
-    pagerRef.current?.scrollTo({ x: i * width, animated: true });
+    pagerRef.current?.scrollTo({ x: i * width, animated: !reduceMotion });
     setPage(i);
   };
   const onPagerEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) =>
@@ -146,6 +155,10 @@ export default function LoginScreen() {
     if (m === mode) return;
     if (m === 'login') nameRef.current?.blur();
     setMode(m);
+    if (reduceMotion) {
+      nameAnim.setValue(m === 'register' ? 1 : 0);
+      return;
+    }
     Animated.timing(nameAnim, {
       toValue: m === 'register' ? 1 : 0,
       duration: 220,
@@ -159,10 +172,10 @@ export default function LoginScreen() {
 
   const handleSubmit = async () => {
     const mail = email.trim();
-    if (mode === 'register' && name.trim().length < 2) return warn('Falta tu', 'nombre', 'Escribe tu nombre (al menos 2 letras).');
-    if (!mail || !password) return warn('Faltan', 'datos', 'Escribe tu correo y tu contraseña para continuar.');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return warn('Correo', 'no válido', 'Revisa tu correo (ejemplo: usuario@correo.com).');
-    if (password.length < 6) return warn('Contraseña muy', 'corta', 'Usa al menos 6 caracteres.');
+    if (mode === 'register' && name.trim().length < 2) return warn(t('screensFlow.login.nameMissingTitle'), t('screensFlow.login.nameMissingEmphasis'), t('screensFlow.login.nameMissingMessage'));
+    if (!mail || !password) return warn(t('screensFlow.login.fieldsMissingTitle'), t('screensFlow.login.fieldsMissingEmphasis'), t('screensFlow.login.fieldsMissingMessage'));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return warn(t('screensFlow.login.emailInvalidTitle'), t('screensFlow.login.emailInvalidEmphasis'), t('screensFlow.login.emailInvalidMessage'));
+    if (password.length < 6) return warn(t('screensFlow.login.passwordShortTitle'), t('screensFlow.login.passwordShortEmphasis'), t('screensFlow.login.passwordShortMessage'));
 
     try {
       if (mode === 'login') await login(mail, password);
@@ -171,9 +184,9 @@ export default function LoginScreen() {
     } catch (err: any) {
       setDialog({
         visible: true,
-        title: mode === 'login' ? 'No pudimos' : 'No pudimos crear',
-        titleEmphasis: mode === 'login' ? 'iniciar sesión' : 'tu cuenta',
-        message: err?.message || 'Revisa tus datos e inténtalo de nuevo.',
+        title: mode === 'login' ? t('screensFlow.login.loginFailTitle') : t('screensFlow.login.registerFailTitle'),
+        titleEmphasis: mode === 'login' ? t('screensFlow.login.loginFailEmphasis') : t('screensFlow.login.registerFailEmphasis'),
+        message: err?.message || t('screensFlow.login.failFallback'),
         type: 'error',
         onConfirm: closeDialog,
       });
@@ -234,10 +247,10 @@ export default function LoginScreen() {
         <View style={[styles.welcomeActions, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]}>
           {last ? (
             <>
-              <PrimaryButton title="Crear cuenta" onPress={() => openForm('register')} style={styles.cta} />
-              <SecondaryButton title="Ya tengo cuenta" variant="outline" onPress={() => openForm('login')} />
+              <PrimaryButton title={t('screensFlow.login.createAccount')} onPress={() => openForm('register')} style={styles.cta} />
+              <SecondaryButton title={t('screensFlow.login.haveAccount')} variant="outline" onPress={() => openForm('login')} />
               <AppText variant="caption" weight="regular" color={colors.textSecondary} align="center" style={styles.legal}>
-                {'Al continuar aceptas los '}
+                {t('screensFlow.login.legalPrefix')}
                 <AppText
                   variant="caption"
                   weight="semibold"
@@ -245,9 +258,9 @@ export default function LoginScreen() {
                   onPress={() => router.push({ pathname: '/legal', params: { tab: 'terms' } })}
                   accessibilityRole="link"
                 >
-                  Términos y condiciones
+                  {t('screensFlow.login.legalTerms')}
                 </AppText>
-                {' y la '}
+                {t('screensFlow.login.legalAnd')}
                 <AppText
                   variant="caption"
                   weight="semibold"
@@ -255,9 +268,9 @@ export default function LoginScreen() {
                   onPress={() => router.push({ pathname: '/legal', params: { tab: 'privacy' } })}
                   accessibilityRole="link"
                 >
-                  Política de privacidad
+                  {t('screensFlow.login.legalPrivacy')}
                 </AppText>
-                .
+                {t('screensFlow.login.legalEnd')}
               </AppText>
             </>
           ) : (
@@ -266,13 +279,13 @@ export default function LoginScreen() {
                 onPress={() => goTo(SLIDES.length - 1)}
                 style={({ pressed }) => [styles.skip, pressed && styles.skipPressed]}
                 accessibilityRole="button"
-                accessibilityLabel="Saltar la bienvenida"
+                accessibilityLabel={t('screensFlow.login.skipA11y')}
               >
                 <AppText variant="body" weight="semibold">
-                  Saltar
+                  {t('screensFlow.login.skip')}
                 </AppText>
               </Pressable>
-              <PrimaryButton title="Siguiente" onPress={() => goTo(page + 1)} style={[styles.flex, styles.cta]} />
+              <PrimaryButton title={t('screensFlow.login.next')} onPress={() => goTo(page + 1)} style={[styles.flex, styles.cta]} />
             </View>
           )}
         </View>
@@ -290,21 +303,21 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.form, { paddingTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 12) + 20 }]}
       >
-        <IconButton iconName="chevron-back" variant="white" accessibilityLabel="Volver a la bienvenida" onPress={() => setScreenView('welcome')} />
+        <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('screensFlow.login.backToWelcomeA11y')} onPress={() => setScreenView('welcome')} />
         <AppText weight="light" style={styles.formTitle} accessibilityRole="header">
-          {register_ ? 'Crea tu ' : 'Inicia '}
-          <AppText weight="semibold">{register_ ? 'cuenta' : 'sesión'}</AppText>
+          {register_ ? t('screensFlow.login.formTitleRegister') : t('screensFlow.login.formTitleLogin')}
+          <AppText weight="semibold">{register_ ? t('screensFlow.login.formTitleRegisterBold') : t('screensFlow.login.formTitleLoginBold')}</AppText>
         </AppText>
 
         <SegmentedControl
           role="tab"
           rail="container"
-          accessibilityLabel="Modo de acceso"
+          accessibilityLabel={t('screensFlow.login.modeA11y')}
           value={mode}
           onChange={changeMode}
           options={[
-            { value: 'login', label: 'Iniciar sesión' },
-            { value: 'register', label: 'Crear cuenta' },
+            { value: 'login', label: t('screensFlow.login.tabLogin') },
+            { value: 'register', label: t('screensFlow.login.tabRegister') },
           ]}
         />
 
@@ -323,11 +336,11 @@ export default function LoginScreen() {
           >
             <IconTextField
               ref={nameRef}
-              label="Tu nombre"
+              label={t('screensFlow.login.nameLabel')}
               iconName="person-outline"
               value={name}
               onChangeText={setName}
-              placeholder="Ej. Chef Carlos"
+              placeholder={t('screensFlow.login.namePlaceholder')}
               maxLength={50}
               autoCapitalize="words"
               returnKeyType="next"
@@ -335,11 +348,11 @@ export default function LoginScreen() {
           </Animated.View>
         )}
         <IconTextField
-          label="Correo electrónico"
+          label={t('screensFlow.login.emailLabel')}
           iconName="mail-outline"
           value={email}
           onChangeText={setEmail}
-          placeholder="tu@correo.com"
+          placeholder={t('screensFlow.login.emailPlaceholder')}
           keyboardType="email-address"
           autoCapitalize="none"
           autoComplete="email"
@@ -347,12 +360,12 @@ export default function LoginScreen() {
           returnKeyType="next"
         />
         <IconTextField
-          label="Contraseña"
+          label={t('screensFlow.login.passwordLabel')}
           iconName="lock-closed-outline"
           secure
           value={password}
           onChangeText={setPassword}
-          placeholder="Mínimo 6 caracteres"
+          placeholder={t('screensFlow.login.passwordPlaceholder')}
           autoCapitalize="none"
           maxLength={128}
           returnKeyType="done"
@@ -362,13 +375,13 @@ export default function LoginScreen() {
         <View style={styles.secure}>
           <Ionicons name="shield-checkmark-outline" size={18} color={colors.functional.fresh.text} />
           <AppText variant="metadata" weight="regular" color={colors.functional.fresh.text}>
-            Tus datos viajan cifrados y protegidos.
+            {t('screensFlow.login.secure')}
           </AppText>
         </View>
 
         <View style={styles.flex} />
         <PrimaryButton
-          title={register_ ? 'Registrar cuenta' : 'Iniciar sesión'}
+          title={register_ ? t('screensFlow.login.submitRegister') : t('screensFlow.login.submitLogin')}
           onPress={handleSubmit}
           isLoading={status === 'loading'}
           style={styles.cta}
@@ -379,7 +392,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   flex: { flex: 1 },
   screen: {
     flex: 1,
@@ -447,5 +460,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-});
+}));
 

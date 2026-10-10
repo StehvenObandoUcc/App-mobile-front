@@ -2,7 +2,9 @@ import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { AppText } from './AppText';
 import { RecipeDifficulty } from '../types';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 import { DIFFICULTY_LABELS } from '../utils/recipe-visuals';
 
 /**
@@ -17,6 +19,7 @@ export type DifficultyPickerProps = {
 const LEVELS: RecipeDifficulty[] = ['easy', 'medium', 'hard'];
 
 export function DifficultyMeter({ level, segment, empty }: { level: number; segment: string; empty: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.meter}>
       {[1, 2, 3].map((i) => (
@@ -27,8 +30,11 @@ export function DifficultyMeter({ level, segment, empty }: { level: number; segm
 }
 
 export function DifficultyPicker({ value, onChange }: DifficultyPickerProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
   return (
-    <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Nivel de dificultad">
+    <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel={t('molecules.difficultyPicker.groupA11y')}>
       {LEVELS.map((d) => {
         const tone = colors.difficulty[d];
         const selected = value === d;
@@ -43,7 +49,7 @@ export function DifficultyPicker({ value, onChange }: DifficultyPickerProps) {
             ]}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
-            accessibilityLabel={`Dificultad ${DIFFICULTY_LABELS[d]}`}
+            accessibilityLabel={t('molecules.difficultyPicker.levelA11y', { level: DIFFICULTY_LABELS[d] })}
           >
             <DifficultyMeter
               level={tone.level}
@@ -61,7 +67,7 @@ export function DifficultyPicker({ value, onChange }: DifficultyPickerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   row: {
     flexDirection: 'row',
     gap: 8,
@@ -92,4 +98,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.ink,
   },
-});
+}));

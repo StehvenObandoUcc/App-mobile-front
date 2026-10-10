@@ -18,7 +18,8 @@ import {
 } from '../src/components';
 import type { Ingredient, Recipe } from '../src/types';
 import { addDaysISO } from '../src/utils/dates';
-import { colors, spacing, radii } from '../src/theme';
+import { spacing, radii } from '../src/theme';
+import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 
 /**
  * Catálogo de diseño (BETA) — muestra los átomos tal como están en Componentes.dc.html
@@ -48,6 +49,8 @@ const SAMPLE_RECIPE: Recipe = {
 };
 
 export default function DesignCatalogScreen() {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('tomate');
@@ -217,6 +220,7 @@ export default function DesignCatalogScreen() {
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.section}>
       <AppText variant="cardTitle">{title}</AppText>
@@ -226,6 +230,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Row({ note, children }: { note: string; children: React.ReactNode }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <AppText variant="caption" color={colors.textSecondary}>{note}</AppText>
@@ -234,7 +240,7 @@ function Row({ note, children }: { note: string; children: React.ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -276,4 +282,4 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-});
+}));

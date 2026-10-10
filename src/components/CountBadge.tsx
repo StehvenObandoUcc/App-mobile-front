@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * CountBadge (NUEVO) — contador numérico (nav de Compras, avisos).
@@ -14,18 +15,20 @@ export type CountBadgeProps = {
 };
 
 export function CountBadge({ count, max = 99 }: CountBadgeProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   if (count <= 0) return null;
   const text = count > max ? `${max}+` : String(count);
   return (
     <View style={styles.badge} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <AppText variant="micro" color={colors.ink} align="center">
+      <AppText variant="micro" color={colors.onAccent} align="center">
         {text}
       </AppText>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   badge: {
     height: 20,
     minWidth: 20,
@@ -35,4 +38,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

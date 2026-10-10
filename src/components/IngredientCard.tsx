@@ -3,9 +3,13 @@ import { View, StyleSheet, Pressable, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../types';
 import { AppText } from './AppText';
-import { colors, spacing, radii, getCategoryConfig } from '../theme';
+import { spacing, radii, getCategoryConfig } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
 import { getExpirationStatus, getDaysLeft } from '../utils/expiration';
 import { formatQuantity } from '../utils/units';
+import { useI18n, type t as TFn, type tp as TpFn } from '../i18n';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 export { getExpirationStatus };
 
@@ -29,24 +33,30 @@ export type IngredientCardProps = {
   compact?: boolean;
 };
 
-function ticketContent(dateStr: string | null) {
+function ticketContent(colors: ThemeColors, dateStr: string | null, t: typeof TFn, tp: typeof TpFn) {
   const status = getExpirationStatus(dateStr).status;
   const tone = colors.functional[status];
   const days = getDaysLeft(dateStr);
   if (status === 'unknown' || days === null) {
-    return { tone, big: '—', small: 'sin fecha', a11y: 'sin fecha de vencimiento', icon: undefined };
+    return { tone, big: '—', small: t('organisms.ingredientCard.noDate'), a11y: t('organisms.ingredientCard.noDateA11y'), icon: undefined };
   }
   if (status === 'expired') {
-    return { tone, big: undefined, small: 'Vencido', a11y: 'vencido', icon: 'alert-circle-outline' as const };
+    return {
+      tone,
+      big: undefined,
+      small: t('organisms.ingredientCard.expired'),
+      a11y: t('organisms.ingredientCard.expiredA11y'),
+      icon: 'alert-circle-outline' as const,
+    };
   }
   if (days === 0) {
-    return { tone, big: 'Hoy', small: 'vence', a11y: 'vence hoy', icon: undefined };
+    return { tone, big: t('organisms.ingredientCard.today'), small: t('organisms.ingredientCard.todaySmall'), a11y: t('organisms.ingredientCard.todayA11y'), icon: undefined };
   }
   return {
     tone,
     big: String(days),
-    small: days === 1 ? 'día' : 'días',
-    a11y: `vence en ${days} ${days === 1 ? 'día' : 'días'}`,
+    small: tp('organisms.ingredientCard.dayUnit', days),
+    a11y: tp('organisms.ingredientCard.daysLeftA11y', days),
     icon: undefined,
   };
 }
@@ -61,9 +71,13 @@ export function IngredientCard({
   onToggleSelect,
   compact = false,
 }: IngredientCardProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t, tp } = useI18n();
+  const reduceMotion = useReduceMotion();
   const catConfig = getCategoryConfig(ingredient.category);
   const catColor = colors.categories[ingredient.category] || colors.categories.other;
-  const ticket = ticketContent(ingredient.expirationDate);
+  const ticket = ticketContent(colors, ingredient.expirationDate, t, tp);
   // Cantidad 0 = agotado: se queda en la despensa con «Sin stock» hasta que el usuario lo reponga o lo borre.
   const outOfStock = ingredient.quantity === 0;
   const quantity =
@@ -80,6 +94,10 @@ export function IngredientCard({
   const firstRender = useRef(true);
 
   useEffect(() => {
+    if (reduceMotion) {
+      selectAnim.setValue(isSelectMode ? 1 : 0);
+      return;
+    }
     Animated.timing(selectAnim, {
       toValue: isSelectMode ? 1 : 0,
       duration: 220,
@@ -93,11 +111,16 @@ export function IngredientCard({
       firstRender.current = false;
       return;
     }
+    if (reduceMotion) return;
     checkPop.setValue(0.6);
     Animated.spring(checkPop, { toValue: 1, tension: 260, friction: 9, useNativeDriver: true }).start();
   }, [isSelected]);
 
   useEffect(() => {
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      return;
+    }
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 280,
@@ -108,11 +131,12 @@ export function IngredientCard({
 
   const handlePressIn = () => {
     if (isSelectMode) return; // al seleccionar la tarjeta no cambia de tamaño
+    if (reduceMotion) return;
     Animated.spring(scaleAnim, { toValue: 0.97, tension: 300, friction: 20, useNativeDriver: true }).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, tension: 200, friction: 14, useNativeDriver: true }).start();
+    if (!reduceMotion) Animated.spring(scaleAnim, { toValue: 1, tension: 200, friction: 14, useNativeDriver: true }).start();
     setTimeout(() => {
       isLongPressActive.current = false;
     }, 250);
@@ -134,6 +158,11 @@ export function IngredientCard({
   const slotGap = selectAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 4] });
   const mainPadLeft = selectAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 6] });
   const checkEnter = selectAnim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.4, 0.4, 1] });
+  const cardLabel = outOfStock
+    ? t('organisms.ingredientCard.cardA11yOutOfStock', { name: ingredient.name, family: catConfig.label, status: ticket.a11y })
+    : quantity
+      ? t('organisms.ingredientCard.cardA11yQty', { name: ingredient.name, quantity, family: catConfig.label, status: ticket.a11y })
+      : t('organisms.ingredientCard.cardA11y', { name: ingredient.name, family: catConfig.label, status: ticket.a11y });
 
   return (
     <Animated.View style={[styles.wrapper, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
@@ -146,7 +175,7 @@ export function IngredientCard({
         style={[styles.card, compact && styles.cardCompact]}
         accessibilityRole="button"
         accessibilityState={isSelectMode ? { selected: isSelected } : undefined}
-        accessibilityLabel={`${ingredient.name}${outOfStock ? ', sin stock' : quantity ? `, ${quantity}` : ''}, ${catConfig.label}, ${ticket.a11y}`}
+        accessibilityLabel={cardLabel}
       >
         <Animated.View style={[styles.main, compact && styles.mainCompact, { paddingLeft: compact ? 12 : mainPadLeft }]}>
           {/* Hueco del check: se abre con animación y empuja el contenido (sin cambiar la altura) */}
@@ -157,7 +186,7 @@ export function IngredientCard({
               style={styles.checkboxHit}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isSelected }}
-              accessibilityLabel={`Seleccionar alimento ${ingredient.name}`}
+              accessibilityLabel={t('organisms.ingredientCard.selectA11y', { name: ingredient.name })}
               accessibilityElementsHidden={!isSelectMode}
               importantForAccessibility={isSelectMode ? 'auto' : 'no-hide-descendants'}
             >
@@ -189,7 +218,7 @@ export function IngredientCard({
             {compact ? (
               outOfStock ? (
                 <AppText variant="metadata" weight="semibold" color={colors.functional.expired.text}>
-                  Sin stock
+                  {t('organisms.ingredientCard.outOfStock')}
                 </AppText>
               ) : (
                 quantity && (
@@ -204,7 +233,7 @@ export function IngredientCard({
                 <View style={styles.outPill}>
                   <Ionicons name="alert-circle-outline" size={13} color={colors.functional.expired.text} />
                   <AppText variant="caption" weight="semibold" color={colors.functional.expired.text}>
-                    Sin stock
+                    {t('organisms.ingredientCard.outOfStock')}
                   </AppText>
                 </View>
               )}
@@ -261,7 +290,7 @@ export function IngredientCard({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   wrapper: {
     marginBottom: 10,
   },
@@ -408,4 +437,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.ink,
   },
-});
+}));

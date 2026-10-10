@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * ScreenHeader — encabezado de pantalla de los mockups.
@@ -20,6 +21,8 @@ export type ScreenHeaderProps = {
 };
 
 export function ScreenHeader({ title, emphasis, subtitle, overline, right, size = 'screenTitle' }: ScreenHeaderProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const a11y = [overline, [title, emphasis].filter(Boolean).join(' '), subtitle].filter(Boolean).join('. ');
   return (
     <View style={styles.row}>
@@ -44,7 +47,7 @@ export function ScreenHeader({ title, emphasis, subtitle, overline, right, size 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -59,4 +62,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-});
+}));

@@ -3,8 +3,10 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { Recipe } from '../types';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { DIFFICULTY_LABELS } from '../utils/recipe-visuals';
+import { useI18n } from '../i18n';
 
 /**
  * TodayRecipeCard — «Para hoy» del Inicio (Inicio.dc.html).
@@ -19,6 +21,9 @@ export type TodayRecipeCardProps = {
 };
 
 export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCardProps) {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
   return (
     <View style={styles.card}>
       <View style={styles.deco} pointerEvents="none" />
@@ -28,14 +33,14 @@ export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCa
           <View style={styles.match}>
             <Ionicons name="sparkles" size={13} color={colors.m3.onTertiary} />
             <AppText variant="caption" weight="semibold" color={colors.m3.onTertiary}>
-              {`${recipe.matchScore} % con tu despensa`}
+              {t('organisms.todayRecipeCard.matchBadge', { match: recipe.matchScore })}
             </AppText>
           </View>
         ) : (
           <View />
         )}
         <AppText variant="label" uppercase color={colors.onTertiaryContainer} style={styles.tag}>
-          Para hoy
+          {t('organisms.todayRecipeCard.tag')}
         </AppText>
       </View>
 
@@ -65,10 +70,10 @@ export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCa
               onPress={onOpen}
               style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
               accessibilityRole="button"
-              accessibilityLabel={`Ver receta ${recipe.title}`}
+              accessibilityLabel={t('organisms.todayRecipeCard.viewA11y', { title: recipe.title })}
             >
               <AppText weight="semibold" color={colors.onInk} style={styles.ctaText}>
-                Ver receta
+                {t('organisms.todayRecipeCard.view')}
               </AppText>
               <Ionicons name="arrow-forward" size={18} color={colors.onInk} />
             </Pressable>
@@ -78,10 +83,10 @@ export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCa
         <>
           <View style={styles.texts}>
             <AppText weight="semibold" color={colors.onTertiaryContainer} style={styles.title}>
-              Aún no hay sugerencia
+              {t('organisms.todayRecipeCard.emptyTitle')}
             </AppText>
             <AppText variant="bodySmall" color={colors.onTertiaryContainer}>
-              Agrega ingredientes a tu despensa para sugerirte la receta ideal.
+              {t('organisms.todayRecipeCard.emptyDescription')}
             </AppText>
           </View>
           <View style={styles.footer}>
@@ -89,10 +94,10 @@ export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCa
               onPress={onEmptyAction}
               style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
               accessibilityRole="button"
-              accessibilityLabel="Ver despensa"
+              accessibilityLabel={t('organisms.todayRecipeCard.viewPantry')}
             >
               <AppText weight="semibold" color={colors.onInk} style={styles.ctaText}>
-                Ver despensa
+                {t('organisms.todayRecipeCard.viewPantry')}
               </AppText>
               <Ionicons name="arrow-forward" size={18} color={colors.onInk} />
             </Pressable>
@@ -103,7 +108,7 @@ export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCa
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   card: {
     borderRadius: radii.tiles,
     backgroundColor: colors.tertiaryContainer,
@@ -118,7 +123,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: '#FAE6EA', // frambuesa muy clara, solo decorativa
+    backgroundColor: colors.tertiaryContainer, // ciruela clara (sigue al tema)
   },
   head: {
     flexDirection: 'row',
@@ -172,4 +177,4 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize: 15,
   },
-});
+}));

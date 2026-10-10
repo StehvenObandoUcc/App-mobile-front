@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
 
 /**
  * Ilustración de estados (Componentes.dc.html · EmptyState / ErrorState).
@@ -10,13 +12,13 @@ import { colors, radii } from '../theme';
  */
 export type BlobTone = 'fresh' | 'neutral' | 'ai' | 'error' | 'brand';
 
-const TONES: Record<BlobTone, { blob: string; icon: string; dots: boolean }> = {
+const tonesFor = (colors: ThemeColors): Record<BlobTone, { blob: string; icon: string; dots: boolean }> => ({
   fresh: { blob: colors.secondaryContainer, icon: colors.onSecondaryContainer, dots: true },
   neutral: { blob: colors.m3.surfaceContainer, icon: colors.functional.unknown.text, dots: false },
   ai: { blob: colors.tertiaryContainer, icon: colors.tertiary, dots: true },
   error: { blob: colors.error.background, icon: colors.error.text, dots: false },
   brand: { blob: colors.primaryContainer, icon: colors.primary, dots: true },
-};
+});
 
 export type IllustrationBlobProps = {
   iconName: keyof typeof Ionicons.glyphMap;
@@ -28,7 +30,9 @@ export type IllustrationBlobProps = {
 };
 
 export function IllustrationBlob({ iconName, tone = 'fresh', size = 'md', dotColors }: IllustrationBlobProps) {
-  const t = TONES[tone];
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const t = tonesFor(colors)[tone];
   const lg = size === 'lg';
   const k = lg ? 1.25 : 1;
   return (
@@ -63,7 +67,7 @@ export function IllustrationBlob({ iconName, tone = 'fresh', size = 'md', dotCol
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   blob: { position: 'absolute' },
   dot: { position: 'absolute' },
   iconCircle: {
@@ -72,4 +76,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

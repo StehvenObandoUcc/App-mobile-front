@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { ScanInput, ScanResult, IngredientCategory, IngredientUnit } from '../types';
 import { scanImageWithApi } from './api-client';
 import { getFriendlyErrorMessage } from '../utils/error-messages';
@@ -9,7 +10,7 @@ export interface ScanService {
 export const mockScanService: ScanService = {
   async analyzeImage(input: ScanInput): Promise<ScanResult> {
     if (!input.imageUri) {
-      throw new Error('No se ha proporcionado una imagen válida para analizar');
+      throw new Error(t('data.scan.noImage'));
     }
 
     try {
@@ -18,9 +19,9 @@ export const mockScanService: ScanService = {
       if (apiResult && Array.isArray(apiResult.ingredients)) {
         let warnings = apiResult.warnings || [];
         if (apiResult.is_food === false) {
-          warnings = ['Esto no parece comida. Intenta con una foto de tu nevera o despensa.'];
+          warnings = [t('data.scan.notFood')];
         } else if (apiResult.ingredients.length === 0 && warnings.length === 0) {
-          warnings = ['No detectamos alimentos claros en esta foto. Prueba con mejor luz o más de cerca.'];
+          warnings = [t('data.scan.noClearFood')];
         }
 
         return {
@@ -50,7 +51,7 @@ export const mockScanService: ScanService = {
       scanId: `scan-${Date.now()}`,
       imageUri: input.imageUri,
       analyzedAt: new Date().toISOString(),
-      warnings: ['No se detectaron alimentos en la imagen.'],
+      warnings: [t('data.scan.noFood')],
       ingredients: [],
     };
   },

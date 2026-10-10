@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useContext } from 'react';
 import {
   Text as RNText,
   TextInput as RNTextInput,
@@ -7,7 +7,8 @@ import {
   StyleSheet,
   TextStyle,
 } from 'react-native';
-import { fontStyle, TextWeight } from './AppText';
+import { fontStyle, TextWeight, InsideText } from './AppText';
+import { useTheme } from '../theme/ThemeProvider';
 
 /**
  * Text y TextInput de la app (reemplazan a los de react-native en pantallas y componentes).
@@ -38,14 +39,33 @@ function resolveFont(style: TextProps['style'], fallback?: TextWeight): TextStyl
   return weight ? fontStyle(weight) : null;
 }
 
-export function Text({ style, ...rest }: TextProps) {
+export function Text({ style, children, ...rest }: TextProps) {
+  const { colors } = useTheme();
+  const nested = useContext(InsideText);
   // Sin peso explícito se usa Outfit Regular (los textos anidados heredan la familia del padre
   // solo si tampoco declaran peso; por eso aquí no se fuerza nada cuando no hay estilo).
   const font = resolveFont(style, style ? 'regular' : undefined);
-  return <RNText {...rest} style={font ? [style, font] : style} />;
+  // Texto de primer nivel sin color: el del tema (nunca el negro por defecto en modo oscuro).
+  const flat = StyleSheet.flatten(style) as TextStyle | undefined;
+  const themed = !nested && !flat?.color ? { color: colors.textPrimary } : null;
+  return (
+    <RNText {...rest} style={[themed, style, font]}>
+      <InsideText.Provider value={true}>{children}</InsideText.Provider>
+    </RNText>
+  );
 }
 
-export const TextInput = forwardRef<RNTextInput, TextInputProps>(function TextInput({ style, ...rest }, ref) {
+export const TextInput = forwardRef<RNTextInput, TextInputProps>(function TextInput({ style, placeholderTextColor, ...rest }, ref) {
+  const { colors } = useTheme();
   const font = resolveFont(style, 'regular');
-  return <RNTextInput ref={ref} {...rest} style={font ? [style, font] : style} />;
+  const flat = StyleSheet.flatten(style) as TextStyle | undefined;
+  const themed = !flat?.color ? { color: colors.textPrimary } : null;
+  return (
+    <RNTextInput
+      ref={ref}
+      {...rest}
+      placeholderTextColor={placeholderTextColor ?? colors.textMuted}
+      style={[themed, style, font]}
+    />
+  );
 });

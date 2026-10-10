@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useState, useEffect, useCallback } from 'react';
 import { AsyncStatus, Ingredient, OutboxMutation } from '../types';
 import { LocalStorage } from '../storage/local-storage';
@@ -126,7 +127,7 @@ export function useInventory() {
       setStatus('success');
     } catch (err: any) {
       if (LocalStorage.getCurrentUserId() === startUserId) {
-        setError(err?.message || 'Error al cargar el inventario');
+        setError(err?.message || t('data.inventory.loadError'));
         setStatus('error');
       }
     }
@@ -184,7 +185,7 @@ export function useInventory() {
       // Disparar sincronización secuencial FIFO en segundo plano
       flushOutbox().catch(() => {});
     } catch (err: any) {
-      setError(err?.message || 'Error al agregar el alimento');
+      setError(err?.message || t('data.inventory.addError'));
       throw err;
     }
   };
@@ -195,7 +196,7 @@ export function useInventory() {
       await updateIngredientSynced(item);
       await loadItems();
     } catch (err: any) {
-      setError(err?.message || 'Error al actualizar el alimento');
+      setError(err?.message || t('data.inventory.updateError'));
       throw err;
     }
   };
@@ -205,7 +206,7 @@ export function useInventory() {
       await deleteIngredientSynced(id);
       await loadItems();
     } catch (err: any) {
-      setError(err?.message || 'Error al eliminar el alimento');
+      setError(err?.message || t('data.inventory.deleteError'));
       throw err;
     }
   };
@@ -216,7 +217,7 @@ export function useInventory() {
         await deleteItem(id);
       }
     } catch (err: any) {
-      setError(err?.message || 'Error al eliminar los alimentos');
+      setError(err?.message || t('data.inventory.deleteManyError'));
       throw err;
     }
   };

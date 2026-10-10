@@ -2,7 +2,9 @@ import React from 'react';
 import { View, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 
 /**
  * ProfileCard — tarjeta de identidad (Perfil.dc.html).
@@ -17,14 +19,17 @@ export type ProfileCardProps = {
 };
 
 export function ProfileCard({ name, email, avatarUri, onPressAvatar }: ProfileCardProps) {
-  const first = name.trim().split(/\s+/)[0] || 'Chef';
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const styles = useStyles();
+  const first = name.trim().split(/\s+/)[0] || t('sheets.profileCard.title');
   return (
     <View style={styles.card}>
       <Pressable
         onPress={onPressAvatar}
         style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
         accessibilityRole="button"
-        accessibilityLabel="Cambiar foto de perfil"
+        accessibilityLabel={t('sheets.profileCard.changePhotoA11y')}
       >
         {avatarUri ? (
           <Image source={{ uri: avatarUri }} style={styles.photo} />
@@ -38,7 +43,7 @@ export function ProfileCard({ name, email, avatarUri, onPressAvatar }: ProfileCa
 
       <View style={styles.texts}>
         <AppText weight="light" align="center" style={styles.name} accessibilityRole="header">
-          {'Chef '}
+          {t('sheets.profileCard.title')}{' '}
           <AppText weight="semibold">{first}</AppText>
         </AppText>
         <AppText variant="bodySmall" color={colors.textSecondary} align="center">
@@ -49,14 +54,14 @@ export function ProfileCard({ name, email, avatarUri, onPressAvatar }: ProfileCa
       <View style={styles.secure}>
         <Ionicons name="shield-checkmark-outline" size={16} color={colors.functional.fresh.text} />
         <AppText variant="metadata" weight="semibold" color={colors.functional.fresh.text}>
-          Sesión segura
+          {t('sheets.profileCard.secure')}
         </AppText>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   card: {
     backgroundColor: colors.surface,
     borderRadius: 28,
@@ -112,4 +117,4 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: colors.functional.fresh.background,
   },
-});
+}));

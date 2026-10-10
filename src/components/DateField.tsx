@@ -3,7 +3,9 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { Chip } from './Chip';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { useI18n } from '../i18n';
 import { formatShortDate, formatLongDate, relativeDayLabel, addDaysISO } from '../utils/dates';
 import { getExpirationStatus } from '../utils/expiration';
 
@@ -19,12 +21,15 @@ export type DateFieldProps = {
 };
 
 const SHORTCUTS = [
-  { label: '+3 días', days: 3 },
-  { label: '+1 sem', days: 7 },
-  { label: '+1 mes', days: 30 },
+  { label: 'molecules.dateField.plus3d', days: 3 },
+  { label: 'molecules.dateField.plus1w', days: 7 },
+  { label: 'molecules.dateField.plus1m', days: 30 },
 ] as const;
 
 export function DateField({ value, onChange, onOpenCalendar }: DateFieldProps) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
   const has = Boolean(value);
   const status = getExpirationStatus(value || null).status;
   const tone = colors.functional[status];
@@ -38,13 +43,13 @@ export function DateField({ value, onChange, onOpenCalendar }: DateFieldProps) {
         accessibilityRole="button"
         accessibilityLabel={
           has
-            ? `Fecha de vencimiento: ${formatLongDate(value)}, ${relative}. Cambiar en el calendario`
-            : 'Sin fecha de vencimiento. Elegir en el calendario'
+            ? t('molecules.dateField.hasDateA11y', { date: formatLongDate(value), relative })
+            : t('molecules.dateField.noDateA11y')
         }
       >
         <Ionicons name="calendar-outline" size={20} color={colors.textPrimary} />
         <AppText variant="body" color={has ? colors.textPrimary : colors.textMuted} style={styles.value} numberOfLines={1}>
-          {has ? formatShortDate(value) : 'Elegir en el calendario'}
+          {has ? formatShortDate(value) : t('molecules.dateField.chooseInCalendar')}
         </AppText>
         {has && (
           <View style={[styles.badge, { backgroundColor: tone.background }]}>
@@ -59,16 +64,16 @@ export function DateField({ value, onChange, onOpenCalendar }: DateFieldProps) {
         {SHORTCUTS.map((s) => {
           const target = addDaysISO(s.days);
           return (
-            <Chip key={s.label} variant="choice" label={s.label} selected={value === target} onPress={() => onChange(target)} />
+            <Chip key={s.label} variant="choice" label={t(s.label)} selected={value === target} onPress={() => onChange(target)} />
           );
         })}
-        <Chip variant="choice" label="Sin fecha" selected={!has} onPress={() => onChange('')} />
+        <Chip variant="choice" label={t('molecules.dateField.noDate')} selected={!has} onPress={() => onChange('')} />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   wrap: {
     gap: 2,
   },
@@ -101,4 +106,4 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     columnGap: 6,
   },
-});
+}));

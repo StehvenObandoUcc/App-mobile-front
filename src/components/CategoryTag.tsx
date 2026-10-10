@@ -3,10 +3,13 @@ import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { IngredientCategory } from '../types';
-import { colors, radii, getCategoryConfig } from '../theme';
+import { radii, getCategoryConfig } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /** CategoryTag — etiqueta pequeña de familia (22 dp, icono 12, texto 12/600) para filas de lista. */
 export function CategoryTag({ category }: { category: IngredientCategory }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
   const cfg = getCategoryConfig(category);
   const tone = colors.categories[category] || colors.categories.other;
   return (
@@ -19,7 +22,7 @@ export function CategoryTag({ category }: { category: IngredientCategory }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   tag: {
     height: 22,
     flexDirection: 'row',
@@ -29,4 +32,4 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     borderRadius: radii.pill,
   },
-});
+}));

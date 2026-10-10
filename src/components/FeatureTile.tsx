@@ -2,7 +2,9 @@ import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { colors, radii } from '../theme';
+import { radii } from '../theme';
+import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import type { ThemeColors } from '../theme/colors';
 
 /**
  * FeatureTile (NUEVO) — Componentes.dc.html / Inicio.dc.html
@@ -11,12 +13,12 @@ import { colors, radii } from '../theme';
  */
 export type FeatureTileTone = 'fresh' | 'expiring' | 'brand' | 'ai';
 
-const TONES: Record<FeatureTileTone, { bg: string; fg: string }> = {
+const tonesFor = (colors: ThemeColors): Record<FeatureTileTone, { bg: string; fg: string }> => ({
   fresh: { bg: colors.functional.fresh.background, fg: colors.functional.fresh.text },
   expiring: { bg: colors.functional.expiringSoon.background, fg: colors.functional.expiringSoon.text },
   brand: { bg: colors.primaryContainer, fg: colors.onPrimaryContainer },
   ai: { bg: colors.tertiaryContainer, fg: colors.onTertiaryContainer },
-};
+});
 
 export type FeatureTileProps = {
   label: string;
@@ -41,7 +43,9 @@ export function FeatureTile({
   size = 'sm',
   footer,
 }: FeatureTileProps) {
-  const t = TONES[tone];
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const t = tonesFor(colors)[tone];
   const lg = size === 'lg';
   return (
     <Pressable
@@ -77,7 +81,7 @@ export function FeatureTile({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   tile: {
     borderRadius: radii.tiles,
     justifyContent: 'space-between',
@@ -129,4 +133,4 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     transform: [{ scale: 0.98 }],
   },
-});
+}));
