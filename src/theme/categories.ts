@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { IngredientCategory } from '../types';
+import { t } from '../i18n';
 
 export type CategoryMeta = {
   key: IngredientCategory;
@@ -14,47 +15,47 @@ export type CategoryMeta = {
 export const CATEGORY_CONFIG: Record<IngredientCategory, CategoryMeta> = {
   vegetable: {
     key: 'vegetable',
-    label: 'Verduras',
+    get label() { return t('misc.categories.vegetable'); },
     icon: 'leaf-outline',
   },
   fruit: {
     key: 'fruit',
-    label: 'Frutas',
+    get label() { return t('misc.categories.fruit'); },
     icon: 'nutrition-outline',
   },
   protein: {
     key: 'protein',
-    label: 'Proteínas',
+    get label() { return t('misc.categories.protein'); },
     icon: 'restaurant-outline',
   },
   dairy: {
     key: 'dairy',
-    label: 'Lácteos',
+    get label() { return t('misc.categories.dairy'); },
     icon: 'water-outline',
   },
   grain: {
     key: 'grain',
-    label: 'Granos',
+    get label() { return t('misc.categories.grain'); },
     icon: 'grid-outline',
   },
   legume: {
     key: 'legume',
-    label: 'Legumbres',
+    get label() { return t('misc.categories.legume'); },
     icon: 'ellipse-outline',
   },
   sauce: {
     key: 'sauce',
-    label: 'Salsas',
+    get label() { return t('misc.categories.sauce'); },
     icon: 'color-fill-outline',
   },
   snack: {
     key: 'snack',
-    label: 'Snacks',
+    get label() { return t('misc.categories.snack'); },
     icon: 'fast-food-outline',
   },
   other: {
     key: 'other',
-    label: 'Otros',
+    get label() { return t('misc.categories.other'); },
     icon: 'cube-outline',
   },
 };
