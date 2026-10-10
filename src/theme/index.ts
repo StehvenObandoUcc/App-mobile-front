@@ -18,3 +18,7 @@ export const theme: Theme = {
 // ─── Exportaciones Directas de Tokens y Tipos ─────────────────────────────────
 export { colors, typography, spacing, radii, elevations, CATEGORY_CONFIG, CATEGORY_LIST, getCategoryConfig };
 export type { Theme, CategoryMeta };
+
+// ─── Tema dinámico (claro / oscuro) ───────────────────────────────────────────
+export { lightColors, darkColors, type ThemeColors } from './colors';
+export { useTheme, makeStyles, type ColorSchemeName } from './ThemeProvider';
