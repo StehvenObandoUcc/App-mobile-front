@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
     },
@@ -14,7 +14,7 @@
       "package": "com.foodai.app",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#4A2A21",
+        "backgroundColor": "#2B1B17",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -50,7 +50,7 @@
         "expo-notifications",
         {
           "icon": "./assets/android-icon-monochrome.png",
-          "color": "#B3432A"
+          "color": "#C33149"
         }
       ],
       [
@@ -71,7 +71,7 @@
           "image": "./assets/splash-logo.png",
           "imageWidth": 240,
           "resizeMode": "contain",
-          "backgroundColor": "#F8F4EF"
+          "backgroundColor": "#FBF3E6"
         }
       ],
       [
