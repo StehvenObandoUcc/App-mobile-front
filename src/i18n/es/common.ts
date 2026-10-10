@@ -1,0 +1,27 @@
+/** Textos compartidos por toda la app (botones genéricos, dietas, tiempos). */
+export const common = {
+  cancel: 'Cancelar',
+  accept: 'Aceptar',
+  save: 'Guardar',
+  delete: 'Eliminar',
+  back: 'Volver',
+  close: 'Cerrar',
+  retry: 'Reintentar',
+  loading: 'Cargando…',
+  gotIt: 'Entendido',
+  syncing: 'Sincronizando…',
+  diets: {
+    any: 'Cualquiera',
+    vegetarian: 'Vegetariana',
+    vegan: 'Vegana',
+    keto: 'Keto',
+    gluten_free: 'Sin gluten',
+    low_carb: 'Baja en carbohidratos',
+  },
+  days_one: '{count} día',
+  days_other: '{count} días',
+  daysBefore_one: '{count} día antes',
+  daysBefore_other: '{count} días antes',
+  servings_one: '{count} porción',
+  servings_other: '{count} porciones',
+};

@@ -1,0 +1,88 @@
+/** Textos en español · zona «molecules». El inglés está en ../en/molecules.ts con la misma forma. */
+export const molecules = {
+  offlineBanner: {
+    offlineTitle: 'Sin conexión',
+    offlineBody_one: '{count} cambio se sincronizará al volver',
+    offlineBody_other: '{count} cambios se sincronizarán al volver',
+    offlineSaved: 'Lo que tienes guardado sigue disponible',
+    authTitle: 'Tu sesión expiró',
+    authBody_one: 'Inicia sesión para sincronizar {count} cambio',
+    authBody_other: 'Inicia sesión para sincronizar {count} cambios',
+    attentionTitle: 'Revisa tus cambios',
+    attentionBody_one: '{count} cambio no se pudo sincronizar',
+    attentionBody_other: '{count} cambios no se pudieron sincronizar',
+    syncedTitle: 'Todo sincronizado',
+    retryA11y: 'Reintentar sincronización',
+    retry: 'Reintentar',
+  },
+  focusFolders: {
+    groupA11y: 'Enfoque culinario',
+    chosenA11y: '{title}, elegido. {description}',
+  },
+  speedDialFab: {
+    closeA11y: 'Cerrar opciones',
+  },
+  iconTextField: {
+    showPassword: 'Mostrar contraseña',
+    hidePassword: 'Ocultar contraseña',
+  },
+  quantityStepper: {
+    valueA11y: 'Cantidad {value}',
+    empty: 'vacía',
+    decreaseA11y: 'Reducir cantidad',
+    inputA11y: 'Cantidad',
+    increaseA11y: 'Aumentar cantidad',
+  },
+  categoryPicker: {
+    groupA11y: 'Categoría',
+    more: '{count} más',
+    seeMoreA11y_one: 'Ver {count} categoría más',
+    seeMoreA11y_other: 'Ver {count} categorías más',
+  },
+  dateField: {
+    hasDateA11y: 'Fecha de vencimiento: {date}, {relative}. Cambiar en el calendario',
+    noDateA11y: 'Sin fecha de vencimiento. Elegir en el calendario',
+    chooseInCalendar: 'Elegir en el calendario',
+    plus3d: '+3 días',
+    plus1w: '+1 sem',
+    plus1m: '+1 mes',
+    noDate: 'Sin fecha',
+  },
+  calendarMonth: {
+    prevMonthA11y: 'Mes anterior',
+    nextMonthA11y: 'Mes siguiente',
+    todayA11y: ', hoy',
+  },
+  pantryHealthCard: {
+    title: 'Salud de tu despensa',
+    seeExpiring: 'Ver por vencer',
+    fresh: 'frescos',
+    expiringSoon: 'por vencer',
+    expired_one: 'vencido',
+    expired_other: 'vencidos',
+    unknown: 'sin fecha',
+    expiredA11y_one: '{count} vencido',
+    expiredA11y_other: '{count} vencidos',
+    a11y: 'Estado de la despensa: {fresh} frescos, {expiringSoon} por vencer, {expiredText}, {unknown} sin fecha. Ver por vencer',
+  },
+  ingredientToggleChip: {
+    expiredShort: 'venc.',
+    todayShort: 'hoy',
+    daysShort: '{count} d',
+    expiredA11y: ', vence ya',
+    dueTodayA11y: ', vence hoy',
+    dueA11y: ', vence {when}',
+  },
+  difficultyPicker: {
+    groupA11y: 'Nivel de dificultad',
+    levelA11y: 'Dificultad {level}',
+  },
+  inlineErrorCard: {
+    retry: 'Reintentar',
+  },
+  errorState: {
+    defaultTitle: 'Algo salió',
+    defaultEmphasis: 'mal',
+    retry: 'Reintentar',
+  },
+};
