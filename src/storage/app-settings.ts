@@ -16,7 +16,19 @@ export type AppSettings = {
   avoidIngredients: string[];
   /** Días de vencimiento al pasar compras a la despensa; null = automático según el tipo de alimento. */
   shoppingShelfDays: number | null;
+  /** Tema: claro por defecto; el usuario puede elegir oscuro o «como el teléfono». */
+  themeMode: ThemeMode;
+  /** true solo cuando el usuario eligió el tema a mano en Configuración. */
+  themeChosen: boolean;
+  /** Idioma de la app: sigue al teléfono, o fijo español / inglés. */
+  language: LanguageSetting;
+  /** Reducir animaciones: sigue al teléfono, o siempre / nunca. */
+  reduceMotion: ReduceMotionSetting;
 };
+
+export type ThemeMode = 'system' | 'light' | 'dark';
+export type LanguageSetting = 'system' | 'es' | 'en';
+export type ReduceMotionSetting = 'system' | 'on' | 'off';
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   expiryAlertsEnabled: true,
@@ -25,6 +37,10 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   defaultServings: 2,
   avoidIngredients: [],
   shoppingShelfDays: null,
+  themeMode: 'light',
+  themeChosen: false,
+  language: 'system',
+  reduceMotion: 'system',
 };
 
 const DIETS: DietaryPreference[] = ['any', 'vegetarian', 'vegan', 'keto', 'gluten_free', 'low_carb'] as DietaryPreference[];
@@ -45,6 +61,17 @@ export function sanitizeSettings(parsed: Partial<AppSettings>): AppSettings {
       ? parsed.avoidIngredients.map((x) => String(x).trim()).filter(Boolean).slice(0, 20)
       : d.avoidIngredients,
     shoppingShelfDays: typeof shelf === 'number' && shelf >= 1 && shelf <= 60 ? shelf : null,
+    // El claro es el predeterminado: un tema guardado solo cuenta si el usuario lo eligió a mano
+    // (así quien ya tenía «system» guardado por defecto vuelve al claro).
+    themeMode:
+      parsed.themeChosen === true && (['system', 'light', 'dark'] as const).includes(parsed.themeMode as ThemeMode)
+        ? (parsed.themeMode as ThemeMode)
+        : d.themeMode,
+    themeChosen: parsed.themeChosen === true,
+    language: (['system', 'es', 'en'] as const).includes(parsed.language as LanguageSetting) ? (parsed.language as LanguageSetting) : d.language,
+    reduceMotion: (['system', 'on', 'off'] as const).includes(parsed.reduceMotion as ReduceMotionSetting)
+      ? (parsed.reduceMotion as ReduceMotionSetting)
+      : d.reduceMotion,
   };
 }
 
