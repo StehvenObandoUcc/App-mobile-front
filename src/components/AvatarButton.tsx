@@ -5,17 +5,16 @@ import { spacing, radii } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
- * AvatarButton — botón de perfil de 48 dp (Inicio.dc.html): frambuesa claro con icono,
- * o la foto del usuario si existe.
+ * AvatarButton — botón de perfil de 48 dp con la misma apariencia que el botón de ajustes de la cabecera:
+ * superficie blanca con filete y icono cacao; con foto, la foto llena el círculo.
  */
 export type AvatarButtonProps = {
   uri?: string | null;
-  signedIn?: boolean;
   onPress: () => void;
   accessibilityLabel: string;
 };
 
-export function AvatarButton({ uri, signedIn = false, onPress, accessibilityLabel }: AvatarButtonProps) {
+export function AvatarButton({ uri, onPress, accessibilityLabel }: AvatarButtonProps) {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
@@ -28,7 +27,7 @@ export function AvatarButton({ uri, signedIn = false, onPress, accessibilityLabe
       {uri ? (
         <Image source={{ uri }} style={styles.image} resizeMode="cover" />
       ) : (
-        <Ionicons name={signedIn ? 'person' : 'person-outline'} size={22} color={colors.onTertiaryContainer} />
+        <Ionicons name="person-outline" size={22} color={colors.textPrimary} />
       )}
     </Pressable>
   );
@@ -39,7 +38,9 @@ const useStyles = makeStyles((colors) => ({
     width: spacing.touchTargetMin,
     height: spacing.touchTargetMin,
     borderRadius: spacing.touchTargetMin / 2,
-    backgroundColor: colors.tertiaryContainer,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -48,7 +49,7 @@ const useStyles = makeStyles((colors) => ({
     transform: [{ scale: 0.94 }],
   },
   image: {
-    width: spacing.touchTargetMin,
-    height: spacing.touchTargetMin,
+    width: '100%',
+    height: '100%',
   },
 }));

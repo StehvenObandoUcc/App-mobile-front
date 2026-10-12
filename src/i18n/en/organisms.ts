@@ -90,6 +90,7 @@ export const organisms: typeof Es = {
     title: 'Scan your',
     titleBold: 'food',
     description: 'Take a photo to detect ingredients and update your pantry instantly.',
+    cta: 'Scan',
   },
   todayRecipeCard: {
     matchBadge: '{match}% match with your pantry',

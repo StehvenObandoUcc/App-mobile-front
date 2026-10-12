@@ -10,9 +10,10 @@ import type { ThemeColors } from '../theme/colors';
  * PrimaryButton — Componentes.dc.html
  * tone: 'ink' (cacao, acción principal · defecto) | 'brand' (tomate, escaneo) | 'ai' (frambuesa, Chef IA)
  *       | 'danger' (rojo, solo para confirmar acciones destructivas)
+ *       | 'inverse' (blanco con texto/icono ciruela, para superficies de color como el héroe de escaneo)
  * Píldora de 52 dp, plano (sin sombra de color). Presionado: tono más oscuro + escala 0.97.
  */
-export type ButtonTone = 'ink' | 'brand' | 'ai' | 'danger';
+export type ButtonTone = 'ink' | 'brand' | 'ai' | 'danger' | 'inverse';
 
 export type PrimaryButtonProps = {
   title: string;
@@ -31,6 +32,8 @@ const tonesFor = (colors: ThemeColors): Record<ButtonTone, { bg: string; pressed
   ink: { bg: colors.ink, pressed: colors.inkPressed, fg: colors.onInk },
   brand: { bg: colors.m3.primary, pressed: colors.m3.primaryPressed, fg: colors.m3.onPrimary },
   ai: { bg: colors.m3.tertiary, pressed: colors.m3.tertiaryPressed, fg: colors.m3.onTertiary },
+  // Sobre fondo ciruela (aiHero): píldora clara; presionado = tinte ciruela claro.
+  inverse: { bg: colors.onAiHero, pressed: colors.aiHeroMuted, fg: colors.aiHero },
   // Confirmaciones destructivas (M3Dialog «Eliminar»): blanco sobre Ladrillo (colors.m3.error)
   danger: { bg: colors.m3.error, pressed: colors.functional.expired.text, fg: colors.m3.onError },
 });

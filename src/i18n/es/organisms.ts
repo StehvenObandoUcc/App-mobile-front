@@ -88,6 +88,7 @@ export const organisms = {
     title: 'Escanea tus',
     titleBold: 'alimentos',
     description: 'Toma una foto para detectar ingredientes y actualizar tu despensa al instante.',
+    cta: 'Escanear',
   },
   todayRecipeCard: {
     matchBadge: '{match} % con tu despensa',

@@ -114,30 +114,30 @@ function build(m3: M3, ext: Extended, f: Record<'fresh' | 'expiringSoon' | 'expi
 // ─── Claro ──────────────────────────────────────────────────────────────────
 export const lightColors = build(
   {
-    primary: '#C33149', // Sandía · blanco 5.45:1 · sobre fondo 4.94:1
+    primary: '#C33149', // Sandía · blanco 5.45:1 · sobre fondo 5.03:1
     onPrimary: '#FFFFFF',
-    primaryContainer: '#F5DEE2',
+    primaryContainer: '#FADAE0', // cacao 12.7:1
     onPrimaryContainer: '#5E0A1C', // 10.7:1
     primaryPressed: '#A0263B',
 
     secondary: '#4F6A10', // Lima (tono de texto/botón) · blanco 6.17:1
     onSecondary: '#FFFFFF',
-    secondaryContainer: '#E5EDCC',
-    onSecondaryContainer: '#22300A', // 11.6:1
+    secondaryContainer: '#DEECAE',
+    onSecondaryContainer: '#22300A', // 11.2:1
     secondaryPressed: '#43590C',
 
-    tertiary: '#754A70', // Ciruela IA · blanco 7.07:1
+    tertiary: '#7A427B', // Ciruela IA · blanco 7.26:1
     onTertiary: '#FFFFFF',
-    tertiaryContainer: '#E9E2E8',
+    tertiaryContainer: '#ECE0ED', // tertiary encima 5.69:1
     onTertiaryContainer: '#45213F', // 10.7:1
-    tertiaryPressed: '#5E3A5A',
+    tertiaryPressed: '#643466', // blanco 9.44:1
 
     error: '#A3301A', // Ladrillo
     onError: '#FFFFFF',
     errorContainer: '#FBE0D8',
     onErrorContainer: '#5A1407',
 
-    surface: '#FBF3E6', // Crema
+    surface: '#FDF5E9', // Crema · cacao 15.3:1 · textMuted 5.92:1
     surfaceContainerLowest: '#FFFFFF',
     surfaceContainerLow: '#F5ECDF',
     surfaceContainer: '#EFE5D7',
@@ -157,7 +157,7 @@ export const lightColors = build(
     accent: '#EF7487', // 5.9:1 sobre la barra
     onAccent: '#2B1B17',
     navIconIdle: '#D9C3B8',
-    textMuted: '#6E5B51', // 5.8:1
+    textMuted: '#6E5B51', // 5.92:1 sobre crema
     inkPressed: '#A0263B',
     cameraScrim: '#1E1714',
     onCameraMuted: '#F2E6DE',
@@ -165,15 +165,15 @@ export const lightColors = build(
     textBody: '#3B2B25',
     limeFill: '#A8C256',
     warning: '#7A5900',
-    aiHero: '#754A70', // blanco encima 7.07:1
+    aiHero: '#7A427B', // blanco encima 7.26:1
     onAiHero: '#FFFFFF',
-    aiHeroMuted: '#EADDE7', // 5.39:1
-    aiHeroChip: '#8B6286', // blanco encima 5.01:1
-    aiHeroPressed: '#5E3A5A',
+    aiHeroMuted: '#EEDDED', // sobre aiHero 5.6:1
+    aiHeroChip: '#925E94', // blanco encima 4.94:1
+    aiHeroPressed: '#643466',
   },
   {
-    fresh: { background: '#E5EDCC', border: '#CFE09A', text: '#22300A' },
-    expiringSoon: { background: '#F8E7B0', border: '#E9CF7A', text: '#4A3600' },
+    fresh: { background: '#DEECAE', border: '#C4DA7C', text: '#22300A' },
+    expiringSoon: { background: '#FCE295', border: '#ECCA5E', text: '#4A3600' }, // texto 9.05:1
     expired: { background: '#FBE0D8', border: '#F2B9A9', text: '#7A2412' },
     unknown: { background: '#EFE5D7', border: '#DCCFBF', text: '#4F3F38' },
   },
@@ -250,6 +250,12 @@ export const darkColors: ThemeColors = build(
   },
   { text: '#EADFD3', background: '#3D3532' }
 );
+
+/** Mismo color con otra opacidad (para degradados a «transparente» que no viren a gris). Solo hex de 6 dígitos. */
+export function withAlpha(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1, 7), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
 
 /** Paleta clara estática: solo para código que aún no usa `useTheme()` o que vive fuera de React. */
 export const colors = lightColors;

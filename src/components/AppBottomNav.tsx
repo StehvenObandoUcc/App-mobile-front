@@ -2,12 +2,14 @@ import React, { useRef, useEffect, useState, useSyncExternalStore } from 'react'
 import { View, StyleSheet, Pressable, PanResponder, Animated, Easing, LayoutAnimation, LayoutChangeEvent } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShoppingList } from '../hooks/useShoppingList';
 import { CountBadge } from './CountBadge';
 import { isBottomNavHidden, subscribeBottomNav } from '../utils/nav-visibility';
 import { typography, spacing, radii, elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { withAlpha } from '../theme/colors';
 import {
   MAIN_TABS,
   setSwipeNavigation,
@@ -19,6 +21,7 @@ import { useReduceMotion } from '../hooks/useReduceMotion';
 import { useI18n } from '../i18n';
 export const NAV_HEIGHT = 72; // Organismos.dc.html: barra flotante de 72 dp
 export const NAV_BOTTOM_OFFSET = 12;
+const FADE_HEIGHT = 150; // degradado bajo la barra flotante
 
 export const getBottomContentPadding = (bottomInset: number) =>
   NAV_HEIGHT + Math.max(bottomInset, 0) + NAV_BOTTOM_OFFSET + 16;
@@ -313,59 +316,75 @@ export function AppBottomNav() {
   if (navHidden) return null;
 
   return (
-    <View style={[styles.bottomNavWrapper, { bottom: bottomPosition }]} {...navPanResponder.panHandlers}>
-      <Animated.View
-        style={[
-          styles.bottomNavContainer,
-          { transform: [{ translateX: navDragX }, { rotate: navDragTilt }, { scale: navDragScale }] },
-        ]}
-      >
-        {/* Píldora durazno que se desliza detrás de la pestaña activa */}
-        {pillVisible && currentTabIndex !== -1 && (
-          <View style={styles.pillLayer} pointerEvents="none">
-            <Animated.View style={[styles.pillCap, { transform: [{ translateX: pillX }] }]} />
-            <Animated.View
-              style={[
-                styles.pillMid,
-                {
-                  transform: [
-                    { translateX: Animated.add(pillX, PILL_H / 2) },
-                    { scaleX: Animated.multiply(Animated.add(pillW, -PILL_H), 1 / MID_BASE) },
-                  ],
-                },
-              ]}
-            />
-            <Animated.View style={[styles.pillCap, { transform: [{ translateX: Animated.add(pillX, Animated.add(pillW, -PILL_H)) }] }]} />
-          </View>
-        )}
-
-        {renderTab(tabs[0])}
-        {renderTab(tabs[1])}
-
-        {/* FAB central de escaneo: squircle tomate con icono cacao */}
-        <Pressable
-          onPressIn={fabIn}
-          onPressOut={fabOut}
-          onPress={() => router.push('/scan')}
-          accessibilityRole="button"
-          accessibilityLabel={t('organisms.appBottomNav.scanA11y')}
+    <>
+      {/* Degradado de transparente al fondo del tema: la barra no flota sobre contenido cortado. No recibe toques. */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={[withAlpha(colors.background, 0), colors.background]}
+        style={styles.fade}
+      />
+      <View style={[styles.bottomNavWrapper, { bottom: bottomPosition }]} {...navPanResponder.panHandlers}>
+        <Animated.View
+          style={[
+            styles.bottomNavContainer,
+            { transform: [{ translateX: navDragX }, { rotate: navDragTilt }, { scale: navDragScale }] },
+          ]}
         >
-          <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
-            {/* Icono del mockup: marco de escaneo + lente circular al centro */}
-            <Ionicons name="scan-outline" size={26} color={colors.m3.onPrimary} />
-            <View style={styles.fabLens} pointerEvents="none" />
-          </Animated.View>
-        </Pressable>
+          {/* Píldora durazno que se desliza detrás de la pestaña activa */}
+          {pillVisible && currentTabIndex !== -1 && (
+            <View style={styles.pillLayer} pointerEvents="none">
+              <Animated.View style={[styles.pillCap, { transform: [{ translateX: pillX }] }]} />
+              <Animated.View
+                style={[
+                  styles.pillMid,
+                  {
+                    transform: [
+                      { translateX: Animated.add(pillX, PILL_H / 2) },
+                      { scaleX: Animated.multiply(Animated.add(pillW, -PILL_H), 1 / MID_BASE) },
+                    ],
+                  },
+                ]}
+              />
+              <Animated.View style={[styles.pillCap, { transform: [{ translateX: Animated.add(pillX, Animated.add(pillW, -PILL_H)) }] }]} />
+            </View>
+          )}
 
-        {renderTab(tabs[2])}
-        {renderTab(tabs[3])}
-      </Animated.View>
-    </View>
+          {renderTab(tabs[0])}
+          {renderTab(tabs[1])}
+
+          {/* FAB central de escaneo: squircle tomate con icono cacao */}
+          <Pressable
+            onPressIn={fabIn}
+            onPressOut={fabOut}
+            onPress={() => router.push('/scan')}
+            accessibilityRole="button"
+            accessibilityLabel={t('organisms.appBottomNav.scanA11y')}
+          >
+            <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
+              {/* Icono del mockup: marco de escaneo + lente circular al centro */}
+              <Ionicons name="scan-outline" size={26} color={colors.m3.onPrimary} />
+              <View style={styles.fabLens} pointerEvents="none" />
+            </Animated.View>
+          </Pressable>
+
+          {renderTab(tabs[2])}
+          {renderTab(tabs[3])}
+        </Animated.View>
+      </View>
+    </>
   );
 }
 
 const useStyles = makeStyles((colors) => ({
   // Organismos.dc.html / Despensa.dc.html: barra cacao flotante de 72 dp, radio 36, márgenes 14.
+  fade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: FADE_HEIGHT,
+    zIndex: 998,
+  },
   bottomNavWrapper: {
     position: 'absolute',
     left: 14,

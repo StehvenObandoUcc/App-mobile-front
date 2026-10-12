@@ -131,7 +131,6 @@ function HomeContent() {
               />
               <AvatarButton
                 uri={avatarUri}
-                signedIn={!!user}
                 accessibilityLabel={user ? t('screensMain.home.profileA11y', { name: user.name }) : t('screensMain.home.loginOrProfileA11y')}
                 onPress={() => router.push('/profile')}
               />

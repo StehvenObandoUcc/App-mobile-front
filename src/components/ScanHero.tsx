@@ -3,12 +3,13 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { radii } from '../theme';
+import { PrimaryButton } from './PrimaryButton';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
  * ScanHero — tarjeta principal del Inicio (Inicio.dc.html).
- * Fondo ciruela (color de la IA), anillo decorativo, chip «IA de visión», título 26/32 300 + 600 y botón squircle claro 64.
+ * Fondo ciruela (color de la IA), anillo decorativo, chip «IA de visión», título 26/32 300 + 600 y botón de pastilla claro «Escanear».
  * Toda la tarjeta abre el escáner.
  */
 export type ScanHeroProps = {
@@ -22,8 +23,7 @@ export function ScanHero({ onPress }: ScanHeroProps) {
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={t('organisms.scanHero.a11y')}
+      accessible={false}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.ring} pointerEvents="none" />
@@ -35,20 +35,23 @@ export function ScanHero({ onPress }: ScanHeroProps) {
         </AppText>
       </View>
 
-      <View style={styles.row}>
-        <View style={styles.texts}>
-          <AppText variant="headline" weight="light" color={colors.onAiHero}>
-            {t('organisms.scanHero.title')} <AppText weight="semibold">{t('organisms.scanHero.titleBold')}</AppText>
-          </AppText>
-          <AppText variant="bodySmall" color={colors.aiHeroMuted}>
-            {t('organisms.scanHero.description')}
-          </AppText>
-        </View>
-        <View style={styles.fab}>
-          <Ionicons name="scan-outline" size={30} color={colors.aiHero} />
-          <View style={styles.fabLens} />
-        </View>
+      <View style={styles.texts}>
+        <AppText variant="headline" weight="light" color={colors.onAiHero}>
+          {t('organisms.scanHero.title')} <AppText weight="semibold">{t('organisms.scanHero.titleBold')}</AppText>
+        </AppText>
+        <AppText variant="bodySmall" color={colors.aiHeroMuted}>
+          {t('organisms.scanHero.description')}
+        </AppText>
       </View>
+
+      <PrimaryButton
+        tone="inverse"
+        title={t('organisms.scanHero.cta')}
+        iconName="scan-outline"
+        onPress={onPress}
+        accessibilityLabel={t('organisms.scanHero.a11y')}
+        style={styles.cta}
+      />
     </Pressable>
   );
 }
@@ -89,29 +92,12 @@ const useStyles = makeStyles((colors) => ({
   badgeText: {
     letterSpacing: 0.8,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 14,
-  },
   texts: {
-    flex: 1,
     gap: 6,
   },
-  fab: {
-    width: 64,
-    height: 64,
-    borderRadius: 22,
-    backgroundColor: colors.onAiHero,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabLens: {
-    position: 'absolute',
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: colors.aiHero,
+  cta: {
+    alignSelf: 'flex-start',
+    height: 52,
+    marginTop: 4,
   },
 }));

@@ -8,7 +8,7 @@ import { useI18n } from '../i18n';
 
 /**
  * ProfileCard — tarjeta de identidad (Perfil.dc.html).
- * Avatar 112 (rosa frambuesa con silueta, o la foto) con insignia de cámara cacao de 40 y aro blanco,
+ * Avatar 112 (fondo neutro con silueta cacao, o la foto) con insignia de cámara cacao de 40 y aro blanco,
  * «Chef **Nombre**» 24/30, correo 14 y la píldora salvia «Sesión segura».
  */
 export type ProfileCardProps = {
@@ -34,7 +34,7 @@ export function ProfileCard({ name, email, avatarUri, onPressAvatar }: ProfileCa
         {avatarUri ? (
           <Image source={{ uri: avatarUri }} style={styles.photo} />
         ) : (
-          <Ionicons name="person-outline" size={48} color={colors.onTertiaryContainer} />
+          <Ionicons name="person-outline" size={48} color={colors.textPrimary} />
         )}
         <View style={styles.badge}>
           <Ionicons name="camera-outline" size={18} color={colors.onInk} />
@@ -75,7 +75,7 @@ const useStyles = makeStyles((colors) => ({
     width: 112,
     height: 112,
     borderRadius: 56,
-    backgroundColor: colors.tertiaryContainer,
+    backgroundColor: colors.m3.surfaceContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
