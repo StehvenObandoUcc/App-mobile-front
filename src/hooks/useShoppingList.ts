@@ -12,6 +12,16 @@ import { loadAppSettings } from '../storage/app-settings';
 import { flushOutbox } from '../services/outbox-dispatcher';
 
 let memoryShoppingList: ShoppingItem[] | null = null;
+
+// Al cerrar sesión o cambiar de cuenta se descarta la caché en memoria (si no, se veían datos de la cuenta anterior).
+let cachedUserId: string | null = null;
+LocalStorage.subscribe(() => {
+  const uid = LocalStorage.getCurrentUserId();
+  if (uid !== cachedUserId) {
+    cachedUserId = uid;
+    memoryShoppingList = null;
+  }
+});
 let isSyncingShopping = false;
 
 /**

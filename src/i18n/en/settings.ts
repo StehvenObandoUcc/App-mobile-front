@@ -93,7 +93,6 @@ export const settings: typeof Es = {
   testNotice: 'Test alert',
   testNoticeSubtitle: 'Scheduled alerts: {count}',
   send: 'Send',
-  designCatalog: 'Design catalog',
   wipe: 'Delete data on this phone',
   wipeSubtitle: "Your account and cloud aren't touched",
   deleteAccount: 'Delete my account',

@@ -7,6 +7,16 @@ import type { RecipeGenerationExtras } from '../services/api-client';
 
 let memoryRecipes: Recipe[] | null = null;
 
+// Al cerrar sesión o cambiar de cuenta se descarta la caché en memoria (si no, se veían datos de la cuenta anterior).
+let cachedUserId: string | null = null;
+LocalStorage.subscribe(() => {
+  const uid = LocalStorage.getCurrentUserId();
+  if (uid !== cachedUserId) {
+    cachedUserId = uid;
+    memoryRecipes = null;
+  }
+});
+
 export function useRecipes(service: RecipeService = mockRecipeService) {
   const [recipes, setRecipes] = useState<Recipe[]>(memoryRecipes || []);
   const [status, setStatus] = useState<AsyncStatus>(memoryRecipes && memoryRecipes.length > 0 ? 'success' : 'loading');
@@ -29,7 +39,9 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
     loadRecipes();
 
     const unsubscribe = LocalStorage.subscribe(() => {
-      service.getRecipes().then((data) => {
+      // Solo lectura local: getRecipes() también sincroniza con la nube y eso
+      // volvía a emitir cambios en bucle (reordenaba la lista y causaba lag).
+      LocalStorage.getRecipes().then((data) => {
         memoryRecipes = data;
         setRecipes(data);
       }).catch(() => {});

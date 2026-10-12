@@ -217,7 +217,7 @@ export class AuthService {
    * Si sale bien, borra también la copia local (despensa, recetas, compras y cola de sincronización)
    * y cierra la sesión. Errores: 'wrong_password' (contraseña errada) o mensaje de red.
    */
-  static async deleteAccount(rawPassword: string): Promise<void> {
+  static async deleteAccount(rawPassword: string, finalize: boolean = true): Promise<void> {
     const token = currentSession?.accessToken;
     if (!token) throw new Error(t('data.auth.noSession'));
     let response: Response;
@@ -235,6 +235,11 @@ export class AuthService {
       const errData = await response.json().catch(() => ({}));
       throw new Error(errData.detail || t('data.auth.deleteAccountError'));
     }
+    if (finalize) await AuthService.finishAccountDeletion();
+  }
+
+  /** Limpia la copia local de la cuenta ya eliminada y cierra la sesión (la pantalla lo llama tras avisar al usuario). */
+  static async finishAccountDeletion(): Promise<void> {
     try {
       await LocalStorage.clearAllUserData();
     } catch (err) {

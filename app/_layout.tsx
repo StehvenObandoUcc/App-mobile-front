@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, Image } from 'react-native';
 import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useAuth } from '../src/hooks/useAuth';
 import { AppBottomNav, Text } from '../src/components';
 import { colors as lightColors, typography } from '../src/theme';
@@ -16,7 +17,10 @@ import {
 // Splash nativo (logo «A · Lente» sobre avena): queda visible hasta que la app está lista.
 // Se llama en el ámbito global, sin await, como indica la documentación de expo-splash-screen.
 SplashScreen.preventAutoHideAsync().catch(() => {});
-SplashScreen.setOptions({ fade: true, duration: 200 });
+// setOptions no existe en Expo Go (solo en builds de desarrollo/producción): evita el aviso en consola.
+if (Constants.executionEnvironment !== ExecutionEnvironment.StoreClient) {
+  SplashScreen.setOptions({ fade: true, duration: 200 });
+}
 
 // Avisos de vencimiento: mostrar la notificación también con la app abierta.
 configureNotifications();
@@ -97,7 +101,7 @@ function RootLayout() {
     );
   }
 
-  const hideBottomNavOn = ['/login', '/legal', '/profile', '/scan', '/scan-result', '/recipe-detail', '/settings', '/design-catalog'];
+  const hideBottomNavOn = ['/login', '/legal', '/profile', '/scan', '/scan-result', '/recipe-detail', '/settings'];
   const showBottomNav = !hideBottomNavOn.includes(pathname);
 
   return (
@@ -114,7 +118,6 @@ function RootLayout() {
       >
         <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="settings" options={{ headerShown: false, animation: 'slide_from_right' }} />
-        <Stack.Screen name="design-catalog" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen
           name="inventory"

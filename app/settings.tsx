@@ -97,6 +97,7 @@ export default function SettingsScreen() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [accountDeleted, setAccountDeleted] = useState(false);
   const closeDeleteDialog = () => {
     if (isDeleting) return;
     setConfirm(null);
@@ -111,11 +112,18 @@ export default function SettingsScreen() {
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await AuthService.deleteAccount(deletePassword);
+      await AuthService.deleteAccount(deletePassword, false);
       setIsDeleting(false);
       setConfirm(null);
       setDeletePassword('');
-      router.replace('/login');
+      // Primero se avisa; la sesión y los datos locales se cierran al pulsar «Entendido».
+      setAccountDeleted(true);
+      setNotice({
+        title: t('settings.deleteDialog.doneTitle'),
+        emphasis: t('settings.deleteDialog.doneEmphasis'),
+        message: t('settings.deleteDialog.doneMessage'),
+        type: 'success',
+      });
     } catch (err: any) {
       setIsDeleting(false);
       const msg = String(err?.message ?? '');
@@ -295,9 +303,7 @@ export default function SettingsScreen() {
             title={t('settings.testNotice')}
             subtitle={t('settings.testNoticeSubtitle', { count: scheduledCount })}
             trailing={{ type: 'button', label: t('settings.send'), onPress: handleTest, busy: isSendingTest }}
-            divider
           />
-          <SettingsRow iconName="color-palette-outline" tone={T.ai} title={t('settings.designCatalog')} onPress={() => router.push('/design-catalog')} />
         </SettingsSection>
 
         <SettingsSection title={t('settings.sections.dataZone')}>
@@ -465,7 +471,13 @@ export default function SettingsScreen() {
         title={notice?.title ?? ''}
         titleEmphasis={notice?.emphasis}
         message={notice?.message ?? ''}
-        onConfirm={() => setNotice(null)}
+        onConfirm={async () => {
+          setNotice(null);
+          if (accountDeleted) {
+            await AuthService.finishAccountDeletion();
+            router.replace('/login');
+          }
+        }}
       />
     </View>
   );

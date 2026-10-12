@@ -92,7 +92,6 @@ export const settings = {
   testNotice: 'Aviso de prueba',
   testNoticeSubtitle: 'Avisos programados: {count}',
   send: 'Enviar',
-  designCatalog: 'Catálogo de diseño',
   wipe: 'Borrar datos de este teléfono',
   wipeSubtitle: 'Tu cuenta y tu nube no se tocan',
   deleteAccount: 'Eliminar mi cuenta',

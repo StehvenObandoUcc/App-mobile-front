@@ -13,6 +13,16 @@ import { flushOutbox } from '../services/outbox-dispatcher';
 import { updateIngredientSynced, deleteIngredientSynced } from '../services/inventory-mutations';
 
 let memoryInventory: Ingredient[] | null = null;
+
+// Al cerrar sesión o cambiar de cuenta se descarta la caché en memoria (si no, se veían datos de la cuenta anterior).
+let cachedUserId: string | null = null;
+LocalStorage.subscribe(() => {
+  const uid = LocalStorage.getCurrentUserId();
+  if (uid !== cachedUserId) {
+    cachedUserId = uid;
+    memoryInventory = null;
+  }
+});
 let isSyncingInventory = false;
 
 export function useInventory() {

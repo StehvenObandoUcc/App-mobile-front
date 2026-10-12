@@ -100,6 +100,28 @@ const CONDIMENT_KEYWORDS = [
   'esencia',
 ];
 
+// Equivalentes en inglés (la app también funciona en English).
+const CONDIMENT_KEYWORDS_EN = [
+  'salt', 'pepper', 'oil', 'vinegar', 'cumin', 'oregano', 'sugar', 'cinnamon',
+  'bay leaf', 'thyme', 'rosemary', 'water', 'food coloring', 'baking soda', 'baking powder', 'extract',
+];
+
+const normalizeWords = (text: string) =>
+  ` ${text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()} `;
+
+/**
+ * Coincide por PALABRA completa, no por trozo: antes «sal» marcaba salmón, salsa o salchicha
+ * y «agua» marcaba aguacate como condimento.
+ */
+export function isCondimentName(name: string): boolean {
+  const words = normalizeWords(name);
+  return [...CONDIMENT_KEYWORDS, ...CONDIMENT_KEYWORDS_EN].some((kw) => {
+    const k = normalizeWords(kw);
+    // También acepta el plural simple («sales», «aceites», «salts»).
+    return words.includes(k) || words.includes(k.trimEnd() + 's ') || words.includes(k.trimEnd() + 'es ');
+  });
+}
+
 export interface IngredientSelectionCoherence {
   isValid: boolean;
   isSingleIngredient: boolean;
@@ -126,8 +148,7 @@ export function checkIngredientSelectionCoherence(
 
   if (ingredients.length === 1) {
     const single = ingredients[0];
-    const nameClean = single.name.toLowerCase().trim();
-    const isCondiment = CONDIMENT_KEYWORDS.some((kw) => nameClean.includes(kw));
+    const isCondiment = isCondimentName(single.name);
 
     if (isCondiment) {
       return {
