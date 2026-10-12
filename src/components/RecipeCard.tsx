@@ -183,7 +183,7 @@ export function RecipeCard({
 
         {/* ── Cuerpo ── */}
         <View style={styles.body}>
-          <AppText variant="sectionTitle" numberOfLines={2} style={styles.title}>
+          <AppText variant="sectionTitle" numberOfLines={2}>
             {recipe.title}
           </AppText>
           {!!recipe.description && !isSelectMode && (
@@ -222,9 +222,12 @@ export function RecipeCard({
               </View>
             )}
             {isSelectMode && missing > 0 && (
-              <AppText variant="metadata" weight="semibold" color={colors.functional.expired.text}>
-                {missingLabel}
-              </AppText>
+              <View style={styles.metaItem}>
+                <Ionicons name="cart-outline" size={16} color={colors.textMuted} />
+                <AppText variant="metadata" weight="semibold" color={colors.textMuted}>
+                  {missingLabel}
+                </AppText>
+              </View>
             )}
           </View>
 
@@ -232,13 +235,13 @@ export function RecipeCard({
             <View style={styles.progress}>
               <View style={styles.progressHead}>
                 <AppText variant="metadata" weight="semibold">{t('organisms.recipeCard.progress', { available, total })}</AppText>
-                <AppText
-                  variant="metadata"
-                  weight="semibold"
-                  color={missing === 0 ? colors.functional.fresh.text : colors.functional.expired.text}
-                >
-                  {missingLabel}
-                </AppText>
+                {/* Faltantes: texto neutro con icono (Ladrillo es solo para errores y vencidos). */}
+                <View style={styles.metaItem}>
+                  {missing > 0 && <Ionicons name="cart-outline" size={16} color={colors.textMuted} />}
+                  <AppText variant="metadata" weight="semibold" color={missing === 0 ? colors.functional.fresh.text : colors.textMuted}>
+                    {missingLabel}
+                  </AppText>
+                </View>
               </View>
               {segmented ? (
                 <View style={styles.segments}>
@@ -362,10 +365,6 @@ const useStyles = makeStyles((colors) => ({
     paddingHorizontal: 20,
     paddingBottom: 20,
     gap: 10,
-  },
-  title: {
-    fontSize: 19,
-    lineHeight: 25,
   },
   metaRow: {
     flexDirection: 'row',

@@ -1,20 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/hooks/useAuth';
 import { useCountdown } from '../src/hooks/useCountdown';
 import {
   AppText,
   PrimaryButton,
   SecondaryButton,
-  IconButton,
   IconTextField,
   InlineErrorCard,
   CodeField,
   AuthErrorBox,
+  AuthScaffold,
 } from '../src/components';
-import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { useTheme } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 import { AuthService } from '../src/services/auth-service';
 import { getPending, clearPending } from '../src/services/pending-auth';
@@ -26,9 +25,7 @@ import { RESEND_SECONDS, isStrongEnough, isValidCode } from '../src/utils/auth-f
  */
 export default function VerifyEmailScreen() {
   const { colors } = useTheme();
-  const styles = useStyles();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { t } = useI18n();
   const { isAuthenticated } = useAuth();
   const params = useLocalSearchParams<{ email?: string | string[] }>();
@@ -114,116 +111,70 @@ export default function VerifyEmailScreen() {
   const unavailable = error?.code === 'auth_unavailable';
 
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.form, { paddingTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 12) + 20 }]}
-      >
-        <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('screensFlow.verifyEmail.backA11y')} onPress={goBack} />
-        <AppText weight="light" style={styles.title} accessibilityRole="header">
-          {t('screensFlow.verifyEmail.titleLight')}
-          <AppText weight="semibold">{t('screensFlow.verifyEmail.titleBold')}</AppText>
-        </AppText>
-        <AppText variant="body" color={colors.textSecondary}>
-          {t('screensFlow.verifyEmail.intro', { email })}
-        </AppText>
-
-        {error && unavailable ? (
-          <InlineErrorCard
-            title={t('screensFlow.verifyEmail.errorTitle')}
-            message={error.message}
-            onRetry={goRegister}
-            retryLabel={t('screensFlow.verifyEmail.unavailableAction')}
-          />
-        ) : error ? (
-          <AuthErrorBox message={error.message} />
-        ) : notice ? (
-          <View accessibilityLiveRegion="polite">
-            <AppText variant="metadata" weight="regular" color={colors.functional.fresh.text}>
-              {notice}
-            </AppText>
-          </View>
-        ) : null}
-
-        <CodeField
-          label={t('screensFlow.verifyEmail.codeLabel')}
-          accessibilityLabel={t('screensFlow.verifyEmail.codeA11y')}
-          value={code}
-          onChangeText={setCode}
-          onSubmitEditing={handleVerify}
-          autoFocus
+    <AuthScaffold
+      title={t('screensFlow.verifyEmail.titleLight')}
+      emphasis={t('screensFlow.verifyEmail.titleBold')}
+      subtitle={t('screensFlow.verifyEmail.intro', { email })}
+      onBack={goBack}
+      backAccessibilityLabel={t('screensFlow.verifyEmail.backA11y')}
+    >
+      {error && unavailable ? (
+        <InlineErrorCard
+          title={t('screensFlow.verifyEmail.errorTitle')}
+          message={error.message}
+          onRetry={goRegister}
+          retryLabel={t('screensFlow.verifyEmail.unavailableAction')}
         />
-
-        {!hasPending && (
-          <IconTextField
-            label={t('screensFlow.verifyEmail.passwordLabel')}
-            iconName="lock-closed-outline"
-            secure
-            value={password}
-            onChangeText={setPassword}
-            placeholder={t('screensFlow.verifyEmail.passwordPlaceholder')}
-            autoCapitalize="none"
-            autoComplete="new-password"
-            maxLength={128}
-            returnKeyType="done"
-            onSubmitEditing={handleVerify}
-          />
-        )}
-
-        <PrimaryButton
-          title={t('screensFlow.verifyEmail.submit')}
-          onPress={handleVerify}
-          isLoading={busy}
-          disabled={!canSubmit}
-          accessibilityHint={t('screensFlow.verifyEmail.submitA11yHint')}
-          style={styles.cta}
-        />
-        <SecondaryButton
-          title={seconds > 0 ? t('screensFlow.verifyEmail.resendIn', { seconds }) : t('screensFlow.verifyEmail.resend')}
-          variant="outline"
-          onPress={handleResend}
-          isLoading={resending}
-          disabled={seconds > 0}
-        />
-        <View style={styles.center}>
-          <AppText
-            variant="body"
-            weight="semibold"
-            color={colors.primary}
-            onPress={goRegister}
-            accessibilityRole="link"
-            style={styles.link}
-          >
-            {t('screensFlow.verifyEmail.otherEmail')}
+      ) : error ? (
+        <AuthErrorBox message={error.message} />
+      ) : notice ? (
+        <View accessibilityLiveRegion="polite">
+          <AppText variant="metadata" weight="regular" color={colors.functional.fresh.text}>
+            {notice}
           </AppText>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      ) : null}
+
+      <CodeField
+        label={t('screensFlow.verifyEmail.codeLabel')}
+        accessibilityLabel={t('screensFlow.verifyEmail.codeA11y')}
+        value={code}
+        onChangeText={setCode}
+        onSubmitEditing={handleVerify}
+        autoFocus
+      />
+
+      {!hasPending && (
+        <IconTextField
+          label={t('screensFlow.verifyEmail.passwordLabel')}
+          iconName="lock-closed-outline"
+          secure
+          value={password}
+          onChangeText={setPassword}
+          placeholder={t('screensFlow.verifyEmail.passwordPlaceholder')}
+          autoCapitalize="none"
+          autoComplete="new-password"
+          maxLength={128}
+          returnKeyType="done"
+          onSubmitEditing={handleVerify}
+        />
+      )}
+
+      <PrimaryButton
+        title={t('screensFlow.verifyEmail.submit')}
+        onPress={handleVerify}
+        isLoading={busy}
+        disabled={!canSubmit}
+        accessibilityHint={t('screensFlow.verifyEmail.submitA11yHint')}
+      />
+      <SecondaryButton
+        title={seconds > 0 ? t('screensFlow.verifyEmail.resendIn', { seconds }) : t('screensFlow.verifyEmail.resend')}
+        variant="outline"
+        onPress={handleResend}
+        isLoading={resending}
+        disabled={seconds > 0}
+      />
+      <SecondaryButton title={t('screensFlow.verifyEmail.otherEmail')} variant="text" onPress={goRegister} />
+    </AuthScaffold>
   );
 }
-
-const useStyles = makeStyles((colors) => ({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  form: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    gap: 18,
-  },
-  title: {
-    fontSize: 32,
-    lineHeight: 40,
-  },
-  cta: {
-    minHeight: 56,
-  },
-  center: {
-    alignItems: 'center',
-  },
-  link: {
-    paddingVertical: 12,
-  },
-}));

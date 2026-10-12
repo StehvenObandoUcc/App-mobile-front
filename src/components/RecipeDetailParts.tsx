@@ -219,7 +219,8 @@ export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: Missin
   const { colors } = useTheme();
   const { t, tp } = useI18n();
   const styles = useStyles();
-  const tone = colors.functional.expiringSoon;
+  // Ingredientes que faltan: neutro (Miel es solo para vencimientos y límites).
+  const tone = { background: colors.surfaceVariant, text: colors.textPrimary };
   const n = rows.length;
   return (
     <View style={[styles.missing, { backgroundColor: tone.background }]}>
@@ -531,7 +532,7 @@ const useStyles = makeStyles((colors) => ({
     borderRadius: 12,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: colors.warning,
+    borderColor: colors.textMuted,
   },
   missingTexts: {
     flex: 1,

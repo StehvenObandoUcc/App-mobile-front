@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShoppingList } from '../src/hooks/useShoppingList';
@@ -8,6 +8,7 @@ import {
   AppScreen,
   AppText,
   PrimaryButton,
+  SecondaryButton,
   EmptyState,
   ActionSheetModal,
   M3Dialog,
@@ -23,7 +24,7 @@ import {
 } from '../src/components';
 import { IngredientCategory, IngredientUnit, ShoppingItem, Ingredient } from '../src/types';
 import { normalizeName } from '../src/utils/consumption';
-import { radii, spacing, elevations } from '../src/theme';
+import { spacing, elevations } from '../src/theme';
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 
@@ -37,7 +38,7 @@ type DialogState = {
   title: string;
   titleEmphasis?: string;
   message: string;
-  type?: 'success' | 'info' | 'warning' | 'error';
+  type?: 'neutral' | 'ai' | 'success' | 'warning' | 'error';
   iconName?: 'trash-outline';
   confirmText?: string;
   confirmTone?: 'ink' | 'danger';
@@ -71,7 +72,7 @@ export default function ShoppingListScreen() {
   const showError = (message: string) =>
     setDialog({ visible: true, title: t('screensFlow.shopping.errorTitle'), titleEmphasis: t('screensFlow.shopping.errorEmphasis'), message, type: 'error', onConfirm: closeDialog });
   const warn = (title: string, titleEmphasis: string, message: string) =>
-    setDialog({ visible: true, title, titleEmphasis, message, type: 'warning', onConfirm: closeDialog });
+    setDialog({ visible: true, title, titleEmphasis, message, type: 'neutral', onConfirm: closeDialog });
 
   // ── Agregar ──
   const pendingNames = useMemo(() => new Set(pendingItems.map((p) => normalizeName(p.name))), [pendingItems]);
@@ -301,16 +302,13 @@ export default function ShoppingListScreen() {
                 {t('screensFlow.shopping.sectionBought')}
                 <AppText weight="regular" color={colors.functional.fresh.text}>{`· ${boughtItems.length}`}</AppText>
               </AppText>
-              <Pressable
+              <SecondaryButton
+                title={t('screensFlow.shopping.clear')}
+                variant="text"
                 onPress={confirmClear}
-                style={({ pressed }) => [styles.clear, pressed && styles.clearPressed]}
-                accessibilityRole="button"
                 accessibilityLabel={t('screensFlow.shopping.clearA11y')}
-              >
-                <AppText variant="bodySmall" weight="semibold" color={colors.primary}>
-                  {t('screensFlow.shopping.clear')}
-                </AppText>
-              </Pressable>
+                style={styles.clear}
+              />
             </View>
             <View style={[styles.list, styles.boughtList]}>
               {boughtItems.map((item) => (
@@ -376,13 +374,7 @@ const useStyles = makeStyles((colors) => ({
     marginTop: -6,
   },
   clear: {
-    height: 48,
-    paddingHorizontal: 8,
-    justifyContent: 'center',
-    borderRadius: radii.pill,
-  },
-  clearPressed: {
-    backgroundColor: colors.surfaceVariant,
+    paddingHorizontal: spacing.sm,
   },
   moveWrap: {
     position: 'absolute',

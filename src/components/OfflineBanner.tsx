@@ -58,8 +58,8 @@ function resolveTone(colors: ThemeColors, state: OutboxBannerState) {
     case 'authBlocked':
       return { bg: colors.m3.primaryContainer, fg: colors.m3.onPrimaryContainer, icon: 'lock-closed-outline' as const };
     default:
-      // offline: ámbar de "próximo a vencer" (7.55:1). Es un aviso, no un error.
-      return { bg: colors.functional.expiringSoon.background, fg: colors.functional.expiringSoon.text, icon: 'cloud-offline-outline' as const };
+      // offline: neutro con icono. Miel es solo para vencimientos y límites; estar sin conexión no es ninguno.
+      return { bg: colors.surfaceVariant, fg: colors.textPrimary, icon: 'cloud-offline-outline' as const };
   }
 }
 

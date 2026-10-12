@@ -42,7 +42,7 @@ export function ProfileCard({ name, email, avatarUri, onPressAvatar }: ProfileCa
       </Pressable>
 
       <View style={styles.texts}>
-        <AppText weight="light" align="center" style={styles.name} accessibilityRole="header">
+        <AppText variant="headline" weight="light" align="center" accessibilityRole="header">
           {t('sheets.profileCard.title')}{' '}
           <AppText weight="semibold">{first}</AppText>
         </AppText>
@@ -102,10 +102,6 @@ const useStyles = makeStyles((colors) => ({
   },
   texts: {
     gap: 2,
-  },
-  name: {
-    fontSize: 24,
-    lineHeight: 30,
   },
   secure: {
     height: 32,

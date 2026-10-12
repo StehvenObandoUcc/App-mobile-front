@@ -9,6 +9,8 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
  * SecondaryButton — Componentes.dc.html
  * variant 'tint': durazno (primaryContainer) con texto onPrimaryContainer (10.25:1).
  * variant 'outline': blanco con borde outline 1.5 px y texto onSurface.
+ * variant 'text': sin fondo, 48 dp, texto Sandía (enlaces de acción como «Usar otro correo»).
+ * tone 'danger': borde y texto Ladrillo (error) sobre fondo transparente; para «Eliminar» fuera de un diálogo.
  */
 export type SecondaryButtonProps = {
   title: string;
@@ -16,7 +18,9 @@ export type SecondaryButtonProps = {
   isLoading?: boolean;
   disabled?: boolean;
   iconName?: keyof typeof Ionicons.glyphMap;
-  variant?: 'outline' | 'tint';
+  variant?: 'outline' | 'tint' | 'text';
+  /** 'danger': contorno/texto en color de error, fondo transparente. Solo para borrar. */
+  tone?: 'default' | 'danger';
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   accessibilityHint?: string;
@@ -29,6 +33,7 @@ export function SecondaryButton({
   disabled = false,
   iconName,
   variant = 'tint',
+  tone = 'default',
   style,
   accessibilityLabel,
   accessibilityHint,
@@ -37,7 +42,10 @@ export function SecondaryButton({
   const styles = useStyles();
   const isDisabled = disabled || isLoading;
   const isOutline = variant === 'outline';
-  const fg = disabled ? colors.textSecondary : isOutline ? colors.textPrimary : colors.onPrimaryContainer;
+  const isText = variant === 'text';
+  const isDanger = tone === 'danger';
+  const baseFg = isText ? colors.primary : isOutline ? colors.textPrimary : colors.onPrimaryContainer;
+  const fg = disabled ? colors.textSecondary : isDanger ? colors.error.text : baseFg;
 
   return (
     <Pressable
@@ -49,10 +57,11 @@ export function SecondaryButton({
       accessibilityState={{ disabled: isDisabled, busy: isLoading }}
       style={({ pressed }) => [
         styles.button,
-        isOutline ? styles.outline : styles.tint,
-        pressed && !isDisabled && (isOutline ? styles.outlinePressed : styles.tintPressed),
+        isText ? styles.text : isOutline ? styles.outline : styles.tint,
+        isDanger && !isText && styles.danger,
+        pressed && !isDisabled && (isDanger ? styles.dangerPressed : isText ? styles.textPressed : isOutline ? styles.outlinePressed : styles.tintPressed),
         pressed && !isDisabled && styles.pressedScale,
-        disabled && styles.disabled,
+        disabled && (isText ? styles.textDisabled : styles.disabled),
         style,
       ]}
     >
@@ -92,6 +101,25 @@ const useStyles = makeStyles((colors) => ({
   },
   outlinePressed: {
     backgroundColor: colors.m3.surfaceContainerLow,
+  },
+  text: {
+    minHeight: spacing.touchTargetMin,
+    backgroundColor: 'transparent',
+    paddingVertical: 0,
+  },
+  textDisabled: {
+    backgroundColor: 'transparent',
+  },
+  danger: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.error.text,
+  },
+  dangerPressed: {
+    backgroundColor: colors.error.background,
+  },
+  textPressed: {
+    backgroundColor: colors.surfaceVariant,
   },
   pressedScale: {
     transform: [{ scale: 0.97 }],

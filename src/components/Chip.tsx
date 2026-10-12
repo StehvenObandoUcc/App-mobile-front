@@ -20,6 +20,8 @@ export type ChipProps = {
   disabled?: boolean;
   onPress?: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
+  /** Contenido a la izquierda en lugar del icono (p. ej. el medidor de dificultad). */
+  leading?: React.ReactNode;
   /** 'choice': opción única de un grupo (radio), seleccionado en cacao sin ✓ (unidades, atajos de fecha). */
   variant?: 'filter' | 'choice' | 'category' | 'status';
   category?: IngredientCategory;
@@ -42,6 +44,7 @@ export function Chip({
   disabled = false,
   onPress,
   icon,
+  leading,
   variant = 'filter',
   category,
   status,
@@ -113,13 +116,13 @@ export function Chip({
           styles.visualChip,
           {
             backgroundColor: bg,
-            paddingLeft: resolvedIcon ? 10 : 14,
+            paddingLeft: resolvedIcon || leading ? 10 : 14,
           },
           border ? { borderWidth: 1, borderColor: border } : null,
           categorySelector && selected ? styles.ring : null,
         ]}
       >
-        {resolvedIcon && <Ionicons name={resolvedIcon} size={16} color={fg} />}
+        {leading ?? (resolvedIcon && <Ionicons name={resolvedIcon} size={16} color={fg} />)}
         <AppText variant="bodySmall" weight={weight} color={fg} numberOfLines={1}>
           {resolvedLabel}
         </AppText>

@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { useRouter, usePathname } from 'expo-router';
 import { spacing } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
@@ -173,7 +172,6 @@ export function AppScreen({
       style={[styles.safeArea, style]}
       edges={['top', 'left', 'right']}
     >
-      <StatusBar style="dark" />
       <Animated.View
         style={[styles.container, { opacity: enterOpacity, transform: [{ translateX: enterX }] }]}
         {...(canSwipe ? screenPanResponder.panHandlers : {})}

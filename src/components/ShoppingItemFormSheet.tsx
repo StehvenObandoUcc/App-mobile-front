@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Modal, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, Modal, ScrollView, Pressable, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
-import { TextInput } from './Text';
+import { LabeledField } from './LabeledField';
 import { IconButton } from './IconButton';
 import { PrimaryButton } from './PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
@@ -11,8 +11,8 @@ import { QuantityStepper } from './QuantityStepper';
 import { DialogTitle } from './DialogTitle';
 import { M3Dialog } from './M3Dialog';
 import { IngredientCategory, IngredientUnit } from '../types';
-import { radii, spacing, typography, elevations, CATEGORY_LIST } from '../theme';
-import { useTheme, makeStyles } from '../theme/ThemeProvider';
+import { radii, spacing, elevations, CATEGORY_LIST } from '../theme';
+import { makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
@@ -45,11 +45,9 @@ const UNIT_OPTIONS: { key: IngredientUnit; label: string; full: string }[] = [
 ];
 
 export function ShoppingItemFormSheet({ visible, values, onChange, onSubmit, onClose }: ShoppingItemFormSheetProps) {
-  const { colors } = useTheme();
   const { t } = useI18n();
   const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const [focused, setFocused] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
   const initialRef = useRef('');
 
@@ -68,35 +66,27 @@ export function ShoppingItemFormSheet({ visible, values, onChange, onSubmit, onC
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={requestClose}>
-      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.overlay} behavior="padding">
         <Pressable style={StyleSheet.absoluteFill} onPress={requestClose} accessibilityLabel={t('sheets.shoppingItemForm.closeFormA11y')} />
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]} accessibilityViewIsModal>
+        <View style={styles.sheet} accessibilityViewIsModal>
           <View style={styles.handle} />
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.body} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
               <View style={styles.flex}>
-                <DialogTitle title={t('sheets.shoppingItemForm.title')} emphasis={t('sheets.shoppingItemForm.titleEmphasis')} size={24} lineHeight={30} />
+                <DialogTitle title={t('sheets.shoppingItemForm.title')} emphasis={t('sheets.shoppingItemForm.titleEmphasis')} />
               </View>
               <IconButton iconName="close" variant="neutral" accessibilityLabel={t('sheets.shoppingItemForm.closeA11y')} onPress={requestClose} style={styles.closeBtn} />
             </View>
 
-            <View style={styles.field}>
-              <AppText variant="bodySmall" weight="semibold">
-                {t('sheets.shoppingItemForm.nameLabel')}
-              </AppText>
-              <TextInput
-                value={values.name}
-                onChangeText={(v) => onChange('name', v)}
-                placeholder={t('sheets.shoppingItemForm.namePlaceholder')}
-                placeholderTextColor={colors.textMuted}
-                maxLength={60}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                style={[styles.input, focused && styles.inputFocused]}
-                accessibilityLabel={t('sheets.shoppingItemForm.nameA11y')}
-                returnKeyType="done"
-              />
-            </View>
+            <LabeledField
+              label={t('sheets.shoppingItemForm.nameLabel')}
+              value={values.name}
+              onChangeText={(v) => onChange('name', v)}
+              placeholder={t('sheets.shoppingItemForm.namePlaceholder')}
+              maxLength={60}
+              accessibilityLabel={t('sheets.shoppingItemForm.nameA11y')}
+              returnKeyType="done"
+            />
 
             <View style={styles.qtyRow}>
               <AppText variant="bodySmall" weight="semibold" style={styles.flex}>
@@ -131,18 +121,19 @@ export function ShoppingItemFormSheet({ visible, values, onChange, onSubmit, onC
                 />
               ))}
             </View>
-
-            <View style={styles.actions}>
-              <SecondaryButton title={t('common.cancel')} variant="outline" onPress={requestClose} style={styles.flex} />
-              <PrimaryButton title={t('common.save')} iconName="checkmark" onPress={onSubmit} style={styles.flex} />
-            </View>
           </ScrollView>
+
+          {/* Pie fijo: «Cancelar» y «Guardar» siempre a la vista (como IngredientFormSheet) */}
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+            <SecondaryButton title={t('common.cancel')} variant="outline" onPress={requestClose} style={styles.flex} />
+            <PrimaryButton title={t('common.save')} iconName="checkmark" onPress={onSubmit} style={styles.flex} />
+          </View>
         </View>
       </KeyboardAvoidingView>
 
       <M3Dialog
         visible={confirmExit}
-        type="warning"
+        type="error"
         title={t('sheets.shoppingItemForm.exit.title')}
         titleEmphasis={t('sheets.shoppingItemForm.exit.emphasis')}
         message={t('sheets.shoppingItemForm.exit.message')}
@@ -184,9 +175,13 @@ const useStyles = makeStyles((colors) => ({
     borderRadius: 2,
     backgroundColor: colors.m3.outline,
   },
+  body: {
+    flexGrow: 0,
+  },
   content: {
     paddingHorizontal: spacing.screenGutter,
     paddingTop: 16,
+    paddingBottom: 20,
     gap: 16,
   },
   header: {
@@ -195,24 +190,6 @@ const useStyles = makeStyles((colors) => ({
   },
   closeBtn: {
     backgroundColor: colors.surfaceVariant,
-  },
-  field: {
-    gap: 6,
-  },
-  input: {
-    height: 56,
-    paddingHorizontal: 16,
-    borderRadius: radii.fields,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface,
-    fontSize: typography.sizes.body,
-    color: colors.textPrimary,
-  },
-  inputFocused: {
-    borderWidth: 2,
-    borderColor: colors.ink,
-    paddingHorizontal: 15,
   },
   qtyRow: {
     flexDirection: 'row',
@@ -224,9 +201,13 @@ const useStyles = makeStyles((colors) => ({
     flexWrap: 'wrap',
     columnGap: 6,
   },
-  actions: {
+  footer: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 4,
+    paddingHorizontal: spacing.screenGutter,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.m3.outlineVariant,
+    backgroundColor: colors.surface,
   },
 }));

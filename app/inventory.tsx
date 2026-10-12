@@ -4,7 +4,6 @@ import {
   StyleSheet,
   FlatList,
   ScrollView,
-  Pressable,
   Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
@@ -27,6 +26,7 @@ import {
   NAV_BOTTOM_OFFSET,
   M3DatePickerModal,
   Chip,
+  SecondaryButton,
   AppText,
   ScreenHeader,
   M3Dialog,
@@ -37,7 +37,7 @@ import {
 } from '../src/components';
 import { getExpirationStatus } from '../src/utils/expiration';
 import { daysUntil } from '../src/utils/dates';
-import { radii, spacing, typography, CATEGORY_LIST } from '../src/theme';
+import { radii, spacing, CATEGORY_LIST } from '../src/theme';
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 
@@ -105,13 +105,13 @@ export default function InventoryScreen() {
     visible: boolean;
     title: string;
     message: string;
-    type?: 'success' | 'info' | 'warning' | 'error';
+    type?: 'neutral' | 'ai' | 'success' | 'warning' | 'error';
     onConfirm: () => void;
   }>({
     visible: false,
     title: '',
     message: '',
-    type: 'info',
+    type: 'neutral',
     onConfirm: () => {},
   });
 
@@ -255,7 +255,7 @@ export default function InventoryScreen() {
         visible: true,
         title: t('screensMain.inventory.requiredTitle'),
         message: t('screensMain.inventory.requiredMessage'),
-        type: 'warning',
+        type: 'neutral',
         onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
       });
       return;
@@ -266,7 +266,7 @@ export default function InventoryScreen() {
         visible: true,
         title: t('screensMain.inventory.tooLongTitle'),
         message: t('screensMain.inventory.tooLongMessage'),
-        type: 'warning',
+        type: 'neutral',
         onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
       });
       return;
@@ -280,7 +280,7 @@ export default function InventoryScreen() {
           visible: true,
           title: t('screensMain.inventory.invalidQtyTitle'),
           message: t('screensMain.inventory.invalidQtyMessage'),
-          type: 'warning',
+          type: 'neutral',
           onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
         });
         return;
@@ -290,7 +290,7 @@ export default function InventoryScreen() {
           visible: true,
           title: t('screensMain.inventory.tooBigQtyTitle'),
           message: t('screensMain.inventory.tooBigQtyMessage'),
-          type: 'warning',
+          type: 'neutral',
           onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
         });
         return;
@@ -304,7 +304,7 @@ export default function InventoryScreen() {
           visible: true,
           title: t('screensMain.inventory.invalidDateTitle'),
           message: t('screensMain.inventory.invalidDateMessage'),
-          type: 'warning',
+          type: 'neutral',
           onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
         });
         return;
@@ -315,7 +315,7 @@ export default function InventoryScreen() {
           visible: true,
           title: t('screensMain.inventory.yearRangeTitle'),
           message: t('screensMain.inventory.yearRangeMessage'),
-          type: 'warning',
+          type: 'neutral',
           onConfirm: () => setDialogConfig((prev) => ({ ...prev, visible: false })),
         });
         return;
@@ -446,15 +446,14 @@ export default function InventoryScreen() {
               <AppText variant="metadata" weight="semibold" color={colors.textSecondary}>
                 {t('screensMain.inventory.countLine', { count: filteredItems.length, noun: tp('screensMain.shared.food', filteredItems.length) })}
               </AppText>
-              <Pressable
+              <SecondaryButton
+                title={t('screensMain.inventory.select')}
+                variant="text"
+                iconName="checkmark-circle-outline"
                 onPress={handleEnterSelectMode}
-                style={styles.selectEntryBtn}
-                accessibilityRole="button"
                 accessibilityLabel={t('screensMain.inventory.selectEntryA11y')}
-              >
-                <Ionicons name="checkmark-circle-outline" size={18} color={colors.textPrimary} />
-                <AppText variant="metadata" weight="semibold">{t('screensMain.inventory.select')}</AppText>
-              </Pressable>
+                style={styles.selectEntryBtn}
+              />
             </View>
           )}
     </View>
@@ -708,22 +707,8 @@ const useStyles = makeStyles((colors) => ({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.xs,
   },
-  countRowText: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: typography.weights.semibold,
-    color: colors.textSecondary,
-  },
   selectEntryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 48,
-    paddingHorizontal: spacing.xs,
-  },
-  selectEntryBtnText: {
-    fontSize: typography.sizes.metadata,
-    fontWeight: typography.weights.semibold,
-    color: colors.textPrimary,
+    paddingHorizontal: spacing.sm,
   },
   // La cabecera de la lista ya trae su propio margen lateral: se compensa el de la lista.
   listHeader: {

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Modal, Animated, Pressable } from 'react-native';
+import { View, StyleSheet, Modal, Animated, Pressable, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { DialogTitle } from './DialogTitle';
@@ -12,9 +12,14 @@ import { useI18n } from '../i18n';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
- * M3Dialog — Organismos.dc.html (success · info · warning · error)
+ * M3Dialog — Organismos.dc.html (neutral · ai · success · warning · error)
  * Tarjeta blanca radio 32 · icono en cuadrado pastel 52 · título 22/28 300 + 600 ·
  * mensaje 15/22 · botones a lo ancho. Misma API que antes (+ titleEmphasis y confirmTone opcionales).
+ *
+ * Semántica de color (paleta Sandía): el tipo por defecto es `neutral` (avisos genéricos, validación,
+ * sin conexión, límites, cerrar sesión). Ladrillo (`error`) SOLO para errores y borrar/descartar; Miel
+ * (`warning`) SOLO para vencimientos; Ciruela (`ai`) SOLO para la IA; `success` en Lima.
+ * Con `children` (p. ej. un campo de contraseña) la tarjeta sube con el teclado.
  */
 export interface M3DialogProps {
   visible: boolean;
@@ -22,7 +27,7 @@ export interface M3DialogProps {
   /** Parte del título en seminegrita; por defecto la última palabra. */
   titleEmphasis?: string;
   message: string;
-  type?: 'success' | 'info' | 'warning' | 'error';
+  type?: 'neutral' | 'ai' | 'success' | 'warning' | 'error';
   iconName?: keyof typeof Ionicons.glyphMap;
   confirmText?: string;
   onConfirm: () => void;
@@ -44,7 +49,8 @@ export interface M3DialogProps {
 
 const typesFor = (colors: ThemeColors) => ({
   success: { bg: colors.functional.fresh.background, fg: colors.functional.fresh.text, icon: 'checkmark-circle-outline' as const },
-  info: { bg: colors.tertiaryContainer, fg: colors.tertiary, icon: 'sparkles-outline' as const },
+  neutral: { bg: colors.surfaceVariant, fg: colors.textPrimary, icon: 'information-circle-outline' as const },
+  ai: { bg: colors.tertiaryContainer, fg: colors.tertiary, icon: 'sparkles-outline' as const },
   warning: { bg: colors.functional.expiringSoon.background, fg: colors.functional.expiringSoon.text, icon: 'alert-circle-outline' as const },
   error: { bg: colors.error.background, fg: colors.error.text, icon: 'alert-circle-outline' as const },
 });
@@ -54,7 +60,7 @@ export function M3Dialog({
   title,
   titleEmphasis,
   message,
-  type = 'info',
+  type = 'neutral',
   iconName,
   confirmText,
   onConfirm,
@@ -92,13 +98,16 @@ export function M3Dialog({
   }, [visible, scaleAnim, opacityAnim, reduceMotion]);
 
   const tones = typesFor(colors);
-  const tone = tones[type] ?? tones.info;
+  const tone = tones[type] ?? tones.neutral;
   const hasCancel = Boolean(cancelText && onCancel);
   const dismiss = onDismiss || onCancel || onConfirm;
+  // Con contenido (campos de texto) la tarjeta sube con el teclado: dentro de un Modal la ventana no se redimensiona.
+  const Backdrop = children ? KeyboardAvoidingView : View;
+  const backdropProps = children ? ({ behavior: 'padding' } as const) : {};
 
   return (
     <Modal visible={visible} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={dismiss}>
-      <View style={styles.backdrop}>
+      <Backdrop style={styles.backdrop} {...backdropProps}>
         <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} accessibilityLabel={t('atoms.m3Dialog.closeA11y')} />
         <Animated.View
           style={[styles.card, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}
@@ -108,7 +117,7 @@ export function M3Dialog({
           <View style={[styles.icon, hero && styles.iconHero, { backgroundColor: tone.bg }]}>
             <Ionicons name={iconName ?? tone.icon} size={26} color={tone.fg} />
           </View>
-          <DialogTitle title={title} emphasis={titleEmphasis} size={hero ? 26 : 22} lineHeight={hero ? 32 : 28} />
+          <DialogTitle title={title} emphasis={titleEmphasis} />
           {!!message && (
             <AppText variant="body" color={colors.textSecondary} style={styles.message}>
               {message}
@@ -139,7 +148,7 @@ export function M3Dialog({
             </View>
           )}
         </Animated.View>
-      </View>
+      </Backdrop>
     </Modal>
   );
 }

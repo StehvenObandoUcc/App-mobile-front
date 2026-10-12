@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { TextInput } from './Text';
+import { useEnsureFieldVisible, useReleaseField } from './KeyboardAwareScroll';
 import { radii } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { CODE_LENGTH, sanitizeCode } from '../utils/auth-flow';
@@ -23,9 +24,13 @@ export type CodeFieldProps = {
 export function CodeField({ label, accessibilityLabel, value, onChangeText, onSubmitEditing, autoFocus }: CodeFieldProps) {
   const styles = useStyles();
   const [focused, setFocused] = useState(false);
+  const groupRef = useRef<View>(null);
+  const ensureVisible = useEnsureFieldVisible();
+  const release = useReleaseField();
+  useEffect(() => () => release(groupRef.current), [release]);
   const digits = sanitizeCode(value);
   return (
-    <View style={styles.group}>
+    <View ref={groupRef} style={styles.group} collapsable={false}>
       <AppText variant="bodySmall" weight="semibold">
         {label}
       </AppText>
@@ -56,8 +61,14 @@ export function CodeField({ label, accessibilityLabel, value, onChangeText, onSu
           caretHidden
           returnKeyType="done"
           onSubmitEditing={onSubmitEditing}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={() => {
+            setFocused(true);
+            ensureVisible(groupRef.current);
+          }}
+          onBlur={() => {
+            setFocused(false);
+            release(groupRef.current);
+          }}
           accessibilityLabel={accessibilityLabel}
           style={styles.hiddenInput}
         />
@@ -66,7 +77,7 @@ export function CodeField({ label, accessibilityLabel, value, onChangeText, onSu
   );
 }
 
-/** AuthErrorBox — error en línea (mismo patrón que el formulario de login). */
+/** AuthErrorBox — error en línea de las cuatro pantallas de autenticación (login, verificar, olvidé, nueva contraseña). */
 export function AuthErrorBox({ title, message }: { title?: string; message: string }) {
   const { colors } = useTheme();
   const styles = useStyles();

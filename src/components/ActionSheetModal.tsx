@@ -4,8 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
 import { DialogTitle } from './DialogTitle';
-import { PrimaryButton } from './PrimaryButton';
-import { SecondaryButton } from './SecondaryButton';
 import { M3Dialog } from './M3Dialog';
 import { spacing, radii, elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
@@ -17,8 +15,8 @@ import { useReduceMotion } from '../hooks/useReduceMotion';
  * Hoja inferior radio 32 con asa. Cabecera opcional con icono pastel (p. ej. el alimento).
  * - action_sheet: filas de 56 dp (icono 22 + texto 16); las destructivas van al final, en rojo,
  *   separadas por un filete.
- * - confirmation: se muestra como la tarjeta centrada de M3Dialog (icono de basura en rojo si es
- *   destructiva, título 300 + 600, descripción, «Cancelar» + confirmar en rojo o cacao).
+ * - confirmation: se muestra como la tarjeta centrada de M3Dialog (destructiva: tipo `error`, icono de
+ *   basura y confirmar en Ladrillo; no destructiva: tipo `neutral` y confirmar en Sandía).
  * Misma API que antes; `headerIconName`/`headerTone` son opcionales.
  */
 export interface ActionSheetOption {
@@ -112,7 +110,7 @@ export function ActionSheetModal({
     return (
       <M3Dialog
         visible={visible}
-        type={confirmDestructive ? 'error' : 'info'}
+        type={confirmDestructive ? 'error' : 'neutral'}
         iconName={confirmDestructive ? 'trash-outline' : undefined}
         title={title}
         titleEmphasis={titleEmphasis}
@@ -165,7 +163,7 @@ export function ActionSheetModal({
 
           {variant === 'choices' ? (
             <View style={styles.choices}>
-              <DialogTitle title={title} emphasis={titleEmphasis} size={24} lineHeight={30} />
+              <DialogTitle title={title} emphasis={titleEmphasis} />
               {!!description && (
                 <AppText variant="bodySmall" color={colors.textSecondary} style={styles.choicesSubtitle}>
                   {description}
@@ -207,7 +205,7 @@ export function ActionSheetModal({
                 </AppText>
               </Pressable>
             </View>
-          ) : variant === 'action_sheet' ? (
+          ) : (
             <>
               <View style={styles.header}>
                 {headerIconName && (
@@ -230,27 +228,6 @@ export function ActionSheetModal({
               {destructive.length > 0 && normal.length > 0 && <View style={styles.divider} />}
               {destructive.map((a, i) => renderRow(a, `d${i}`))}
             </>
-          ) : (
-            <View style={styles.confirm}>
-              <DialogTitle title={title} />
-              {!!description && (
-                <AppText variant="body" color={colors.textSecondary} style={styles.description}>
-                  {description}
-                </AppText>
-              )}
-              <View style={styles.confirmActions}>
-                <SecondaryButton title={cancelText} variant="outline" onPress={onClose} style={styles.confirmBtn} />
-                <PrimaryButton
-                  title={confirmText}
-                  tone={confirmDestructive ? 'danger' : 'ink'}
-                  onPress={() => {
-                    onClose();
-                    onConfirm?.();
-                  }}
-                  style={styles.confirmBtn}
-                />
-              </View>
-            </View>
           )}
         </Animated.View>
       </Animated.View>
@@ -357,23 +334,5 @@ const useStyles = makeStyles((colors) => ({
   },
   choiceCancelText: {
     fontSize: 15,
-  },
-  confirm: {
-    gap: spacing.md,
-    paddingHorizontal: spacing.sm,
-    paddingTop: spacing.xs,
-  },
-  description: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  confirmActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 6,
-  },
-  confirmBtn: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
   },
 }));

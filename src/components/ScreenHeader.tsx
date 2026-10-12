@@ -16,16 +16,19 @@ export type ScreenHeaderProps = {
   subtitle?: string;
   overline?: string;
   right?: React.ReactNode;
+  /** Hueco a la izquierda del título, p. ej. el botón «volver». */
+  leading?: React.ReactNode;
   /** Por defecto 'screenTitle' (32). 'headline' (24) para cabeceras compactas. */
   size?: 'screenTitle' | 'headline';
 };
 
-export function ScreenHeader({ title, emphasis, subtitle, overline, right, size = 'screenTitle' }: ScreenHeaderProps) {
+export function ScreenHeader({ title, emphasis, subtitle, overline, right, leading, size = 'screenTitle' }: ScreenHeaderProps) {
   const { colors } = useTheme();
   const styles = useStyles();
   const a11y = [overline, [title, emphasis].filter(Boolean).join(' '), subtitle].filter(Boolean).join('. ');
   return (
     <View style={styles.row}>
+      {leading ? <View style={styles.leading}>{leading}</View> : null}
       <View style={styles.texts} accessible accessibilityRole="header" accessibilityLabel={a11y}>
         {overline ? (
           <AppText variant="bodySmall" color={colors.textSecondary}>
@@ -56,6 +59,9 @@ const useStyles = makeStyles((colors) => ({
   texts: {
     flex: 1,
     gap: 2,
+  },
+  leading: {
+    flexShrink: 0,
   },
   right: {
     flexDirection: 'row',

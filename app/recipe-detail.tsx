@@ -37,7 +37,7 @@ type DialogState = {
   title: string;
   titleEmphasis?: string;
   message: string;
-  type?: 'success' | 'info' | 'warning' | 'error';
+  type?: 'neutral' | 'ai' | 'success' | 'warning' | 'error';
   iconName?: keyof typeof Ionicons.glyphMap;
   confirmText?: string;
   cancelText?: string;
@@ -255,7 +255,7 @@ export default function RecipeDetailScreen() {
       title: partial ? t('screensMain.recipeDetail.partialTitle') : t('screensMain.recipeDetail.doneTitle'),
       titleEmphasis: partial ? t('screensMain.recipeDetail.partialEmphasis') : t('screensMain.recipeDetail.doneEmphasis'),
       message: validation.inventoryDeductionNotice,
-      type: partial ? 'warning' : 'info',
+      type: 'neutral',
       iconName: partial ? undefined : 'restaurant-outline',
       confirmText: partial ? t('screensMain.recipeDetail.partialConfirm') : t('screensMain.recipeDetail.doneConfirm'),
       cancelText: t('screensMain.recipeDetail.notYet'),
@@ -288,12 +288,12 @@ export default function RecipeDetailScreen() {
           {/* ── Encabezado ── */}
           <View style={styles.intro}>
             <AiBadge label={t('screensMain.recipeDetail.matchLabel', { score: recipe.matchScore })} />
-            <AppText weight="light" style={styles.title} accessibilityRole="header">
+            <AppText variant="screenTitle" weight="light" accessibilityRole="header">
               {lead ? `${lead} ` : ''}
               <AppText weight="semibold">{emphasis}</AppText>
             </AppText>
             {!!recipe.description && (
-              <AppText variant="body" color={colors.textSecondary} style={styles.description}>
+              <AppText variant="body" color={colors.textSecondary}>
                 {recipe.description}
               </AppText>
             )}
@@ -412,14 +412,6 @@ const useStyles = makeStyles((colors) => ({
   },
   intro: {
     gap: 10,
-  },
-  title: {
-    fontSize: 30,
-    lineHeight: 36,
-  },
-  description: {
-    fontSize: 15,
-    lineHeight: 22,
   },
   stats: {
     flexDirection: 'row',

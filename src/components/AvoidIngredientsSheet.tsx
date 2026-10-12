@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Modal, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet, Modal, Pressable, ScrollView, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
-import { TextInput } from './Text';
+import { LabeledField } from './LabeledField';
 import { DialogTitle } from './DialogTitle';
 import { PrimaryButton } from './PrimaryButton';
 import { IconButton } from './IconButton';
-import { radii, spacing, typography, elevations } from '../theme';
+import { Chip } from './Chip';
+import { radii, spacing, elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
@@ -29,7 +29,6 @@ export function AvoidIngredientsSheet({ visible, value, onSave, onClose }: Avoid
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<string[]>(value);
   const [text, setText] = useState('');
-  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -52,52 +51,47 @@ export function AvoidIngredientsSheet({ visible, value, onSave, onClose }: Avoid
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.overlay} behavior="padding">
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={t('common.close')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 16 }]} accessibilityViewIsModal>
           <View style={styles.handle} />
-          <DialogTitle title={t('sheets.avoidIngredients.title')} emphasis={t('sheets.avoidIngredients.titleEmphasis')} size={24} lineHeight={30} />
+          <DialogTitle title={t('sheets.avoidIngredients.title')} emphasis={t('sheets.avoidIngredients.titleEmphasis')} />
           <AppText variant="bodySmall" color={colors.textSecondary}>
             {t('sheets.avoidIngredients.description')}
           </AppText>
           <View style={styles.inputRow}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              onSubmitEditing={add}
-              placeholder={t('sheets.avoidIngredients.placeholder')}
-              placeholderTextColor={colors.textMuted}
-              maxLength={80}
-              returnKeyType="done"
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              style={[styles.input, focused && styles.inputFocused]}
-              accessibilityLabel={t('sheets.avoidIngredients.inputA11y')}
-            />
-            <IconButton iconName="add" variant="ink" accessibilityLabel={t('sheets.avoidIngredients.addA11y')} onPress={add} />
+            <View style={styles.flex}>
+              <LabeledField
+                label={t('sheets.avoidIngredients.inputLabel')}
+                value={text}
+                onChangeText={setText}
+                onSubmitEditing={add}
+                placeholder={t('sheets.avoidIngredients.placeholder')}
+                maxLength={80}
+                returnKeyType="done"
+                accessibilityLabel={t('sheets.avoidIngredients.inputA11y')}
+              />
+            </View>
+            <IconButton iconName="add" variant="ink" accessibilityLabel={t('sheets.avoidIngredients.addA11y')} onPress={add} style={styles.addBtn} />
           </View>
-          <View style={styles.chips}>
-            {items.length === 0 ? (
-              <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
-                {t('sheets.avoidIngredients.none')}
-              </AppText>
-            ) : (
-              items.map((it) => (
-                <Pressable
+          {items.length === 0 ? (
+            <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
+              {t('sheets.avoidIngredients.none')}
+            </AppText>
+          ) : (
+            // Lista con alto máximo: con muchos ingredientes (hasta 20) el campo y «Guardar» siguen a la vista.
+            <ScrollView style={styles.chipsScroll} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+              {items.map((it) => (
+                <Chip
                   key={it}
+                  label={it}
+                  icon="close"
                   onPress={() => setItems((prev) => prev.filter((p) => p !== it))}
-                  style={styles.chip}
-                  accessibilityRole="button"
                   accessibilityLabel={t('sheets.avoidIngredients.removeA11y', { name: it })}
-                >
-                  <AppText variant="bodySmall" weight="semibold" color={colors.functional.expired.text}>
-                    {it}
-                  </AppText>
-                  <Ionicons name="close" size={16} color={colors.functional.expired.text} />
-                </Pressable>
-              ))
-            )}
-          </View>
+                />
+              ))}
+            </ScrollView>
+          )}
           <PrimaryButton
             title={t('common.save')}
             iconName="checkmark"
@@ -136,40 +130,23 @@ const useStyles = makeStyles((colors) => ({
     backgroundColor: colors.m3.outline,
     marginBottom: 6,
   },
+  flex: { flex: 1 },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 8,
   },
-  input: {
-    flex: 1,
-    height: 56,
-    paddingHorizontal: 16,
-    borderRadius: radii.fields,
-    borderWidth: 1,
-    borderColor: colors.m3.outline,
-    fontSize: typography.sizes.body,
-    color: colors.textPrimary,
+  addBtn: {
+    // Centrado respecto a la caja del campo (52 dp), no a la etiqueta.
+    marginBottom: 2,
   },
-  inputFocused: {
-    borderWidth: 2,
-    borderColor: colors.ink,
-    paddingHorizontal: 15,
+  chipsScroll: {
+    maxHeight: 148,
+    flexGrow: 0,
   },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    minHeight: 24,
-  },
-  chip: {
-    height: 36,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingLeft: 14,
-    paddingRight: 10,
-    borderRadius: radii.pill,
-    backgroundColor: colors.functional.expired.background,
+    columnGap: 6,
   },
 }));

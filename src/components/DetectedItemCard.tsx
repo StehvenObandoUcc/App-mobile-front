@@ -38,13 +38,18 @@ export function expiryLabel(date: string | null, t: typeof TFn, tp: typeof TpFn)
   return tp('organisms.detectedItemCard.daysLeft', d);
 }
 
-/** ≥ 80 % seguro · 60–79 % revisa · < 60 % verifica. */
+/**
+ * ≥ 80 % seguro · 60–79 % revisa · < 60 % verifica.
+ * Solo «seguro» lleva color (Lima); «revisa» y «verifica» son neutros con icono: Miel es solo para
+ * vencimientos y Ladrillo solo para errores, y una confianza baja no es ninguna de las dos.
+ */
 export function confidenceBadge(colors: ThemeColors, confidence: number | null | undefined, t: typeof TFn) {
   if (confidence === null || confidence === undefined) return null;
   const pct = Math.round(confidence * 100);
-  if (confidence >= 0.8) return { label: t('organisms.detectedItemCard.confidenceSafe', { pct }), tone: colors.functional.fresh };
-  if (confidence >= 0.6) return { label: t('organisms.detectedItemCard.confidenceReview', { pct }), tone: colors.functional.expiringSoon };
-  return { label: t('organisms.detectedItemCard.confidenceVerify'), tone: colors.functional.expired };
+  const neutral = { background: colors.surfaceVariant, text: colors.textSecondary };
+  if (confidence >= 0.8) return { label: t('organisms.detectedItemCard.confidenceSafe', { pct }), tone: colors.functional.fresh, icon: 'checkmark-circle-outline' as const };
+  if (confidence >= 0.6) return { label: t('organisms.detectedItemCard.confidenceReview', { pct }), tone: neutral, icon: 'eye-outline' as const };
+  return { label: t('organisms.detectedItemCard.confidenceVerify'), tone: neutral, icon: 'help-circle-outline' as const };
 }
 
 export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, mergeChecked = true, onToggleMerge, mergeCompatible = true }: DetectedItemCardProps) {
@@ -95,6 +100,7 @@ export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, m
           </AppText>
           {badge && (
             <View style={[styles.badge, { backgroundColor: badge.tone.background }]}>
+              <Ionicons name={badge.icon} size={14} color={badge.tone.text} />
               <AppText variant="caption" weight="semibold" color={badge.tone.text}>
                 {badge.label}
               </AppText>
@@ -204,6 +210,9 @@ const useStyles = makeStyles((colors) => ({
   badge: {
     alignSelf: 'flex-start',
     height: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 8,
     borderRadius: radii.pill,
     justifyContent: 'center',

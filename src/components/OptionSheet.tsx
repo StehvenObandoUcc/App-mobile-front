@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, StyleSheet, Modal, Pressable, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
 import { DialogTitle } from './DialogTitle';
+import { OptionRow } from './OptionRow';
 import { radii, spacing, elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
@@ -31,43 +31,25 @@ export function OptionSheet<V extends string | number | null>({ visible, title, 
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={t('common.close')} />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]} accessibilityViewIsModal>
           <View style={styles.handle} />
-          <DialogTitle title={title} emphasis={emphasis} size={24} lineHeight={30} />
+          <DialogTitle title={title} emphasis={emphasis} />
           {!!description && (
             <AppText variant="bodySmall" color={colors.textSecondary}>
               {description}
             </AppText>
           )}
           <ScrollView style={styles.list} accessibilityRole="radiogroup">
-            {options.map((o) => {
-              const selected = o.value === value;
-              return (
-                <Pressable
-                  key={String(o.value)}
-                  onPress={() => {
-                    onSelect(o.value);
-                    onClose();
-                  }}
-                  style={({ pressed }) => [styles.row, selected && styles.rowSelected, pressed && styles.rowPressed]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selected }}
-                  accessibilityLabel={o.hint ? `${o.label}. ${o.hint}` : o.label}
-                >
-                  <View style={styles.texts}>
-                    <AppText variant="body" weight={selected ? 'semibold' : 'regular'}>
-                      {o.label}
-                    </AppText>
-                    {!!o.hint && (
-                      <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
-                        {o.hint}
-                      </AppText>
-                    )}
-                  </View>
-                  <View style={[styles.radio, selected && styles.radioOn]}>
-                    {selected && <Ionicons name="checkmark" size={14} color={colors.onInk} />}
-                  </View>
-                </Pressable>
-              );
-            })}
+            {options.map((o) => (
+              <OptionRow
+                key={String(o.value)}
+                label={o.label}
+                hint={o.hint}
+                selected={o.value === value}
+                onPress={() => {
+                  onSelect(o.value);
+                  onClose();
+                }}
+              />
+            ))}
           </ScrollView>
         </View>
       </View>
@@ -101,37 +83,5 @@ const useStyles = makeStyles((colors) => ({
   },
   list: {
     flexGrow: 0,
-  },
-  row: {
-    minHeight: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: radii.fields,
-  },
-  rowSelected: {
-    backgroundColor: colors.surfaceVariant,
-  },
-  rowPressed: {
-    backgroundColor: colors.m3.surfaceContainer,
-  },
-  texts: {
-    flex: 1,
-    gap: 2,
-  },
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.m3.outline,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioOn: {
-    backgroundColor: colors.ink,
-    borderColor: colors.ink,
   },
 }));

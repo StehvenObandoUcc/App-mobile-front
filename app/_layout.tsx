@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useAuth } from '../src/hooks/useAuth';
+import { t } from '../src/i18n';
 import { AppBottomNav, Text } from '../src/components';
 import { colors as lightColors, typography } from '../src/theme';
 import { primeAppPermissionsOnce } from '../src/utils/permissions';
@@ -96,7 +97,7 @@ function RootLayout() {
   if (!appReady) {
     return (
       // Igual al splash nativo (mismo logo, mismo tamaño y fondo avena): el paso a la app no «salta».
-      <View style={styles.splashContainer} accessibilityLabel="Food AI cargando">
+      <View style={styles.splashContainer} accessibilityLabel={t('common.appLoadingA11y')}>
         <Image source={{ uri: LOGO_MARK_URI }} style={styles.splashLogo} fadeDuration={0} />
         <ActivityIndicator size="small" color={lightColors.ink} style={styles.splashSpinner} />
       </View>

@@ -17,6 +17,7 @@ export const typography = {
   },
   sizes: {
     displayNumber: 44, // NUEVO: cifras grandes (días, métricas del Inicio)
+    ticketNumber: 24, // cifra grande del «boleto» de caducidad de IngredientCard
     screenTitle: 32, // 30 → 32 · M3 displaySmall (peso 300 + énfasis 600)
     headline: 24, // M3 headlineSmall
     sectionTitle: 20, // 21 → 20 · M3 titleLarge
@@ -38,6 +39,7 @@ export const typography = {
   },
   lineHeights: {
     displayNumber: 48,
+    ticketNumber: 26,
     screenTitle: 40,
     headline: 32,
     sectionTitle: 28,

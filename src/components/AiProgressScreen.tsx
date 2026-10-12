@@ -66,7 +66,7 @@ export function AiProgressScreen({
         {topSlot && <View style={[styles.top, { top: insets.top + 24 }]}>{topSlot}</View>}
         <HeroArt iconName={iconName} blobColor={colors.tertiaryContainer} tileColor={colors.tertiary} iconColor={colors.m3.onTertiary} />
 
-        <AppText weight="light" align="center" style={styles.title} accessibilityRole="header">
+        <AppText variant="headline" weight="light" align="center" accessibilityRole="header">
           {`${title} `}
           <AppText weight="semibold">{emphasis}</AppText>
         </AppText>
@@ -104,7 +104,7 @@ export function AiProgressScreen({
         </View>
 
         {footnote && (
-          <AppText variant="bodySmall" color={colors.textSecondary} align="center" style={styles.footnote}>
+          <AppText variant="bodySmall" color={colors.textSecondary} align="center">
             {footnote}
           </AppText>
         )}
@@ -130,14 +130,6 @@ const useStyles = makeStyles((colors) => ({
     right: 0,
     alignItems: 'center',
   },
-  footnote: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  title: {
-    fontSize: 28,
-    lineHeight: 34,
-  },
   steps: {
     alignSelf: 'stretch',
     gap: 10,
@@ -156,7 +148,6 @@ const useStyles = makeStyles((colors) => ({
   },
   stepText: {
     flex: 1,
-    fontSize: 15,
   },
   doneDot: {
     width: 24,

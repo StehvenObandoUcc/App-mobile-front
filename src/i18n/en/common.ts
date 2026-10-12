@@ -9,6 +9,7 @@ export const common: typeof Es = {
   close: 'Close',
   retry: 'Try again',
   loading: 'Loading…',
+  appLoadingA11y: 'Food AI loading',
   gotIt: 'Got it',
   syncing: 'Syncing…',
   diets: {

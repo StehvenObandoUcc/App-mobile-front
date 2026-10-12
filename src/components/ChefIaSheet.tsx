@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Modal, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, Modal, ScrollView, Pressable, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
-import { TextInput } from './Text';
+import { LabeledField } from './LabeledField';
 import { IconButton } from './IconButton';
 import { PrimaryButton } from './PrimaryButton';
 import { Chip } from './Chip';
@@ -14,7 +14,7 @@ import { DifficultyPicker } from './DifficultyPicker';
 import { OptionPills } from './OptionPills';
 import { SegmentedControl } from './SegmentedControl';
 import { Ingredient, RecipeDifficulty, DietaryPreference, DIETARY_OPTIONS, RecipeFocus, RECIPE_FOCUS_OPTIONS } from '../types';
-import { radii, spacing, typography, elevations, getCategoryConfig } from '../theme';
+import { radii, spacing, elevations, getCategoryConfig } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import type { ThemeColors } from '../theme/colors';
 import { daysUntil } from '../utils/dates';
@@ -56,7 +56,8 @@ export type ChefIaSheetProps = {
 
 const focusTonesFor = (colors: ThemeColors): Record<RecipeFocus, { background: string; text: string }> => ({
   custom: { background: colors.tertiaryContainer, text: colors.onTertiaryContainer },
-  quick: { background: colors.functional.expiringSoon.background, text: colors.functional.expiringSoon.text },
+  // «Rápida» no es un vencimiento: superficie neutra (Miel es solo para vencimientos y límites).
+  quick: { background: colors.m3.surfaceContainer, text: colors.textPrimary },
   waste_reduction: { background: colors.functional.fresh.background, text: colors.functional.fresh.text },
 });
 const FOCUS_TITLE_KEYS: Record<RecipeFocus, string> = {
@@ -112,7 +113,7 @@ export function ChefIaSheet({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
-      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.overlay} behavior="padding">
         <Pressable style={StyleSheet.absoluteFill} onPress={close} disabled={!canClose} accessibilityLabel={t('sheets.chefIa.closeChefA11y')} />
         <View style={styles.sheet} accessibilityViewIsModal>
           <View style={styles.handle} />
@@ -121,7 +122,7 @@ export function ChefIaSheet({
             <View style={styles.badge}>
               <Ionicons name="sparkles" size={24} color={colors.m3.onTertiary} />
             </View>
-            <AppText weight="light" style={styles.title} accessibilityRole="header">
+            <AppText variant="headline" weight="light" style={styles.title} accessibilityRole="header">
               {t('sheets.chefIa.title')} <AppText weight="semibold">{t('sheets.chefIa.titleEmphasis')}</AppText>
             </AppText>
             <IconButton
@@ -142,7 +143,7 @@ export function ChefIaSheet({
           >
             {/* ── Enfoque ── */}
             <StaggerView index={0} delayMs={70} duration={320} style={styles.section}>
-              <AppText variant="body" weight="semibold" style={styles.label}>
+              <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.focusQuestion')}
               </AppText>
               <FocusFolders options={focusOptionsFor(colors, t)} value={values.focus} onChange={(f) => onChange('focus', f)} />
@@ -162,13 +163,12 @@ export function ChefIaSheet({
                       </StaggerView>
                     ))}
                   </View>
-                  <TextInput
+                  <LabeledField
+                    label={t('sheets.chefIa.noteLabel')}
                     value={values.note}
                     onChangeText={(v) => onChange('note', v)}
                     placeholder={t('sheets.chefIa.notePlaceholder')}
-                    placeholderTextColor={colors.textMuted}
                     maxLength={60}
-                    style={styles.noteInput}
                     accessibilityLabel={t('sheets.chefIa.noteA11y')}
                     returnKeyType="done"
                   />
@@ -179,7 +179,7 @@ export function ChefIaSheet({
             {/* ── Ingredientes ── */}
             <StaggerView index={1} delayMs={70} duration={320} style={styles.section}>
               <View style={styles.rowBetween}>
-                <AppText variant="body" weight="semibold" style={styles.label}>
+                <AppText variant="body" weight="semibold">
                   {t('sheets.chefIa.ingredientsLabel')}{' '}
                   <AppText weight="regular" color={colors.textSecondary}>{t('sheets.chefIa.ingredientsCount', { selected: values.ingredientIds.size, total: ingredients.length })}</AppText>
                 </AppText>
@@ -235,7 +235,7 @@ export function ChefIaSheet({
 
             {/* ── Dieta ── */}
             <StaggerView index={2} delayMs={70} duration={320} style={styles.section}>
-              <AppText variant="body" weight="semibold" style={styles.label}>
+              <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.dietLabel')}
               </AppText>
               <View style={styles.wrap} accessibilityRole="radiogroup" accessibilityLabel={t('sheets.chefIa.dietLabel')}>
@@ -247,7 +247,7 @@ export function ChefIaSheet({
 
             {/* ── Dificultad ── */}
             <StaggerView index={3} delayMs={70} duration={320} style={styles.section}>
-              <AppText variant="body" weight="semibold" style={styles.label}>
+              <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.difficultyLabel')}
               </AppText>
               <DifficultyPicker value={values.difficulty} onChange={(d) => onChange('difficulty', d)} />
@@ -255,7 +255,7 @@ export function ChefIaSheet({
 
             {/* ── Tiempo ── */}
             <StaggerView index={4} delayMs={70} duration={320} style={styles.section}>
-              <AppText variant="body" weight="semibold" style={styles.label}>
+              <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.timeLabel')}
               </AppText>
               <OptionPills
@@ -274,7 +274,7 @@ export function ChefIaSheet({
 
             {/* ── Cantidad ── */}
             <StaggerView index={5} delayMs={70} duration={320} style={styles.section}>
-              <AppText variant="body" weight="semibold" style={styles.label}>
+              <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.howManyLabel')}
               </AppText>
               <SegmentedControl
@@ -307,7 +307,7 @@ export function ChefIaSheet({
 function Hint({ text, warning, icon }: { text: string; warning?: boolean; icon?: keyof typeof Ionicons.glyphMap }) {
   const { colors } = useTheme();
   const styles = useStyles();
-  const fg = warning ? colors.functional.expiringSoon.text : colors.tertiary;
+  const fg = warning ? colors.textPrimary : colors.tertiary;
   return (
     <View style={styles.hint}>
       <Ionicons name={icon ?? (warning ? 'alert-circle-outline' : 'sparkles-outline')} size={16} color={fg} />
@@ -356,8 +356,6 @@ const useStyles = makeStyles((colors) => ({
   },
   title: {
     flex: 1,
-    fontSize: 28,
-    lineHeight: 34,
   },
   closeBtn: {
     backgroundColor: colors.surfaceVariant,
@@ -373,9 +371,6 @@ const useStyles = makeStyles((colors) => ({
   },
   section: {
     gap: 10,
-  },
-  label: {
-    fontSize: 15,
   },
   rowBetween: {
     flexDirection: 'row',
@@ -405,15 +400,6 @@ const useStyles = makeStyles((colors) => ({
   custom: {
     gap: 10,
     marginTop: 4,
-  },
-  noteInput: {
-    height: 52,
-    paddingHorizontal: 16,
-    borderRadius: radii.fields,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    fontSize: typography.sizes.body,
-    color: colors.textPrimary,
   },
   hint: {
     flexDirection: 'row',

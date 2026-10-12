@@ -20,6 +20,7 @@ export const spacing = {
   touchTargetMin: 48, // Touch target mínimo de 48dp para Android
   buttonHeight: 52,   // 48 → 52: alinea el token con la altura real de los botones
   inputHeight: 52,    // 48 → 52: campos de entrada
+  fieldHeightLarge: 56, // campos de los formularios de acceso (mockup Login-Formulario); el resto usa inputHeight
 
   // ─── Alias semánticos (Despensa Tonal · Etapa 2) ────────────────────────────
   screenGutter: 20,   // Margen lateral de pantalla

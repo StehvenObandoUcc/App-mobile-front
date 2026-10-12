@@ -48,7 +48,7 @@ export default function LegalScreen() {
         />
 
         <View style={styles.titleBlock}>
-          <AppText weight="light" style={styles.title} accessibilityRole="header">
+          <AppText variant="screenTitle" weight="light" accessibilityRole="header">
             {terms ? t('screensFlow.legal.termsTitle') : t('screensFlow.legal.privacyTitle')}
             <AppText weight="semibold">{terms ? t('screensFlow.legal.termsTitleBold') : t('screensFlow.legal.privacyTitleBold')}</AppText>
           </AppText>
@@ -79,9 +79,5 @@ const useStyles = makeStyles((colors) => ({
   },
   titleBlock: {
     gap: 4,
-  },
-  title: {
-    fontSize: 28,
-    lineHeight: 34,
   },
 }));

@@ -312,12 +312,6 @@ const useStyles = makeStyles((colors) => ({
     height: 10,
     borderRadius: 5,
   },
-  tileCaption: {
-    fontSize: typography.sizes.metadata,
-    lineHeight: 18,
-    fontWeight: typography.weights.medium,
-    color: colors.functional.fresh.text,
-  },
   section: {
     marginTop: 8,
     gap: 12,

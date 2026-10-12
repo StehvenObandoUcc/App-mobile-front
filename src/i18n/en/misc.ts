@@ -68,6 +68,17 @@ export const misc: typeof Es = {
     package_one: '{count} package',
     package_other: '{count} packages',
   },
+  notifications: {
+    expiry: {
+      whenTomorrow: 'tomorrow',
+      whenDays: 'in {days} days',
+      titleOne: '{name} expires {when}',
+      bodyOne: 'Use it first or ask the AI Chef for a recipe.',
+      titleMany: '{count} items expire {when}',
+      bodyMany: '{shown}{extra}. Use them up with an AI Chef recipe.',
+      extraMore: ' and {count} more',
+    },
+  },
   expiration: {
     noDate: 'No date',
     expired: 'Expired',

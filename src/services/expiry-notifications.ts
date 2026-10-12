@@ -101,7 +101,7 @@ async function runSync(): Promise<void> {
   const items = await LocalStorage.getInventory();
   const plan = buildExpiryReminderPlan(
     items.map((i) => ({ name: i.name, expirationDate: i.expirationDate })),
-    { daysBefore: settings.expiryDaysBefore }
+    { daysBefore: settings.expiryDaysBefore, translate: t }
   );
   for (const entry of plan) {
     await Notifications.scheduleNotificationAsync({

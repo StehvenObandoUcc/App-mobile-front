@@ -24,6 +24,11 @@ export type ReminderOptions = {
   hour?: number; // hora local del aviso (por defecto 9:00)
   now?: Date;
   maxEntries?: number; // tope de avisos programados (por defecto 30)
+  /**
+   * Función de traducción (la `t` de src/i18n). El módulo sigue siendo puro: si no se pasa,
+   * usa los textos internos en español/inglés según `globalThis.__appLanguage` (pruebas en Node).
+   */
+  translate?: (key: string, params?: Record<string, string | number>) => string;
 };
 
 /** Interpreta 'YYYY-MM-DD' como fecha LOCAL (new Date('2026-10-02') la tomaría en UTC). */
@@ -56,7 +61,21 @@ function buildCopyEn(names: string[], daysBefore: number) {
   };
 }
 
-function buildCopy(names: string[], daysBefore: number) {
+function buildCopyTranslated(names: string[], daysBefore: number, tr: NonNullable<ReminderOptions['translate']>) {
+  const when = daysBefore === 1 ? tr('misc.notifications.expiry.whenTomorrow') : tr('misc.notifications.expiry.whenDays', { days: daysBefore });
+  if (names.length === 1) {
+    return { title: tr('misc.notifications.expiry.titleOne', { name: names[0], when }), body: tr('misc.notifications.expiry.bodyOne') };
+  }
+  const shown = names.slice(0, 3).join(', ');
+  const extra = names.length > 3 ? tr('misc.notifications.expiry.extraMore', { count: names.length - 3 }) : '';
+  return {
+    title: tr('misc.notifications.expiry.titleMany', { count: names.length, when }),
+    body: tr('misc.notifications.expiry.bodyMany', { shown, extra }),
+  };
+}
+
+function buildCopy(names: string[], daysBefore: number, translate?: ReminderOptions['translate']) {
+  if (translate) return buildCopyTranslated(names, daysBefore, translate);
   if (lang() === 'en') return buildCopyEn(names, daysBefore);
   const when = daysBefore === 1 ? 'mañana' : `en ${daysBefore} días`;
   if (names.length === 1) {
@@ -93,5 +112,5 @@ export function buildExpiryReminderPlan(items: ReminderSource[], options: Remind
     .filter(([, g]) => g.names.length > 0)
     .sort((a, b) => a[1].fireAt.getTime() - b[1].fireAt.getTime())
     .slice(0, maxEntries)
-    .map(([dayKey, g]) => ({ dayKey, fireAt: g.fireAt, itemNames: g.names, ...buildCopy(g.names, daysBefore) }));
+    .map(([dayKey, g]) => ({ dayKey, fireAt: g.fireAt, itemNames: g.names, ...buildCopy(g.names, daysBefore, options.translate) }));
 }

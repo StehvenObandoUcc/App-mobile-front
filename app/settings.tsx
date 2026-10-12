@@ -8,8 +8,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AppText,
-  TextInput,
+  LabeledField,
   IconButton,
+  ScreenHeader,
   SettingsSection,
   SettingsRow,
   OptionSheet,
@@ -91,7 +92,7 @@ export default function SettingsScreen() {
   const [lastSync, setLastSync] = useState<number | null>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [confirm, setConfirm] = useState<Confirm>(null);
-  const [notice, setNotice] = useState<{ title: string; emphasis: string; message: string; type: 'success' | 'warning' } | null>(null);
+  const [notice, setNotice] = useState<{ title: string; emphasis: string; message: string; type: 'success' | 'neutral' } | null>(null);
   const [isSendingTest, setIsSendingTest] = useState(false);
   // Eliminar cuenta: contraseña de confirmación, error y estado de envío.
   const [deletePassword, setDeletePassword] = useState('');
@@ -178,7 +179,7 @@ export default function SettingsScreen() {
     setNotice(
       ok
         ? { title: t('settings.testDialog.sentTitle'), emphasis: t('settings.testDialog.sentEmphasis'), message: t('settings.testDialog.sentMessage', { count: TEST_DELAY_SECONDS }), type: 'success' }
-        : { title: t('settings.testDialog.failTitle'), emphasis: t('settings.testDialog.failEmphasis'), message: t('settings.testDialog.failMessage'), type: 'warning' }
+        : { title: t('settings.testDialog.failTitle'), emphasis: t('settings.testDialog.failEmphasis'), message: t('settings.testDialog.failMessage'), type: 'neutral' }
     );
   };
 
@@ -203,28 +204,26 @@ export default function SettingsScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 48 }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('settings.backA11y')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
-          <AppText weight="light" style={styles.title} accessibilityRole="header">
-            {t('settings.titleLight')}
-            <AppText weight="semibold">{t('settings.titleBold')}</AppText>
-          </AppText>
-        </View>
+        <ScreenHeader
+          leading={<IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('settings.backA11y')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />}
+          title={t('settings.titleLight').trim()}
+          emphasis={t('settings.titleBold')}
+        />
 
         <SettingsSection title={t('settings.sections.account')}>
-          <SettingsRow iconName="person-outline" tone={T.ai} title={t('settings.profile')} subtitle={t('settings.profileSubtitle', { name: firstName, email: user?.email ?? '' })} onPress={() => router.push('/profile')} divider />
+          <SettingsRow iconName="person-outline" tone={T.neutral} title={t('settings.profile')} subtitle={t('settings.profileSubtitle', { name: firstName, email: user?.email ?? '' })} onPress={() => router.push('/profile')} divider />
           <SettingsRow iconName="log-out-outline" tone={T.neutral} title={t('settings.logout')} onPress={() => setConfirm('logout')} />
         </SettingsSection>
 
         <SettingsSection title={t('settings.sections.appearance')}>
           <SettingsRow iconName="contrast-outline" tone={T.neutral} title={t('settings.theme.title')} subtitle={themeLabel} onPress={() => setSheet('theme')} divider />
-          <SettingsRow iconName="language-outline" tone={T.ai} title={t('settings.language.title')} subtitle={languageLabel} onPress={() => setSheet('language')} />
+          <SettingsRow iconName="language-outline" tone={T.neutral} title={t('settings.language.title')} subtitle={languageLabel} onPress={() => setSheet('language')} />
         </SettingsSection>
 
         <SettingsSection title={t('settings.sections.cooking')}>
           <SettingsRow iconName="leaf-outline" tone={T.fresh} title={t('settings.diet')} subtitle={t('settings.dietSubtitle')} trailing={{ type: 'value', text: dietLabel }} onPress={() => setSheet('diet')} divider />
           <SettingsRow iconName="people-outline" tone={T.peach} title={t('settings.servings')} trailing={{ type: 'value', text: String(settings.defaultServings) }} onPress={() => setSheet('servings')} divider />
-          <SettingsRow iconName="alert-circle-outline" tone={T.danger} title={t('settings.avoid')} subtitle={t('settings.avoidSubtitle')} trailing={{ type: 'value', text: avoidLabel }} onPress={() => setSheet('avoid')} />
+          <SettingsRow iconName="alert-circle-outline" tone={T.neutral} title={t('settings.avoid')} subtitle={t('settings.avoidSubtitle')} trailing={{ type: 'value', text: avoidLabel }} onPress={() => setSheet('avoid')} />
         </SettingsSection>
 
         <SettingsSection title={t('settings.sections.pantry')}>
@@ -239,7 +238,7 @@ export default function SettingsScreen() {
           {NOTIFICATIONS_AVAILABLE && !permission.granted && (
             <SettingsRow
               iconName="notifications-off-outline"
-              tone={T.danger}
+              tone={T.neutral}
               title={t('settings.notificationsOff')}
               subtitle={t('settings.notificationsOffSubtitle')}
               trailing={{ type: 'button', label: permission.canAskAgain ? t('settings.allow') : t('settings.openSettings'), onPress: handleNotifPermission }}
@@ -393,7 +392,7 @@ export default function SettingsScreen() {
 
       <M3Dialog
         visible={confirm === 'logout'}
-        type="warning"
+        type="neutral"
         iconName="log-out-outline"
         title={t('settings.logoutDialog.title')}
         titleEmphasis={t('settings.logoutDialog.emphasis')}
@@ -401,7 +400,6 @@ export default function SettingsScreen() {
         cancelText={t('common.cancel')}
         onCancel={() => setConfirm(null)}
         confirmText={t('settings.logout')}
-        confirmTone="danger"
         onConfirm={async () => {
           setConfirm(null);
           await logout();
@@ -441,28 +439,27 @@ export default function SettingsScreen() {
         onConfirm={handleDeleteAccount}
       >
         <View style={styles.deleteField}>
-          <AppText variant="metadata" weight="semibold" color={colors.textSecondary}>
-            {t('settings.deleteDialog.passwordLabel')}
-          </AppText>
-          <TextInput
+          <LabeledField
+            label={t('settings.deleteDialog.passwordLabel')}
+            secure
+            invalid={Boolean(deleteError)}
             value={deletePassword}
             onChangeText={(v) => {
               setDeletePassword(v);
               if (deleteError) setDeleteError(null);
             }}
             placeholder={t('settings.deleteDialog.passwordPlaceholder')}
-            secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
             editable={!isDeleting}
-            accessibilityLabel={t('settings.deleteDialog.passwordLabel')}
-            style={[styles.deleteInput, deleteError ? styles.deleteInputError : null]}
+            footer={
+              deleteError ? (
+                <AppText variant="bodySmall" color={colors.m3.error} accessibilityLiveRegion="polite">
+                  {deleteError}
+                </AppText>
+              ) : null
+            }
           />
-          {deleteError ? (
-            <AppText variant="bodySmall" color={colors.m3.error} accessibilityLiveRegion="polite">
-              {deleteError}
-            </AppText>
-          ) : null}
         </View>
       </M3Dialog>
       <M3Dialog
@@ -492,29 +489,8 @@ const useStyles = makeStyles((c) => ({
     paddingHorizontal: spacing.screenGutter,
     gap: 20,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  title: {
-    fontSize: 28,
-    lineHeight: 34,
-  },
   deleteField: {
     gap: 8,
     marginTop: 4,
-  },
-  deleteInput: {
-    height: 52,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: c.borderStrong,
-    backgroundColor: c.surfaceVariant,
-    paddingHorizontal: 16,
-    fontSize: 16,
-  },
-  deleteInputError: {
-    borderColor: c.m3.error,
   },
 }));

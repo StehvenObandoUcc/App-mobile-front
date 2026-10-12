@@ -47,7 +47,7 @@ export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCa
       {recipe ? (
         <>
           <View style={styles.texts}>
-            <AppText weight="semibold" color={colors.onTertiaryContainer} style={styles.title} numberOfLines={2}>
+            <AppText variant="sectionTitle" weight="semibold" color={colors.onTertiaryContainer} numberOfLines={2}>
               {recipe.title}
             </AppText>
             {!!recipe.description && (
@@ -72,7 +72,7 @@ export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCa
               accessibilityRole="button"
               accessibilityLabel={t('organisms.todayRecipeCard.viewA11y', { title: recipe.title })}
             >
-              <AppText weight="semibold" color={colors.onInk} style={styles.ctaText}>
+              <AppText weight="semibold" color={colors.onInk}>
                 {t('organisms.todayRecipeCard.view')}
               </AppText>
               <Ionicons name="arrow-forward" size={18} color={colors.onInk} />
@@ -82,7 +82,7 @@ export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCa
       ) : (
         <>
           <View style={styles.texts}>
-            <AppText weight="semibold" color={colors.onTertiaryContainer} style={styles.title}>
+            <AppText variant="sectionTitle" weight="semibold" color={colors.onTertiaryContainer}>
               {t('organisms.todayRecipeCard.emptyTitle')}
             </AppText>
             <AppText variant="bodySmall" color={colors.onTertiaryContainer}>
@@ -96,7 +96,7 @@ export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCa
               accessibilityRole="button"
               accessibilityLabel={t('organisms.todayRecipeCard.viewPantry')}
             >
-              <AppText weight="semibold" color={colors.onInk} style={styles.ctaText}>
+              <AppText weight="semibold" color={colors.onInk}>
                 {t('organisms.todayRecipeCard.viewPantry')}
               </AppText>
               <Ionicons name="arrow-forward" size={18} color={colors.onInk} />
@@ -146,10 +146,6 @@ const useStyles = makeStyles((colors) => ({
   texts: {
     gap: 6,
   },
-  title: {
-    fontSize: 22,
-    lineHeight: 28,
-  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -173,8 +169,5 @@ const useStyles = makeStyles((colors) => ({
   ctaPressed: {
     backgroundColor: colors.inkPressed,
     transform: [{ scale: 0.97 }],
-  },
-  ctaText: {
-    fontSize: 15,
   },
 }));

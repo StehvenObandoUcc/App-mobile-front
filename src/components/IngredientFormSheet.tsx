@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Modal, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet, Modal, ScrollView, Pressable, KeyboardAvoidingView } from 'react-native';
 import { AppText } from './AppText';
-import { TextInput } from './Text';
+import { LabeledField } from './LabeledField';
 import { IconButton } from './IconButton';
 import { PrimaryButton } from './PrimaryButton';
+import { SecondaryButton } from './SecondaryButton';
 import { Chip } from './Chip';
 import { QuantityStepper } from './QuantityStepper';
 import { CategoryPicker } from './CategoryPicker';
@@ -12,7 +12,7 @@ import { DateField } from './DateField';
 import { M3Dialog } from './M3Dialog';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IngredientCategory, IngredientUnit } from '../types';
-import { radii, spacing, typography, elevations } from '../theme';
+import { radii, spacing, elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
@@ -68,7 +68,6 @@ export function IngredientFormSheet({
   const { colors } = useTheme();
   const { t } = useI18n();
   const styles = useStyles();
-  const [nameFocused, setNameFocused] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
   const insets = useSafeAreaInsets();
 
@@ -91,13 +90,13 @@ export function IngredientFormSheet({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={requestClose}>
-      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.overlay} behavior="padding">
         <Pressable style={StyleSheet.absoluteFill} onPress={requestClose} accessibilityLabel={t('sheets.ingredientForm.closeFormA11y')} />
         <View style={styles.sheet} accessibilityViewIsModal>
           <View style={styles.handle} />
 
           <View style={styles.header}>
-            <AppText weight="light" style={styles.title} accessibilityRole="header">
+            <AppText variant="headline" weight="light" style={styles.title} accessibilityRole="header">
               {mode === 'edit' ? t('sheets.ingredientForm.titleEdit') : t('sheets.ingredientForm.titleAdd')}{' '}
               <AppText weight="semibold">{t('sheets.ingredientForm.titleEmphasis')}</AppText>
             </AppText>
@@ -111,29 +110,24 @@ export function IngredientFormSheet({
             keyboardShouldPersistTaps="handled"
           >
             {/* ── Nombre ── */}
-            <View style={styles.field}>
-              <AppText variant="bodySmall" weight="semibold">
-                {t('sheets.ingredientForm.nameLabel')} <AppText color={colors.error.text}>*</AppText>
-              </AppText>
-              <TextInput
-                value={values.name}
-                onChangeText={(v) => onChange('name', v)}
-                placeholder={t('sheets.ingredientForm.namePlaceholder')}
-                placeholderTextColor={colors.textMuted}
-                maxLength={NAME_MAX}
-                onFocus={() => setNameFocused(true)}
-                onBlur={() => setNameFocused(false)}
-                style={[styles.input, nameFocused && styles.inputFocused]}
-                accessibilityLabel={t('sheets.ingredientForm.nameA11y')}
-                returnKeyType="done"
-              />
-              <View style={styles.helperRow}>
-                <AppText variant="caption" color={colors.textSecondary}>
-                  {t('sheets.ingredientForm.nameHelper')}
-                </AppText>
-                <AppText variant="caption" color={colors.textSecondary}>{`${values.name.length}/${NAME_MAX}`}</AppText>
-              </View>
-            </View>
+            <LabeledField
+              label={t('sheets.ingredientForm.nameLabel')}
+              required
+              value={values.name}
+              onChangeText={(v) => onChange('name', v)}
+              placeholder={t('sheets.ingredientForm.namePlaceholder')}
+              maxLength={NAME_MAX}
+              accessibilityLabel={t('sheets.ingredientForm.nameA11y')}
+              returnKeyType="done"
+              footer={
+                <View style={styles.helperRow}>
+                  <AppText variant="caption" color={colors.textSecondary}>
+                    {t('sheets.ingredientForm.nameHelper')}
+                  </AppText>
+                  <AppText variant="caption" color={colors.textSecondary}>{`${values.name.length}/${NAME_MAX}`}</AppText>
+                </View>
+              }
+            />
 
             {/* ── Cantidad + unidad ── */}
             <View style={styles.fieldWide}>
@@ -176,17 +170,14 @@ export function IngredientFormSheet({
             </View>
 
             {mode === 'edit' && onDelete && (
-              <Pressable
+              // «Eliminar» con relleno solo dentro del diálogo de confirmación: aquí contorno y texto en Ladrillo.
+              <SecondaryButton
+                title={t('sheets.ingredientForm.deleteLabel')}
+                variant="outline"
+                tone="danger"
+                iconName="trash-outline"
                 onPress={onDelete}
-                style={({ pressed }) => [styles.deleteBtn, pressed && styles.deletePressed]}
-                accessibilityRole="button"
-                accessibilityLabel={t('sheets.ingredientForm.deleteLabel')}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.m3.onErrorContainer} />
-                <AppText variant="body" weight="semibold" color={colors.m3.onErrorContainer}>
-                  {t('sheets.ingredientForm.deleteLabel')}
-                </AppText>
-              </Pressable>
+              />
             )}
           </ScrollView>
 
@@ -199,7 +190,7 @@ export function IngredientFormSheet({
 
       <M3Dialog
         visible={confirmExit}
-        type="warning"
+        type="error"
         title={t(mode === 'edit' ? 'sheets.ingredientForm.exit.titleEdit' : 'sheets.ingredientForm.exit.titleAdd')}
         titleEmphasis={t(mode === 'edit' ? 'sheets.ingredientForm.exit.emphasisEdit' : 'sheets.ingredientForm.exit.emphasisAdd')}
         message={t(mode === 'edit' ? 'sheets.ingredientForm.exit.messageEdit' : 'sheets.ingredientForm.exit.messageAdd')}
@@ -249,8 +240,6 @@ const useStyles = makeStyles((colors) => ({
   },
   title: {
     flex: 1,
-    fontSize: 26,
-    lineHeight: 32,
   },
   closeBtn: {
     backgroundColor: colors.surfaceVariant,
@@ -264,26 +253,8 @@ const useStyles = makeStyles((colors) => ({
     paddingBottom: 20,
     gap: 18,
   },
-  field: {
-    gap: 6,
-  },
   fieldWide: {
     gap: 8,
-  },
-  input: {
-    height: 56,
-    paddingHorizontal: 16,
-    borderRadius: radii.fields,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface,
-    fontSize: typography.sizes.body,
-    color: colors.textPrimary,
-  },
-  inputFocused: {
-    borderWidth: 2,
-    borderColor: colors.ink,
-    paddingHorizontal: 15,
   },
   helperRow: {
     flexDirection: 'row',
@@ -303,17 +274,5 @@ const useStyles = makeStyles((colors) => ({
   },
   submit: {
     minHeight: 56,
-  },
-  deleteBtn: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderRadius: radii.pill,
-    backgroundColor: colors.error.background,
-  },
-  deletePressed: {
-    opacity: 0.85,
   },
 }));

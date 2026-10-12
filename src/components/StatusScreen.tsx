@@ -42,11 +42,11 @@ export function StatusScreen({ art, title, emphasis, message, primary, secondary
     >
       {topSlot && <View style={[styles.top, { top: insets.top + 24 }]}>{topSlot}</View>}
       <HeroArt {...art} />
-      <AppText weight="light" align="center" style={styles.title} accessibilityRole="header">
+      <AppText variant="headline" weight="light" align="center" accessibilityRole="header">
         {emphasis ? `${title} ` : title}
         {emphasis ? <AppText weight="semibold">{emphasis}</AppText> : null}
       </AppText>
-      <AppText variant="body" color={colors.textSecondary} align="center" style={styles.message}>
+      <AppText variant="body" color={colors.textSecondary} align="center">
         {message}
       </AppText>
       <View style={styles.actions}>
@@ -73,14 +73,6 @@ const useStyles = makeStyles((colors) => ({
     left: 0,
     right: 0,
     alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    lineHeight: 34,
-  },
-  message: {
-    fontSize: 15,
-    lineHeight: 22,
   },
   actions: {
     alignSelf: 'stretch',

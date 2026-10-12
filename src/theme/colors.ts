@@ -97,11 +97,12 @@ function build(m3: M3, ext: Extended, f: Record<'fresh' | 'expiringSoon' | 'expi
       other: { ...neutralCat },
     },
 
-    // Dificultad: se lee por número de segmentos (todos en Sandía); el chip conserva su estado.
+    // Dificultad: se lee por número de segmentos (todos en Sandía) sobre un contenedor neutro.
     difficulty: {
-      easy: { text: f.fresh.text, background: f.fresh.background, segment: m3.primary, level: 1 },
-      medium: { text: f.expiringSoon.text, background: f.expiringSoon.background, segment: m3.primary, level: 2 },
-      hard: { text: f.expired.text, background: f.expired.background, segment: m3.primary, level: 3 },
+      // Contenedor neutro en los tres niveles: Miel es solo de vencimientos y Ladrillo de errores.
+      easy: { text: m3.onSurface, background: m3.surfaceContainer, segment: m3.primary, level: 1 },
+      medium: { text: m3.onSurface, background: m3.surfaceContainer, segment: m3.primary, level: 2 },
+      hard: { text: m3.onSurface, background: m3.surfaceContainer, segment: m3.primary, level: 3 },
     },
 
     error: { text: m3.error, background: m3.errorContainer },

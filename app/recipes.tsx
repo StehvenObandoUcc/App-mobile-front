@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, FlatList, ScrollView, Pressable, Platform } from 'react-native';
+import { View, StyleSheet, FlatList, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,8 +15,8 @@ import {
 } from '../src/types';
 import {
   AppScreen,
-  AppText,
   RecipeCard,
+  DifficultyMeter,
   SkeletonCard,
   EmptyState,
   ErrorState,
@@ -36,7 +36,6 @@ import {
   AiProgressScreen,
   SelectionHeader,
   SelectionActionBar,
-  DifficultyMeter,
 } from '../src/components';
 import { sortRecipes } from '../src/utils/recipe-sorter';
 import { getValidTimeOptionsForFocus, checkIngredientSelectionCoherence } from '../src/utils/recipe-validation';
@@ -129,11 +128,11 @@ export default function RecipesScreen() {
     visible: boolean;
     title: string;
     message: string;
-    type?: 'success' | 'info' | 'warning' | 'error';
+    type?: 'neutral' | 'ai' | 'success' | 'warning' | 'error';
     iconName?: keyof typeof Ionicons.glyphMap;
     confirmText?: string;
     onConfirm: () => void;
-  }>({ visible: false, title: '', message: '', type: 'info', confirmText: t('common.gotIt'), onConfirm: () => {} });
+  }>({ visible: false, title: '', message: '', type: 'neutral', confirmText: t('common.gotIt'), onConfirm: () => {} });
 
   const closeDialog = () => setDialogConfig((prev) => ({ ...prev, visible: false }));
 
@@ -192,7 +191,7 @@ export default function RecipesScreen() {
           visible: true,
           title: t('screensMain.recipes.emptyPantryTitle'),
           message: t('screensMain.recipes.emptyPantryMessage'),
-          type: 'warning',
+          type: 'neutral',
           iconName: 'basket-outline',
           confirmText: t('common.gotIt'),
           onConfirm: closeDialog,
@@ -205,7 +204,7 @@ export default function RecipesScreen() {
         visible: true,
         title: t('screensMain.recipes.pickTitle'),
         message: t('screensMain.recipes.pickMessage'),
-        type: 'warning',
+        type: 'neutral',
         confirmText: t('common.gotIt'),
         onConfirm: closeDialog,
       });
@@ -245,7 +244,7 @@ export default function RecipesScreen() {
           title: t('screensMain.recipes.readyTitle', { count: n, noun: tp('screensMain.shared.recipe', n) }),
           titleEmphasis: t('screensMain.recipes.readyEmphasis'),
           message: tp('screensMain.recipes.readyMessage', n),
-          type: 'success',
+          type: 'ai',
           iconName: 'sparkles',
           confirmText: t('screensMain.recipes.viewRecipes'),
           onConfirm: closeDialog,
@@ -358,7 +357,6 @@ export default function RecipesScreen() {
   const readyCount = recipes.filter((r) => r.missingIngredients.length === 0).length;
   const sortLabel = t(SORT_OPTIONS.find((o) => o.key === sortBy)?.labelKey ?? 'screensMain.recipes.sort.recent');
   const diffFilter = DIFFICULTY_FILTERS.find((d) => d.key === difficultyFilter)!;
-  const diffTone = difficultyFilter === 'all' ? null : colors.difficulty[difficultyFilter];
 
   const renderRecipeItem = useCallback(
     ({ item, index }: { item: Recipe; index: number }) => (
@@ -433,28 +431,24 @@ export default function RecipesScreen() {
           </ScrollView>
 
           <View style={styles.tools}>
-            <Pressable
+            <Chip
+              label={sortLabel}
+              icon="swap-vertical"
               onPress={() => setPicker('sort')}
-              style={styles.tool}
-              accessibilityRole="button"
               accessibilityLabel={t('screensMain.recipes.sortA11y', { label: sortLabel })}
-            >
-              <Ionicons name="swap-vertical" size={18} color={colors.textPrimary} />
-              <AppText variant="bodySmall" weight="semibold">{sortLabel}</AppText>
-            </Pressable>
-            <Pressable
+            />
+            <Chip
+              label={t(diffFilter.labelKey)}
+              leading={
+                <DifficultyMeter
+                  level={difficultyFilter === 'all' ? 2 : colors.difficulty[difficultyFilter].level}
+                  segment={difficultyFilter === 'all' ? colors.borderStrong : colors.difficulty[difficultyFilter].segment}
+                  empty={colors.m3.surfaceContainerHighest}
+                />
+              }
               onPress={() => setPicker('difficulty')}
-              style={styles.tool}
-              accessibilityRole="button"
               accessibilityLabel={t('screensMain.recipes.difficultyA11y', { label: t(diffFilter.labelKey) })}
-            >
-              <DifficultyMeter
-                level={diffTone ? diffTone.level : 2}
-                segment={diffTone ? diffTone.segment : colors.borderStrong}
-                empty={colors.m3.surfaceContainerHighest}
-              />
-              <AppText variant="bodySmall" weight="semibold">{t(diffFilter.labelKey)}</AppText>
-            </Pressable>
+            />
           </View>
           </>
           )}
@@ -689,12 +683,5 @@ const useStyles = makeStyles((colors) => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  tool: {
-    height: spacing.touchTargetMin,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 4,
   },
 }));

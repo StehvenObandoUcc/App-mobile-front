@@ -6,7 +6,7 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
  * CountBadge (NUEVO) — contador numérico (nav de Compras, avisos).
- * Fundamentos.dc.html: 20 dp de alto, acento #E86B45 con texto cacao, micro 11/700.
+ * Fundamentos.dc.html: 20 dp de alto, acento del tema (`colors.accent`) con su texto (`colors.onAccent`), micro 11/700.
  */
 export type CountBadgeProps = {
   count: number;

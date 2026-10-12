@@ -70,6 +70,12 @@ export function useAuth() {
     await AuthService.logout();
   }, []);
 
+  /** Limpia el error visible (p. ej. al cambiar entre «Iniciar sesión» y «Crear cuenta»). */
+  const clearError = useCallback(() => {
+    setError(null);
+    setStatus((s) => (s === 'error' ? 'idle' : s));
+  }, []);
+
   return {
     user: session?.user || null,
     token: session?.accessToken || null,
@@ -80,5 +86,6 @@ export function useAuth() {
     login,
     register,
     logout,
+    clearError,
   };
 }

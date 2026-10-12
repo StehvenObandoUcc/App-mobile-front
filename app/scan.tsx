@@ -292,13 +292,13 @@ export default function ScanScreen() {
 
       {/* Título + guía */}
       <View style={[styles.heading, { top: insets.top + 84 }]}>
-        <AppText weight="light" color={colors.textInverse} style={styles.title} accessibilityRole="header">
+        <AppText variant="screenTitle" weight="light" color={colors.textInverse} accessibilityRole="header">
           {t('screensFlow.scan.headingLight')}
           <AppText weight="semibold" color={colors.textInverse}>
             {t('screensFlow.scan.headingBold')}
           </AppText>
         </AppText>
-        <AppText variant="body" color={colors.onCameraMuted} style={styles.subtitle}>
+        <AppText variant="body" color={colors.onCameraMuted}>
           {t('screensFlow.scan.frameHint')}
         </AppText>
       </View>
@@ -394,14 +394,6 @@ const useStyles = makeStyles((colors) => ({
     left: 24,
     right: 24,
     gap: 4,
-  },
-  title: {
-    fontSize: 28,
-    lineHeight: 34,
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 20,
   },
   center: {
     ...StyleSheet.absoluteFill,

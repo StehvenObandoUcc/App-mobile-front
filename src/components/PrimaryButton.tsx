@@ -31,7 +31,7 @@ const tonesFor = (colors: ThemeColors): Record<ButtonTone, { bg: string; pressed
   ink: { bg: colors.ink, pressed: colors.inkPressed, fg: colors.onInk },
   brand: { bg: colors.m3.primary, pressed: colors.m3.primaryPressed, fg: colors.m3.onPrimary },
   ai: { bg: colors.m3.tertiary, pressed: colors.m3.tertiaryPressed, fg: colors.m3.onTertiary },
-  // Confirmaciones destructivas (Organismos.dc.html · M3Dialog «Eliminar»): blanco sobre #B3261E 6.54:1
+  // Confirmaciones destructivas (M3Dialog «Eliminar»): blanco sobre Ladrillo (colors.m3.error)
   danger: { bg: colors.m3.error, pressed: colors.functional.expired.text, fg: colors.m3.onError },
 });
 

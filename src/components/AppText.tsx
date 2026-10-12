@@ -15,6 +15,7 @@ import { fontFamilyFor } from '../utils/brand-font';
  */
 export type TextVariant =
   | 'displayNumber'
+  | 'ticketNumber'
   | 'screenTitle'
   | 'headline'
   | 'sectionTitle'
@@ -32,6 +33,7 @@ type VariantSpec = { size: number; lineHeight: number; weight: TextWeight; lette
 
 const VARIANTS: Record<TextVariant, VariantSpec> = {
   displayNumber: { size: typography.sizes.displayNumber, lineHeight: typography.lineHeights.displayNumber, weight: 'medium' },
+  ticketNumber: { size: typography.sizes.ticketNumber, lineHeight: typography.lineHeights.ticketNumber, weight: 'medium' },
   screenTitle: { size: typography.sizes.screenTitle, lineHeight: typography.lineHeights.screenTitle, weight: 'light' },
   headline: { size: typography.sizes.headline, lineHeight: typography.lineHeights.headline, weight: 'medium' },
   sectionTitle: { size: typography.sizes.sectionTitle, lineHeight: typography.lineHeights.sectionTitle, weight: 'semibold' },

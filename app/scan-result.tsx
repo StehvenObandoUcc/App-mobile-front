@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,7 +36,7 @@ type DialogState = {
   title: string;
   titleEmphasis?: string;
   message: string;
-  type: 'info' | 'warning' | 'error' | 'success';
+  type: 'neutral' | 'ai' | 'warning' | 'error' | 'success';
   confirmText?: string;
   confirmTone?: 'ink' | 'danger';
   cancelText?: string;
@@ -79,7 +79,7 @@ export default function ScanResultScreen() {
   });
   const detectedCount = useRef(detectedItems.length).current;
 
-  const [dialog, setDialog] = useState<DialogState>({ visible: false, title: '', message: '', type: 'info', onConfirm: () => {} });
+  const [dialog, setDialog] = useState<DialogState>({ visible: false, title: '', message: '', type: 'neutral', onConfirm: () => {} });
   const closeDialog = () => setDialog((prev) => ({ ...prev, visible: false }));
 
   // Salir sin guardar (botón físico, gesto, «Descartar») pide confirmación.
@@ -93,7 +93,7 @@ export default function ScanResultScreen() {
         title: t('screensFlow.scanResult.discardTitle'),
         titleEmphasis: tp('screensFlow.scanResult.discardEmphasis', n),
         message: tp('screensFlow.scanResult.discardMessage', n),
-        type: 'warning',
+        type: 'error',
         confirmText: t('screensFlow.scanResult.discardConfirm'),
         confirmTone: 'danger',
         cancelText: t('screensFlow.scanResult.keepReviewing'),
@@ -159,7 +159,7 @@ export default function ScanResultScreen() {
   };
 
   const warn = (title: string, titleEmphasis: string, message: string) =>
-    setDialog({ visible: true, title, titleEmphasis, message, type: 'warning', onConfirm: closeDialog });
+    setDialog({ visible: true, title, titleEmphasis, message, type: 'neutral', onConfirm: closeDialog });
 
   const handleSaveSheet = () => {
     const trimmed = name.trim();
@@ -304,11 +304,11 @@ export default function ScanResultScreen() {
         <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('screensFlow.scanResult.backToCameraA11y')} onPress={() => router.back()} />
         <View style={styles.empty}>
           <IllustrationBlob iconName="scan-outline" tone="ai" size="lg" />
-          <AppText weight="light" align="center" style={styles.emptyTitle} accessibilityRole="header">
+          <AppText variant="headline" weight="light" align="center" accessibilityRole="header">
             {detectedCount === 0 ? t('screensFlow.scanResult.emptyTitleNone') : t('screensFlow.scanResult.emptyTitleRemoved')}
             <AppText weight="semibold">{t('screensFlow.scanResult.emptyBold')}</AppText>
           </AppText>
-          <AppText variant="body" color={colors.textSecondary} align="center" style={styles.emptyText}>
+          <AppText variant="body" color={colors.textSecondary} align="center">
             {detectedCount === 0
               ? t('screensFlow.scanResult.emptyTextNone')
               : t('screensFlow.scanResult.emptyTextRemoved')}
@@ -333,19 +333,19 @@ export default function ScanResultScreen() {
 
         <View style={styles.header}>
           <AiBadge label={t('screensFlow.scanResult.aiBadge')} />
-          <AppText weight="light" style={styles.title} accessibilityRole="header">
+          <AppText variant="screenTitle" weight="light" accessibilityRole="header">
             {t('screensFlow.scanResult.reviewTitleLight')}
             <AppText weight="semibold">{t('screensFlow.scanResult.reviewTitleBold')}</AppText>
           </AppText>
-          <AppText variant="body" color={colors.textSecondary} style={styles.subtitle}>
+          <AppText variant="body" color={colors.textSecondary}>
             {t('screensFlow.scanResult.reviewSubtitle')}
           </AppText>
         </View>
 
         {warnings.length > 0 && (
           <View style={styles.warning} accessibilityRole="alert">
-            <Ionicons name="information-circle-outline" size={18} color={colors.functional.expiringSoon.text} />
-            <AppText variant="metadata" weight="regular" color={colors.functional.expiringSoon.text} style={styles.flex}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+            <AppText variant="metadata" weight="regular" color={colors.textPrimary} style={styles.flex}>
               {warnings[0]}
             </AppText>
           </View>
@@ -385,15 +385,12 @@ export default function ScanResultScreen() {
           onPress={handleConfirmAll}
           disabled={selected.length === 0}
         />
-        <Pressable
+        <SecondaryButton
+          title={t('screensFlow.scanResult.discardAndRescan')}
+          variant="text"
+          tone="danger"
           onPress={() => router.back()}
-          style={({ pressed }) => [styles.discard, pressed && styles.discardPressed]}
-          accessibilityRole="button"
-        >
-          <AppText variant="body" weight="semibold" color={colors.m3.error} style={styles.discardText}>
-            {t('screensFlow.scanResult.discardAndRescan')}
-          </AppText>
-        </Pressable>
+        />
       </StickyActionBar>
 
       {overlays}
@@ -415,21 +412,13 @@ const useStyles = makeStyles((colors) => ({
   header: {
     gap: 8,
   },
-  title: {
-    fontSize: 30,
-    lineHeight: 36,
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
   warning: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     padding: 12,
     borderRadius: radii.fields,
-    backgroundColor: colors.functional.expiringSoon.background,
+    backgroundColor: colors.surfaceVariant,
   },
   countRow: {
     flexDirection: 'row',
@@ -443,18 +432,6 @@ const useStyles = makeStyles((colors) => ({
   list: {
     gap: 10,
   },
-  discard: {
-    height: 48,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  discardPressed: {
-    backgroundColor: colors.m3.errorContainer,
-  },
-  discardText: {
-    fontSize: 15,
-  },
   emptyScreen: {
     paddingHorizontal: spacing.screenGutter,
   },
@@ -465,14 +442,6 @@ const useStyles = makeStyles((colors) => ({
     gap: 12,
     paddingHorizontal: 8,
     paddingBottom: 40,
-  },
-  emptyTitle: {
-    fontSize: 26,
-    lineHeight: 32,
-  },
-  emptyText: {
-    fontSize: 15,
-    lineHeight: 22,
   },
   emptyActions: {
     alignSelf: 'stretch',

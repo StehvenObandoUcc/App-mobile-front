@@ -212,7 +212,7 @@ export function IngredientCard({
           </View>
 
           <View style={styles.body}>
-            <AppText variant="cardTitle" style={compact ? styles.nameCompact : styles.name} numberOfLines={1}>
+            <AppText variant={compact ? 'body' : 'cardTitle'} weight="semibold" numberOfLines={1}>
               {ingredient.name}
             </AppText>
             {compact ? (
@@ -265,15 +265,9 @@ export function IngredientCard({
             <Ionicons name={ticket.icon} size={20} color={ticket.tone.text} />
           ) : (
             <AppText
+              variant={!compact && ticket.big && ticket.big.length > 2 ? 'cardTitle' : 'ticketNumber'}
               weight="medium"
               color={ticket.tone.text}
-              style={
-                compact
-                  ? styles.ticketBigCompact
-                  : ticket.big && ticket.big.length > 2
-                    ? styles.ticketBigSmall
-                    : styles.ticketBig
-              }
             >
               {ticket.big}
             </AppText>
@@ -323,19 +317,11 @@ const useStyles = makeStyles((colors) => ({
     borderRadius: 16,
     marginRight: 12,
   },
-  nameCompact: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
   perforationCompact: {
     marginVertical: 8,
   },
   ticketCompact: {
     width: 72,
-  },
-  ticketBigCompact: {
-    fontSize: 24,
-    lineHeight: 26,
   },
   checkSlot: {
     height: spacing.touchTargetMin,
@@ -373,10 +359,6 @@ const useStyles = makeStyles((colors) => ({
     flex: 1,
     minWidth: 0,
     gap: 4,
-  },
-  name: {
-    fontSize: 18,
-    lineHeight: 23,
   },
   dimmed: {
     opacity: 0.55,
@@ -422,14 +404,6 @@ const useStyles = makeStyles((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
-  },
-  ticketBig: {
-    fontSize: 24,
-    lineHeight: 27,
-  },
-  ticketBigSmall: {
-    fontSize: 18,
-    lineHeight: 23,
   },
   selectedRing: {
     ...StyleSheet.absoluteFill,

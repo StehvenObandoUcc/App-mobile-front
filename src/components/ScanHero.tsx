@@ -37,7 +37,7 @@ export function ScanHero({ onPress }: ScanHeroProps) {
 
       <View style={styles.row}>
         <View style={styles.texts}>
-          <AppText weight="light" color={colors.onAiHero} style={styles.title}>
+          <AppText variant="headline" weight="light" color={colors.onAiHero}>
             {t('organisms.scanHero.title')} <AppText weight="semibold">{t('organisms.scanHero.titleBold')}</AppText>
           </AppText>
           <AppText variant="bodySmall" color={colors.aiHeroMuted}>
@@ -97,10 +97,6 @@ const useStyles = makeStyles((colors) => ({
   texts: {
     flex: 1,
     gap: 6,
-  },
-  title: {
-    fontSize: 26,
-    lineHeight: 32,
   },
   fab: {
     width: 64,

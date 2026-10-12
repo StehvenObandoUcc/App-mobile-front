@@ -32,7 +32,8 @@ function stockLabel(
   item: Ingredient,
   t: typeof TFn
 ): { text: string; tone: { background: string; text: string } } {
-  if (item.quantity === 0) return { text: t('sheets.pantryPicker.noStock'), tone: colors.functional.expired };
+  // «Sin stock» no es un error ni un vencimiento: neutro (Ladrillo solo para vencido).
+  if (item.quantity === 0) return { text: t('sheets.pantryPicker.noStock'), tone: { background: colors.surfaceVariant, text: colors.textSecondary } };
   const d = daysUntil(item.expirationDate);
   const qty = item.quantity !== null ? formatQuantity(item.quantity, item.unit) : t('sheets.pantryPicker.noQuantity');
   if (d !== null && d < 0) return { text: t('sheets.pantryPicker.expired', { qty }), tone: colors.functional.expired };
@@ -68,7 +69,7 @@ export function PantryPickerSheet({ visible, items, isInList, onPick, onClose }:
           <View style={styles.handle} />
           <View style={styles.header}>
             <View style={styles.flex}>
-              <DialogTitle title={t('sheets.pantryPicker.title')} emphasis={t('sheets.pantryPicker.titleEmphasis')} size={24} lineHeight={30} />
+              <DialogTitle title={t('sheets.pantryPicker.title')} emphasis={t('sheets.pantryPicker.titleEmphasis')} />
               <AppText variant="bodySmall" color={colors.textSecondary}>
                 {t('sheets.pantryPicker.hint')}
               </AppText>

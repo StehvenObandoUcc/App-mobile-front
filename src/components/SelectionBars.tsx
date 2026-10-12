@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
+import { SecondaryButton } from './SecondaryButton';
 import { NAV_HEIGHT, NAV_BOTTOM_OFFSET } from './AppBottomNav';
 import { hideBottomNav } from '../utils/nav-visibility';
 import { radii, spacing, elevations } from '../theme';
@@ -94,17 +95,16 @@ export function SelectionActionBar({ count, onCancel, onDelete, itemNoun }: Sele
           {t('common.cancel')}
         </AppText>
       </Pressable>
-      <Pressable
+      <SecondaryButton
+        title={t('organisms.selectionBars.deleteButton', { count })}
+        variant="outline"
+        tone="danger"
+        iconName="trash-outline"
         onPress={onDelete}
         disabled={count === 0}
-        style={({ pressed }) => [styles.delete, count === 0 && styles.deleteDisabled, pressed && { opacity: 0.9 }]}
-        accessibilityRole="button"
-        accessibilityState={{ disabled: count === 0 }}
         accessibilityLabel={t('organisms.selectionBars.deleteA11y', { count, items: noun })}
-      >
-        <Ionicons name="trash-outline" size={20} color={colors.m3.onErrorContainer} />
-        <AppText variant="body" weight="semibold" color={colors.m3.onErrorContainer}>{t('organisms.selectionBars.deleteButton', { count })}</AppText>
-      </Pressable>
+        style={styles.delete}
+      />
     </Animated.View>
   );
 }
@@ -153,15 +153,5 @@ const useStyles = makeStyles((colors) => ({
   },
   delete: {
     flex: 1,
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: radii.pill,
-    backgroundColor: colors.error.background,
-  },
-  deleteDisabled: {
-    opacity: 0.6,
   },
 }));

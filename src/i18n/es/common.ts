@@ -8,6 +8,7 @@ export const common = {
   close: 'Cerrar',
   retry: 'Reintentar',
   loading: 'Cargando…',
+  appLoadingA11y: 'Food AI cargando',
   gotIt: 'Entendido',
   syncing: 'Sincronizando…',
   diets: {

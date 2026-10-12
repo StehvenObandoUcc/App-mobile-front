@@ -1,23 +1,21 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/hooks/useAuth';
 import { useAvatar } from '../src/hooks/useAvatar';
-import { AppText, IconButton, ProfileCard, ActionSheetModal, M3Dialog } from '../src/components';
-import { radii, spacing } from '../src/theme';
-import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
+import { IconButton, ScreenHeader, ProfileCard, ActionSheetModal, M3Dialog, SecondaryButton } from '../src/components';
+import { spacing } from '../src/theme';
+import { makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 
 /**
- * Perfil (Perfil.dc.html): volver + «Mi perfil», ProfileCard y «Cerrar sesión» en rojo suave.
+ * Perfil (Perfil.dc.html): volver + «Mi perfil», ProfileCard y «Cerrar sesión» (no es destructivo: botón de contorno neutro).
  * Tocar la foto abre opciones (elegir o quitar). Cerrar sesión pide confirmación.
  */
 export default function ProfileScreen() {
-  const { colors } = useTheme();
   const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -63,13 +61,11 @@ export default function ProfileScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}>
-        <View style={styles.header}>
-          <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('screensFlow.profile.backA11y')} onPress={goBack} />
-          <AppText weight="light" style={styles.title} accessibilityRole="header">
-            {t('screensFlow.profile.titleLight')}
-            <AppText weight="semibold">{t('screensFlow.profile.titleBold')}</AppText>
-          </AppText>
-        </View>
+        <ScreenHeader
+          leading={<IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('screensFlow.profile.backA11y')} onPress={goBack} />}
+          title={t('screensFlow.profile.titleLight').trim()}
+          emphasis={t('screensFlow.profile.titleBold')}
+        />
 
         <ProfileCard
           name={user.name}
@@ -78,16 +74,13 @@ export default function ProfileScreen() {
           onPressAvatar={() => (uri ? setPhotoSheet(true) : pickPhoto())}
         />
 
-        <Pressable
+        <SecondaryButton
+          title={t('screensFlow.profile.logout')}
+          variant="outline"
+          iconName="log-out-outline"
           onPress={() => setConfirmLogout(true)}
-          style={({ pressed }) => [styles.logout, pressed && styles.logoutPressed]}
-          accessibilityRole="button"
-        >
-          <Ionicons name="log-out-outline" size={20} color={colors.m3.onErrorContainer} />
-          <AppText variant="body" weight="semibold" color={colors.m3.onErrorContainer}>
-            {t('screensFlow.profile.logout')}
-          </AppText>
-        </Pressable>
+          style={styles.logout}
+        />
       </ScrollView>
 
       <ActionSheetModal
@@ -95,7 +88,6 @@ export default function ProfileScreen() {
         onClose={() => setPhotoSheet(false)}
         title={t('screensFlow.profile.photoSheetTitle')}
         headerIconName="camera-outline"
-        headerTone={{ background: colors.tertiaryContainer, text: colors.onTertiaryContainer }}
         actions={[
           { label: t('screensFlow.profile.choosePhoto'), icon: 'image-outline', onPress: pickPhoto },
           { label: t('screensFlow.profile.removePhoto'), icon: 'trash-outline', isDestructive: true, onPress: () => save(null) },
@@ -103,7 +95,7 @@ export default function ProfileScreen() {
       />
       <M3Dialog
         visible={confirmLogout}
-        type="warning"
+        type="neutral"
         iconName="log-out-outline"
         title={t('screensFlow.profile.logoutTitle')}
         titleEmphasis={t('screensFlow.profile.logoutEmphasis')}
@@ -111,7 +103,6 @@ export default function ProfileScreen() {
         cancelText={t('common.cancel')}
         onCancel={() => setConfirmLogout(false)}
         confirmText={t('screensFlow.profile.logout')}
-        confirmTone="danger"
         onConfirm={async () => {
           setConfirmLogout(false);
           await logout();
@@ -120,7 +111,7 @@ export default function ProfileScreen() {
       />
       <M3Dialog
         visible={notice !== null}
-        type="warning"
+        type="neutral"
         title={notice?.title ?? ''}
         titleEmphasis={notice?.emphasis}
         message={notice?.message ?? ''}
@@ -139,26 +130,7 @@ const useStyles = makeStyles((colors) => ({
     paddingHorizontal: spacing.screenGutter,
     gap: 18,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  title: {
-    fontSize: 26,
-    lineHeight: 32,
-  },
   logout: {
-    height: 56,
     marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: radii.pill,
-    backgroundColor: colors.m3.errorContainer,
-  },
-  logoutPressed: {
-    opacity: 0.85,
   },
 }));

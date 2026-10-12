@@ -66,6 +66,17 @@ export const misc = {
     package_one: '{count} paquete',
     package_other: '{count} paquetes',
   },
+  notifications: {
+    expiry: {
+      whenTomorrow: 'mañana',
+      whenDays: 'en {days} días',
+      titleOne: '{name} vence {when}',
+      bodyOne: 'Úsalo primero o pide una receta al Chef IA.',
+      titleMany: '{count} alimentos vencen {when}',
+      bodyMany: '{shown}{extra}. Aprovéchalos con una receta del Chef IA.',
+      extraMore: ' y {count} más',
+    },
+  },
   expiration: {
     noDate: 'Sin fecha',
     expired: 'Vencido',
