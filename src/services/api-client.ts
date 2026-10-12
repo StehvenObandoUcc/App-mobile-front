@@ -52,6 +52,7 @@ export interface ApiScanResponse {
 }
 
 import { Ingredient, Recipe, ShoppingItem } from '../types';
+import { normalizeGeneratedRecipe, readRecipeImage } from '../utils/recipe-merge';
 
 let getAuthTokenFn: (() => string | null) | null = null;
 
@@ -201,7 +202,7 @@ export async function generateRecipesWithApi(
   dietaryPreference: DietaryPreference = 'any',
   extras: RecipeGenerationExtras = {}
 ): Promise<any[]> {
-  return requestJson<any[]>(`${API_BASE_URL}/api/v1/recipes/generate`, {
+  const generated = await requestJson<any[]>(`${API_BASE_URL}/api/v1/recipes/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -215,6 +216,8 @@ export async function generateRecipesWithApi(
       ...(extras.avoid && extras.avoid.length > 0 ? { avoid_ingredients: extras.avoid } : {}),
     }),
   });
+  // Conserva la foto y valida su crédito (el resto de campos de la receta pasa tal cual)
+  return Array.isArray(generated) ? generated.map(normalizeGeneratedRecipe) : generated;
 }
 
 /**
@@ -226,7 +229,7 @@ export async function getRecipeStepsWithApi(recipe: {
   availableIngredients: any[];
   missingIngredients: any[];
   difficulty?: string;
-}): Promise<string[]> {
+}, avoid: string[] = []): Promise<string[]> {
   const data = await requestJson<{ steps: string[] }>(`${API_BASE_URL}/api/v1/recipes/steps`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -236,6 +239,7 @@ export async function getRecipeStepsWithApi(recipe: {
       availableIngredients: recipe.availableIngredients,
       missingIngredients: recipe.missingIngredients,
       difficulty: recipe.difficulty || 'easy',
+      ...(avoid.length > 0 ? { avoid_ingredients: avoid } : {}),
     }),
   });
 
@@ -368,6 +372,7 @@ export async function fetchSavedRecipesFromApi(): Promise<Recipe[]> {
     isSaved: r.isSaved !== undefined ? r.isSaved : true,
     isPrepared: r.isPrepared !== undefined ? r.isPrepared : false,
     createdAt: r.createdAt || r.created_at,
+    ...readRecipeImage(r),
   }));
 }
 
@@ -388,6 +393,8 @@ export async function saveRecipeWithApi(recipe: Recipe): Promise<Recipe> {
     steps: recipe.steps,
     isSaved: recipe.isSaved ?? true,
     isPrepared: recipe.isPrepared ?? false,
+    imageUri: recipe.imageUri || null,
+    imageCredit: recipe.imageUri ? recipe.imageCredit ?? null : null,
   };
   const saved = await requestJson<any>(`${API_BASE_URL}/api/v1/recipes/save`, {
     method: 'POST',
@@ -406,6 +413,7 @@ export async function saveRecipeWithApi(recipe: Recipe): Promise<Recipe> {
     steps: Array.isArray(saved.steps) ? saved.steps : [],
     isSaved: saved.isSaved !== undefined ? saved.isSaved : true,
     isPrepared: saved.isPrepared !== undefined ? saved.isPrepared : false,
+    ...readRecipeImage(saved),
   };
 }
 

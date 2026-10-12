@@ -59,6 +59,11 @@ export const organisms = {
     minutes: '{count} min',
   },
   recipeDetailParts: {
+    photoBy: 'Foto:',
+    photoSourceName: 'Unsplash',
+    photoOn: 'en',
+    photoProfileA11y: 'Abrir el perfil de {name} en Unsplash',
+    photoSourceA11y: 'Abrir la foto original en Unsplash',
     unsaveA11y: 'Quitar de guardadas',
     saveA11y: 'Guardar receta',
     ingredientsTitle: 'Ingredientes',

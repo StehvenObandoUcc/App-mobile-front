@@ -57,11 +57,19 @@ export type RecipeIngredient = {
   substitutions: string[];
 };
 
+export type RecipeImageCredit = {
+  source: 'unsplash';
+  name: string;
+  profileUrl: string;
+  sourceUrl: string;
+};
+
 export type Recipe = {
   id: string;
   title: string;
   description: string;
   imageUri?: string | null;
+  imageCredit?: RecipeImageCredit | null;
   prepTimeMinutes: number | null;
   servings: number | null;
   difficulty: RecipeDifficulty;

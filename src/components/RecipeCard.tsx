@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { View, StyleSheet, Pressable, Animated, Easing, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Recipe } from '../types';
@@ -48,6 +48,8 @@ export function RecipeCard({
   const total = available + recipe.missingIngredients.length;
   const missing = recipe.missingIngredients.length;
   const banner = recipeBanner(colors, recipe.id);
+  // Si la foto remota falla al cargar, se muestra la ilustración de siempre
+  const [failedUri, setFailedUri] = useState<string | null>(null);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -119,8 +121,13 @@ export function RecipeCard({
       >
         {/* ── Franja superior ── */}
         <View style={[styles.banner, { backgroundColor: banner.bg }]}>
-          {recipe.imageUri ? (
-            <Image source={{ uri: recipe.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          {recipe.imageUri && failedUri !== recipe.imageUri ? (
+            <Image
+              source={{ uri: recipe.imageUri }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+              onError={() => setFailedUri(recipe.imageUri!)}
+            />
           ) : (
             <>
               <View style={styles.bannerHalo} />

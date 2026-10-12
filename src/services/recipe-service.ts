@@ -15,6 +15,8 @@ import { getFriendlyErrorMessage } from '../utils/error-messages';
 import { planConsumption } from '../utils/consumption';
 import { updateIngredientSynced } from './inventory-mutations';
 import { flushOutbox } from './outbox-dispatcher';
+import { loadAppSettings } from '../storage/app-settings';
+import { mergeCloudRecipe } from '../utils/recipe-merge';
 
 /** Lo que devuelve «Preparar receta»: alimentos descontados y los que hay que ajustar a mano. */
 export type PrepareRecipeResult = { consumed: string[]; skipped: string[] };
@@ -79,7 +81,11 @@ export const mockRecipeService: RecipeService = {
           for (const r of remote) {
             if (LocalStorage.getCurrentUserId() !== startUserId) return;
             if (!activePendingDeletes.has(r.id)) {
-              await LocalStorage.saveRecipe(r);
+              // Conserva la fecha y la foto locales si la nube no las trae.
+              const existing = local.find((x) => x.id === r.id);
+              const merged = mergeCloudRecipe(r, existing);
+              if (existing && JSON.stringify({ ...existing, ...merged }) === JSON.stringify(existing)) continue;
+              await LocalStorage.saveRecipe(merged);
             }
           }
         }
@@ -109,13 +115,17 @@ export const mockRecipeService: RecipeService = {
       return recipe.steps;
     }
     try {
-      const steps = await getRecipeStepsWithApi({
-        title: recipe.title,
-        description: recipe.description,
-        availableIngredients: recipe.availableIngredients,
-        missingIngredients: recipe.missingIngredients,
-        difficulty: recipe.difficulty,
-      });
+      const { avoidIngredients } = await loadAppSettings();
+      const steps = await getRecipeStepsWithApi(
+        {
+          title: recipe.title,
+          description: recipe.description,
+          availableIngredients: recipe.availableIngredients,
+          missingIngredients: recipe.missingIngredients,
+          difficulty: recipe.difficulty,
+        },
+        avoidIngredients
+      );
       const updatedRecipe: Recipe = { ...recipe, steps };
       await LocalStorage.saveRecipe(updatedRecipe);
       saveRecipeWithApi(updatedRecipe).catch(() => {});

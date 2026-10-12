@@ -61,6 +61,11 @@ export const organisms: typeof Es = {
     minutes: '{count} min',
   },
   recipeDetailParts: {
+    photoBy: 'Photo by',
+    photoSourceName: 'Unsplash',
+    photoOn: 'on',
+    photoProfileA11y: "Open {name}'s profile on Unsplash",
+    photoSourceA11y: 'Open the original photo on Unsplash',
     unsaveA11y: 'Remove from saved',
     saveA11y: 'Save recipe',
     ingredientsTitle: 'Ingredients',

@@ -16,6 +16,7 @@ import {
   StepsLoading,
   AiBadge,
   RecipeCover,
+  RecipePhotoCredit,
   StatTile,
   RecipeIngredientsCard,
   MissingIngredientsCard,
@@ -281,6 +282,7 @@ export default function RecipeDetailScreen() {
             setRecipe((r) => (r ? { ...r, isSaved: !r.isSaved } : r));
           }}
         />
+        {recipe.imageUri && recipe.imageCredit ? <RecipePhotoCredit credit={recipe.imageCredit} /> : null}
 
         <View style={styles.content}>
           {/* ── Encabezado ── */}

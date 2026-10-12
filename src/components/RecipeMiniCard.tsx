@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
@@ -23,6 +23,8 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
   const styles = useStyles();
   const { t } = useI18n();
   const banner = recipeBanner(colors, recipe.id);
+  // Si la foto remota falla al cargar, se muestra la ilustración de siempre
+  const [failedUri, setFailedUri] = useState<string | null>(null);
   const diff = DIFFICULTY_LABELS[recipe.difficulty] ?? DIFFICULTY_LABELS.easy;
   const meta = [
     recipe.prepTimeMinutes !== null ? t('organisms.recipeMiniCard.minutes', { count: recipe.prepTimeMinutes ?? 0 }) : null,
@@ -42,8 +44,13 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={[styles.banner, { backgroundColor: banner.bg }]}>
-        {recipe.imageUri ? (
-          <Image source={{ uri: recipe.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        {recipe.imageUri && failedUri !== recipe.imageUri ? (
+          <Image
+            source={{ uri: recipe.imageUri }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            onError={() => setFailedUri(recipe.imageUri!)}
+          />
         ) : (
           <View style={styles.plate}>
             <Ionicons name="restaurant-outline" size={28} color={banner.fg} />

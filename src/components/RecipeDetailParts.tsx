@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Pressable, Image } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Pressable, Image, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
@@ -7,6 +7,7 @@ import { SecondaryButton } from './SecondaryButton';
 import { radii, spacing, elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
+import type { RecipeImageCredit } from '../types';
 
 /**
  * Piezas del detalle de receta (Receta-Detalle.dc.html).
@@ -41,10 +42,13 @@ export type RecipeCoverProps = {
 export function RecipeCover({ banner, imageUri, isSaved, topInset, onBack, onToggleSave }: RecipeCoverProps) {
   const styles = useStyles();
   const { t } = useI18n();
+  // Si la foto remota falla al cargar, se muestra la ilustración de siempre
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  const showPhoto = !!imageUri && failedUri !== imageUri;
   return (
     <View style={[styles.cover, { backgroundColor: banner.bg, height: 270 + topInset }]}>
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      {showPhoto ? (
+        <Image source={{ uri: imageUri! }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setFailedUri(imageUri!)} />
       ) : (
         <>
           <View style={[styles.halo, { top: 40 + topInset }]} />
@@ -63,6 +67,49 @@ export function RecipeCover({ banner, imageUri, isSaved, topInset, onBack, onTog
           style={styles.coverBtn}
         />
       </View>
+    </View>
+  );
+}
+
+// ── RecipePhotoCredit ─────────────────────────────────────────────────────────
+function openLink(url: string) {
+  if (!url.startsWith('https://')) return;
+  Linking.openURL(url).catch(() => {});
+}
+
+/** Crédito del fotógrafo (guía de Unsplash): «Foto: {name} en Unsplash», con ambos enlaces. */
+export function RecipePhotoCredit({ credit }: { credit: RecipeImageCredit }) {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { t } = useI18n();
+  return (
+    <View style={styles.photoCredit}>
+      <AppText variant="caption" color={colors.textSecondary}>
+        {t('organisms.recipeDetailParts.photoBy')}
+      </AppText>
+      <Pressable
+        onPress={() => openLink(credit.profileUrl)}
+        style={styles.photoCreditLink}
+        accessibilityRole="link"
+        accessibilityLabel={t('organisms.recipeDetailParts.photoProfileA11y', { name: credit.name })}
+      >
+        <AppText variant="caption" weight="semibold" color={colors.primary} style={styles.photoCreditUnderline}>
+          {credit.name}
+        </AppText>
+      </Pressable>
+      <AppText variant="caption" color={colors.textSecondary}>
+        {t('organisms.recipeDetailParts.photoOn')}
+      </AppText>
+      <Pressable
+        onPress={() => openLink(credit.sourceUrl)}
+        style={styles.photoCreditLink}
+        accessibilityRole="link"
+        accessibilityLabel={t('organisms.recipeDetailParts.photoSourceA11y')}
+      >
+        <AppText variant="caption" weight="semibold" color={colors.primary} style={styles.photoCreditUnderline}>
+          {t('organisms.recipeDetailParts.photoSourceName')}
+        </AppText>
+      </Pressable>
     </View>
   );
 }
@@ -345,6 +392,20 @@ const useStyles = makeStyles((colors) => ({
 
   cover: {
     overflow: 'hidden',
+  },
+  photoCredit: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  photoCreditLink: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  photoCreditUnderline: {
+    textDecorationLine: 'underline',
   },
   halo: {
     position: 'absolute',
