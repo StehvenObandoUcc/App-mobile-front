@@ -67,8 +67,10 @@ function RootLayout() {
   useEffect(() => {
     if (!isHydrated) return;
 
-    // Sin sesión solo se puede estar en la bienvenida/login o leer los textos legales.
-    const inLoginScreen = segments[0] === 'login' || segments[0] === 'legal';
+    // Sin sesión solo se puede estar en la bienvenida/login, en el flujo de cuenta (verificar correo,
+    // recuperar contraseña) o leer los textos legales.
+    const publicScreens = ['login', 'legal', 'verify-email', 'forgot-password', 'reset-password'];
+    const inLoginScreen = publicScreens.includes(String(segments[0]));
 
     // Punto de entrada natural: si no hay sesión activa ni modo invitado, dirigir a bienvenida/onboarding
     if (!isAuthenticated && !inLoginScreen) {
@@ -101,7 +103,7 @@ function RootLayout() {
     );
   }
 
-  const hideBottomNavOn = ['/login', '/legal', '/profile', '/scan', '/scan-result', '/recipe-detail', '/settings'];
+  const hideBottomNavOn = ['/login', '/legal', '/verify-email', '/forgot-password', '/reset-password', '/profile', '/scan', '/scan-result', '/recipe-detail', '/settings'];
   const showBottomNav = !hideBottomNavOn.includes(pathname);
 
   return (
@@ -147,6 +149,9 @@ function RootLayout() {
           name="legal"
           options={{ headerShown: false, animation: 'slide_from_right' }}
         />
+        <Stack.Screen name="verify-email" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="reset-password" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen
           name="recipe-detail"
           options={{ headerShown: false, animation: 'slide_from_right' }}

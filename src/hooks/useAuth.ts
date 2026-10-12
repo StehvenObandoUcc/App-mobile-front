@@ -36,6 +36,11 @@ export function useAuth() {
       setStatus('success');
       return res;
     } catch (err: any) {
+      // Estos dos casos no son un fallo: la pantalla lleva a verificar el correo o a crear contraseña nueva.
+      if (err?.code === 'email_not_verified' || err?.code === 'password_reset_required') {
+        setStatus('idle');
+        throw err;
+      }
       const msg = err?.message || t('data.auth.loginError');
       setError(msg);
       setStatus('error');

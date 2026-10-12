@@ -13,7 +13,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import type { TextInput as RNTextInput } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/hooks/useAuth';
@@ -32,6 +32,7 @@ import {
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 import { useReduceMotion } from '../src/hooks/useReduceMotion';
 import { useI18n, type t as TFn, type tp as TpFn } from '../src/i18n';
+import { isStrongEnough } from '../src/utils/auth-flow';
 
 /**
  * Bienvenida (Bienvenida-Fotos.dc.html) + Formulario (Login-Formulario.dc.html).
@@ -123,17 +124,22 @@ export default function LoginScreen() {
     if (isAuthenticated) router.replace('/');
   }, [isAuthenticated]);
 
-  const [screenView, setScreenView] = useState<'welcome' | 'form'>('welcome');
+  // Otras pantallas (p. ej. «Usar otro correo») pueden abrir el formulario directo con ?mode=register|login.
+  const params = useLocalSearchParams<{ mode?: string | string[] }>();
+  const modeParam = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+  const startMode: 'login' | 'register' | null = modeParam === 'login' || modeParam === 'register' ? modeParam : null;
+
+  const [screenView, setScreenView] = useState<'welcome' | 'form'>(startMode ? 'form' : 'welcome');
   const [page, setPage] = useState(0);
   const pagerRef = useRef<ScrollView>(null);
-  const [mode, setMode] = useState<'login' | 'register'>('register');
+  const [mode, setMode] = useState<'login' | 'register'>(startMode ?? 'register');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [dialog, setDialog] = useState<DialogState>({ visible: false, title: '', message: '', onConfirm: () => {} });
   const closeDialog = () => setDialog((p) => ({ ...p, visible: false }));
   const nameRef = useRef<RNTextInput>(null);
-  const nameAnim = useRef(new Animated.Value(1)).current;
+  const nameAnim = useRef(new Animated.Value(startMode === 'login' ? 0 : 1)).current;
 
   // Foto: 470 del lienzo de 390, sin pasar del 56 % del alto del teléfono.
   const photoH = Math.min(470 * (width / 390), screenH * 0.56);
@@ -170,18 +176,42 @@ export default function LoginScreen() {
   const warn = (title: string, titleEmphasis: string, message: string) =>
     setDialog({ visible: true, title, titleEmphasis, message, type: 'warning', onConfirm: closeDialog });
 
+  // Si ya hay un formulario abierto y llega ?mode=..., se ajusta a ese modo.
+  useEffect(() => {
+    if (startMode) {
+      setMode(startMode);
+      nameAnim.setValue(startMode === 'register' ? 1 : 0);
+      setScreenView('form');
+    }
+  }, [startMode]);
+
   const handleSubmit = async () => {
     const mail = email.trim();
     if (mode === 'register' && name.trim().length < 2) return warn(t('screensFlow.login.nameMissingTitle'), t('screensFlow.login.nameMissingEmphasis'), t('screensFlow.login.nameMissingMessage'));
     if (!mail || !password) return warn(t('screensFlow.login.fieldsMissingTitle'), t('screensFlow.login.fieldsMissingEmphasis'), t('screensFlow.login.fieldsMissingMessage'));
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return warn(t('screensFlow.login.emailInvalidTitle'), t('screensFlow.login.emailInvalidEmphasis'), t('screensFlow.login.emailInvalidMessage'));
-    if (password.length < 6) return warn(t('screensFlow.login.passwordShortTitle'), t('screensFlow.login.passwordShortEmphasis'), t('screensFlow.login.passwordShortMessage'));
+    if (mode === 'register' && !isStrongEnough(password)) return warn(t('screensFlow.login.passwordShortTitle'), t('screensFlow.login.passwordShortEmphasis'), t('screensFlow.login.passwordShortMessage'));
 
     try {
       if (mode === 'login') await login(mail, password);
-      else await register(mail, password, name.trim());
+      else {
+        const res = await register(mail, password, name.trim());
+        if (res.kind === 'verify') {
+          router.push({ pathname: '/verify-email', params: { email: res.email } });
+          return;
+        }
+      }
       // Al quedar autenticado, el efecto de arriba lleva a Inicio.
     } catch (err: any) {
+      if (mode === 'login' && err?.code === 'email_not_verified') {
+        // La contraseña queda pendiente en memoria; el servidor ya reenvió el código.
+        router.push({ pathname: '/verify-email', params: { email: mail.toLowerCase() } });
+        return;
+      }
+      if (mode === 'login' && err?.code === 'password_reset_required') {
+        router.push({ pathname: '/reset-password', params: { email: mail.toLowerCase(), reason: 'required' } });
+        return;
+      }
       setDialog({
         visible: true,
         title: mode === 'login' ? t('screensFlow.login.loginFailTitle') : t('screensFlow.login.registerFailTitle'),
@@ -371,6 +401,18 @@ export default function LoginScreen() {
           returnKeyType="done"
           onSubmitEditing={handleSubmit}
         />
+        {!register_ && (
+          <AppText
+            variant="body"
+            weight="semibold"
+            color={colors.primary}
+            onPress={() => router.push({ pathname: '/forgot-password', params: { email: email.trim() } })}
+            accessibilityRole="link"
+            style={styles.forgot}
+          >
+            {t('screensFlow.login.forgotLink')}
+          </AppText>
+        )}
 
         <View style={styles.secure}>
           <Ionicons name="shield-checkmark-outline" size={18} color={colors.functional.fresh.text} />
@@ -454,6 +496,10 @@ const useStyles = makeStyles((colors) => ({
     padding: 12,
     borderRadius: 16,
     backgroundColor: colors.m3.errorContainer,
+  },
+  forgot: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
   },
   secure: {
     flexDirection: 'row',
