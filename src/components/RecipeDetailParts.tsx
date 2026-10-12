@@ -8,6 +8,7 @@ import { radii, spacing, elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 import type { RecipeImageCredit } from '../types';
+import { isUnsplashPageUrl } from '../utils/recipe-merge';
 
 /**
  * Piezas del detalle de receta (Receta-Detalle.dc.html).
@@ -33,19 +34,22 @@ export function AiBadge({ label, size = 'md' }: { label: string; size?: 'sm' | '
 export type RecipeCoverProps = {
   banner: { bg: string; fg: string };
   imageUri?: string | null;
+  /** Crédito del fotógrafo: se muestra bajo la portada solo mientras se ve la foto (no la ilustración de respaldo). */
+  imageCredit?: RecipeImageCredit | null;
   isSaved: boolean;
   topInset: number;
   onBack: () => void;
   onToggleSave: () => void;
 };
 
-export function RecipeCover({ banner, imageUri, isSaved, topInset, onBack, onToggleSave }: RecipeCoverProps) {
+export function RecipeCover({ banner, imageUri, imageCredit, isSaved, topInset, onBack, onToggleSave }: RecipeCoverProps) {
   const styles = useStyles();
   const { t } = useI18n();
   // Si la foto remota falla al cargar, se muestra la ilustración de siempre
   const [failedUri, setFailedUri] = useState<string | null>(null);
   const showPhoto = !!imageUri && failedUri !== imageUri;
   return (
+    <>
     <View style={[styles.cover, { backgroundColor: banner.bg, height: 270 + topInset }]}>
       {showPhoto ? (
         <Image source={{ uri: imageUri! }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setFailedUri(imageUri!)} />
@@ -68,12 +72,14 @@ export function RecipeCover({ banner, imageUri, isSaved, topInset, onBack, onTog
         />
       </View>
     </View>
+    {showPhoto && imageCredit ? <RecipePhotoCredit credit={imageCredit} /> : null}
+    </>
   );
 }
 
 // ── RecipePhotoCredit ─────────────────────────────────────────────────────────
 function openLink(url: string) {
-  if (!url.startsWith('https://')) return;
+  if (!isUnsplashPageUrl(url)) return;
   Linking.openURL(url).catch(() => {});
 }
 

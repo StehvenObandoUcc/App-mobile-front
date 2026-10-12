@@ -87,6 +87,8 @@ export const misc = {
   errors: {
     network: 'No hay conexión a internet. Revisa tu red e intenta de nuevo.',
     rateLimit: 'Estamos procesando muchas solicitudes. Espera un momento y vuelve a intentar.',
+    dailyRecipeLimit: 'Llegaste al límite diario de recetas. Vuelve mañana.',
+    noCoherentRecipe: 'No encontramos un plato claro con esos alimentos. Elige 2 a 6 que suelan ir juntos en una misma receta.',
     scanTimeout: 'El análisis tardó demasiado. Verifica tu conexión e intenta de nuevo.',
     scanBadGateway: 'No pudimos analizar tu foto. Intenta de nuevo en unos segundos.',
     scanGeneric: 'No pudimos analizar tu foto. Intenta con mejor iluminación o más de cerca.',

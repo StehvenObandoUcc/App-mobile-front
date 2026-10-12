@@ -57,6 +57,7 @@ export * from './ShoppingItemRow';
 export * from './ShoppingItemFormSheet';
 export * from './PantryPickerSheet';
 export * from './PhotoTag';
+export * from './PhotoCredit';
 export * from './PagerDots';
 export * from './OnboardingSlide';
 export * from './LabeledField';

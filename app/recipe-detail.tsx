@@ -16,7 +16,6 @@ import {
   StepsLoading,
   AiBadge,
   RecipeCover,
-  RecipePhotoCredit,
   StatTile,
   RecipeIngredientsCard,
   MissingIngredientsCard,
@@ -274,6 +273,7 @@ export default function RecipeDetailScreen() {
         <RecipeCover
           banner={banner}
           imageUri={recipe.imageUri}
+          imageCredit={recipe.imageCredit}
           isSaved={recipe.isSaved}
           topInset={insets.top}
           onBack={() => router.back()}
@@ -282,7 +282,6 @@ export default function RecipeDetailScreen() {
             setRecipe((r) => (r ? { ...r, isSaved: !r.isSaved } : r));
           }}
         />
-        {recipe.imageUri && recipe.imageCredit ? <RecipePhotoCredit credit={recipe.imageCredit} /> : null}
 
         <View style={styles.content}>
           {/* ── Encabezado ── */}

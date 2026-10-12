@@ -100,7 +100,13 @@ async function requestJson<T = any>(url: string, options?: RequestInit): Promise
     } catch {
       // Cuerpo de error vacío o no JSON
     }
-    throw new ApiError(detail, response.status, false);
+    let code: string | null = null;
+    try {
+      code = response.headers?.get?.('X-Error-Code') || null;
+    } catch {
+      code = null;
+    }
+    throw new ApiError(detail, response.status, false, code);
   }
 
   // HTTP 204 No Content: éxito confirmado sin cuerpo
@@ -206,7 +212,15 @@ export async function generateRecipesWithApi(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      ingredients,
+      // Solo los campos que usa el backend (no el objeto completo: foto, notas, confianza… inflan la petición)
+      ingredients: ingredients.map(({ id, name, quantity, unit, category, expirationDate }) => ({
+        id,
+        name,
+        quantity,
+        unit,
+        category,
+        expirationDate,
+      })),
       max_prep_time: maxPrepTime,
       focus,
       count,

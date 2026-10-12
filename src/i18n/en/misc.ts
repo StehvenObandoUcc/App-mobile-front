@@ -89,6 +89,8 @@ export const misc: typeof Es = {
   errors: {
     network: 'No internet connection. Check your network and try again.',
     rateLimit: 'We are processing many requests. Wait a moment and try again.',
+    dailyRecipeLimit: "You've reached today's recipe limit. Come back tomorrow.",
+    noCoherentRecipe: "We couldn't find a clear dish with those foods. Pick 2 to 6 that usually go together in one recipe.",
     scanTimeout: 'The analysis took too long. Check your connection and try again.',
     scanBadGateway: "We couldn't analyze your photo. Try again in a few seconds.",
     scanGeneric: "We couldn't analyze your photo. Try better lighting or get closer.",

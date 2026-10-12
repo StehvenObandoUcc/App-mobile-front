@@ -30,6 +30,8 @@ type Extended = {
   accent: string; onAccent: string;
   navIconIdle: string; textMuted: string; inkPressed: string;
   cameraScrim: string; onCameraMuted: string; quotaDotIdle: string; textBody: string;
+  /** Pastilla de crédito sobre fotos (Unsplash). Texto blanco encima: ≥ 8:1 aun sobre una foto blanca (peor caso). */
+  photoScrim: string;
   /** Lima tal cual (relleno de barras y medidores); para texto usar `secondary`. */
   limeFill: string;
   /** Miel: texto/icono de aviso sobre superficies. */
@@ -160,6 +162,7 @@ export const lightColors = build(
     textMuted: '#6E5B51', // 5.92:1 sobre crema
     inkPressed: '#A0263B',
     cameraScrim: '#1E1714',
+    photoScrim: 'rgba(30, 23, 20, 0.78)',
     onCameraMuted: '#F2E6DE',
     quotaDotIdle: '#7A5A4F',
     textBody: '#3B2B25',
@@ -231,6 +234,7 @@ export const darkColors: ThemeColors = build(
     textMuted: '#B3A497', // 6.4:1
     inkPressed: '#F58E9E',
     cameraScrim: '#1E1714',
+    photoScrim: 'rgba(30, 23, 20, 0.78)',
     onCameraMuted: '#F2E6DE',
     quotaDotIdle: '#7A5A4F',
     textBody: '#DCCFC3',

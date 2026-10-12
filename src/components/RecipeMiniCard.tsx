@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
+import { PhotoCredit } from './PhotoCredit';
 import { Recipe } from '../types';
 import { radii } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
@@ -56,6 +57,7 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
             <Ionicons name="restaurant-outline" size={28} color={banner.fg} />
           </View>
         )}
+        {recipe.imageUri && failedUri !== recipe.imageUri ? <PhotoCredit credit={recipe.imageCredit} /> : null}
         <View style={styles.match}>
           <AppText variant="caption" weight="semibold" color={colors.onTertiaryContainer}>
             {t('organisms.recipeMiniCard.match', { match: recipe.matchScore })}

@@ -16,4 +16,5 @@ export const atoms = {
   m3Dialog: { closeA11y: 'Cerrar diálogo' },
   actionSheet: { closeA11y: 'Cerrar', confirm: 'Confirmar', cancel: 'Cancelar' },
   pagerDots: { stepA11y: 'Paso {current} de {total}' },
+  photoCredit: { label: '{name} · Unsplash', a11y: 'Foto de {name} en Unsplash, abrir perfil' },
 };

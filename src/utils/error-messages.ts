@@ -31,6 +31,15 @@ export function getFriendlyErrorMessage(
   }
 
   const status = error?.status;
+  const code = typeof error?.code === 'string' ? error.code : null;
+
+  if (code === 'daily_recipe_limit') {
+    return t('misc.errors.dailyRecipeLimit');
+  }
+
+  if (code === 'no_coherent_recipe') {
+    return t('misc.errors.noCoherentRecipe');
+  }
 
   if (status === 429) {
     return t('misc.errors.rateLimit');

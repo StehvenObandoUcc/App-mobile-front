@@ -5,12 +5,15 @@
 export class ApiError extends Error {
   status: number;
   isNetworkError: boolean;
+  /** Código estable del backend (encabezado X-Error-Code), o null si no lo envió. */
+  code: string | null;
 
-  constructor(message: string, status: number, isNetworkError: boolean = false) {
+  constructor(message: string, status: number, isNetworkError: boolean = false, code: string | null = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.isNetworkError = isNetworkError;
+    this.code = code;
   }
 }
 

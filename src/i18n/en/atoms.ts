@@ -18,4 +18,5 @@ export const atoms: typeof Es = {
   m3Dialog: { closeA11y: 'Close dialog' },
   actionSheet: { closeA11y: 'Close', confirm: 'Confirm', cancel: 'Cancel' },
   pagerDots: { stepA11y: 'Step {current} of {total}' },
+  photoCredit: { label: '{name} · Unsplash', a11y: "Photo by {name} on Unsplash, open profile" },
 };

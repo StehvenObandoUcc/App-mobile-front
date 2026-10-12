@@ -3,6 +3,7 @@ import { View, StyleSheet, Pressable, Animated, Easing, Image } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { Recipe } from '../types';
 import { AppText } from './AppText';
+import { PhotoCredit } from './PhotoCredit';
 import { radii, spacing } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { recipeBanner, DIFFICULTY_LABELS, missingLabel as missingText } from '../utils/recipe-visuals';
@@ -136,6 +137,7 @@ export function RecipeCard({
               </View>
             </>
           )}
+          {recipe.imageUri && failedUri !== recipe.imageUri ? <PhotoCredit credit={recipe.imageCredit} /> : null}
 
           {isSelectMode ? (
             <Pressable
