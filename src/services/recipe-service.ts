@@ -183,9 +183,11 @@ export const mockRecipeService: RecipeService = {
     if (!recipe) return { consumed: [], skipped: [] };
 
     const inventory = await LocalStorage.getInventory();
+    // Se pasan TODOS los ingredientes: la lista «disponibles» guardada es la del momento de generar,
+    // y desde entonces pudiste comprar o gastar algo. planConsumption solo toca lo que hoy está en la despensa.
     const plan = planConsumption(
       inventory,
-      recipe.availableIngredients.map((ing) => ({
+      [...recipe.availableIngredients, ...recipe.missingIngredients].map((ing) => ({
         name: ing.name,
         quantity: ing.quantity,
         unit: ing.unit,

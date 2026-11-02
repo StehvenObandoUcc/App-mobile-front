@@ -31,6 +31,7 @@ import { useReduceMotion } from '../src/hooks/useReduceMotion';
 import { useHorizontalSwipe } from '../src/hooks/useHorizontalSwipe';
 import { useI18n, type t as TFn, type tp as TpFn } from '../src/i18n';
 import { isStrongEnough } from '../src/utils/auth-flow';
+import { AuthService } from '../src/services/auth-service';
 
 /**
  * Bienvenida (Bienvenida-Fotos.dc.html) + Formulario (Login-Formulario.dc.html).
@@ -121,17 +122,25 @@ export default function LoginScreen() {
   // Otras pantallas (p. ej. «Usar otro correo») pueden abrir el formulario directo con ?mode=register|login.
   const params = useLocalSearchParams<{ mode?: string | string[] }>();
   const modeParam = Array.isArray(params.mode) ? params.mode[0] : params.mode;
-  const startMode: Mode | null = modeParam === 'login' || modeParam === 'register' ? modeParam : null;
+  // Si la sesión venció, se abre directo el formulario de «Iniciar sesión» con el aviso.
+  const [sessionExpired] = useState(() => AuthService.takeSessionExpiredNotice());
+  const startMode: Mode | null = sessionExpired
+    ? 'login'
+    : modeParam === 'login' || modeParam === 'register'
+      ? modeParam
+      : null;
 
   const [screenView, setScreenView] = useState<'welcome' | 'form'>(startMode ? 'form' : 'welcome');
   const [page, setPage] = useState(0);
-  const pagerRef = useRef<ScrollView>(null);
+  const pagerRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const [mode, setMode] = useState<Mode>(startMode ?? 'register');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   // Validación y fallos del servidor se muestran en línea (AuthErrorBox), como en las otras pantallas de acceso.
-  const [formError, setFormError] = useState<FormError | null>(null);
+  const [formError, setFormError] = useState<FormError | null>(() =>
+    sessionExpired ? { message: t('data.auth.sessionExpired') } : null
+  );
   const nameAnim = useRef(new Animated.Value(startMode === 'login' ? 0 : 1)).current;
 
   // Foto: 470 del lienzo de 390, sin pasar del 56 % del alto del teléfono.

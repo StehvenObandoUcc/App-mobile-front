@@ -1,5 +1,6 @@
 /**
- * Descuento de ingredientes al preparar una receta (lógica pura, sin imports para poder probarla con node --test).
+ * Descuento de ingredientes al preparar una receta y disponibilidad de recetas frente a la despensa
+ * (lógica pura, sin imports para poder probarla con node --test).
  *
  * - Empareja cada ingrediente de la receta con uno de la despensa: primero por `inventoryIngredientId`,
  *   luego por nombre exacto (sin tildes ni mayúsculas) y por último por nombre contenido.
@@ -70,6 +71,32 @@ export function tidyQuantity(quantity: number, unit: Unit): { quantity: number; 
   return { quantity: round(quantity, 2), unit };
 }
 
+/**
+ * Alimento de la despensa que corresponde a un ingrediente de receta, o undefined.
+ * Es la MISMA regla para «¿lo tienes?» (disponibilidad de recetas) y para «¿de dónde descuento?» (preparar):
+ * si la app dice que lo tienes, es porque al cocinar lo descontará de ese alimento.
+ * Solo cuenta lo que tiene existencias (los agotados, en 0, no se pueden usar).
+ */
+export function findPantryMatch<T extends { id: string; name: string; quantity: number | null }>(
+  pantry: T[],
+  req: { name: string; inventoryIngredientId?: string | null }
+): T | undefined {
+  const alive = pantry.filter((i) => i.quantity !== 0);
+  if (req.inventoryIngredientId) {
+    const byId = alive.find((i) => i.id === req.inventoryIngredientId);
+    if (byId) return byId;
+  }
+  const target = normalizeName(req.name);
+  if (!target) return undefined;
+  return (
+    alive.find((i) => normalizeName(i.name) === target) ??
+    alive.find((i) => {
+      const current = normalizeName(i.name);
+      return current.includes(target) || target.includes(current);
+    })
+  );
+}
+
 export function planConsumption(
   inventory: ConsumptionInventoryItem[],
   requests: ConsumptionRequest[]
@@ -80,26 +107,8 @@ export function planConsumption(
   const consumed: string[] = [];
   const skipped: string[] = [];
 
-  const find = (req: ConsumptionRequest) => {
-    // Solo cuenta lo que tiene existencias (los agotados, en 0, no se pueden usar).
-    const alive = [...working.values()].filter((i) => i.quantity !== 0);
-    if (req.inventoryIngredientId) {
-      const byId = alive.find((i) => i.id === req.inventoryIngredientId);
-      if (byId) return byId;
-    }
-    const target = normalizeName(req.name);
-    if (!target) return undefined;
-    return (
-      alive.find((i) => normalizeName(i.name) === target) ??
-      alive.find((i) => {
-        const current = normalizeName(i.name);
-        return current.includes(target) || target.includes(current);
-      })
-    );
-  };
-
   for (const req of requests) {
-    const match = find(req);
+    const match = findPantryMatch([...working.values()], req);
     if (!match) continue; // no está en la despensa: nada que descontar
     if (req.quantity === null || req.quantity <= 0 || match.quantity === null) {
       skipped.push(req.name);
@@ -131,3 +140,66 @@ export function planConsumption(
   }
   return { updates, deletes: [], depleted: [...depleted], consumed, skipped };
 }
+
+// ─── Disponibilidad de recetas frente a la despensa ACTUAL ──────────────────────
+//
+// El porcentaje que traía la IA («matchScore») se calculaba una sola vez al generar y luego quedaba congelado
+// (o se inventaba un 90 si faltaba). Aquí se recalcula cada vez con lo que hay hoy en la despensa,
+// usando el mismo emparejamiento que el descuento al preparar.
+
+type AvailabilityIngredient = { name: string; isOptional?: boolean; inventoryIngredientId?: string | null };
+
+export type RecipeAvailability<I> = {
+  available: I[];
+  missing: I[];
+  /** Ingredientes obligatorios que no tienes (los opcionales no bloquean). */
+  missingRequired: number;
+  requiredTotal: number;
+  /** % de ingredientes obligatorios que tienes (0–100). */
+  score: number;
+};
+
+
+export function computeRecipeAvailability<I extends AvailabilityIngredient>(
+  ingredients: I[],
+  pantry: { id: string; name: string; quantity: number | null }[]
+): RecipeAvailability<I> {
+  const available: I[] = [];
+  const missing: I[] = [];
+  for (const ing of ingredients) {
+    const match = findPantryMatch(pantry, ing);
+    // El vínculo con la despensa se actualiza: si el alimento original ya no está, apunta al que sí coincide.
+    if (match) available.push({ ...ing, isAvailable: true, inventoryIngredientId: match.id });
+    else missing.push({ ...ing, isAvailable: false });
+  }
+  const requiredTotal = ingredients.filter((i) => !i.isOptional).length;
+  const missingRequired = missing.filter((i) => !i.isOptional).length;
+  const score = requiredTotal === 0 ? 0 : Math.round(((requiredTotal - missingRequired) / requiredTotal) * 100);
+  return { available, missing, missingRequired, requiredTotal, score };
+}
+
+/**
+ * Receta con sus listas «tienes / te falta» y su porcentaje recalculados contra la despensa actual.
+ * Si la receta no trae ingredientes (datos antiguos), se deja tal cual.
+ */
+export function withLiveAvailability<
+  I extends AvailabilityIngredient,
+  R extends { availableIngredients: I[]; missingIngredients: I[]; matchScore: number }
+>(recipe: R, pantry: { id: string; name: string; quantity: number | null }[]): R {
+  const all = [...(recipe.availableIngredients || []), ...(recipe.missingIngredients || [])];
+  if (all.length === 0) return recipe;
+  const a = computeRecipeAvailability(all, pantry);
+  return { ...recipe, availableIngredients: a.available, missingIngredients: a.missing, matchScore: a.score } as R;
+}
+
+/** Faltantes obligatorios de una receta ya recalculada (para ordenar y filtrar). */
+export const missingRequiredOf = (recipe: { missingIngredients: AvailabilityIngredient[] }) =>
+  (recipe.missingIngredients || []).filter((i) => !i.isOptional).length;
+
+/** Regla ÚNICA de «la puedes cocinar»: no te falta ningún ingrediente obligatorio. */
+export const isCookable = (recipe: { missingIngredients: AvailabilityIngredient[] }) => missingRequiredOf(recipe) === 0;
+
+/** Regla ÚNICA de «te falta poco»: a lo sumo un ingrediente obligatorio (Inicio y filtro «Mayor coincidencia»). */
+export const ALMOST_MISSING_MAX = 1;
+export const isAlmostCookable = (recipe: { missingIngredients: AvailabilityIngredient[] }) =>
+  missingRequiredOf(recipe) <= ALMOST_MISSING_MAX;

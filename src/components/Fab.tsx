@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Pressable, StyleProp, ViewStyle, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { AppText } from './AppText';
 import { elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
@@ -16,9 +17,11 @@ export type FabProps = {
   style?: StyleProp<ViewStyle>;
   iconRotation?: Animated.AnimatedInterpolation<string>;
   accessibilityState?: { expanded?: boolean };
+  /** Texto visible junto al icono (FAB extendido): un icono solo no dice qué hace. */
+  label?: string;
 };
 
-export function Fab({ iconName, onPress, accessibilityLabel, tone = 'ink', style, iconRotation, accessibilityState }: FabProps) {
+export function Fab({ iconName, onPress, accessibilityLabel, tone = 'ink', style, iconRotation, accessibilityState, label }: FabProps) {
   const { colors } = useTheme();
   const styles = useStyles();
   const bg = tone === 'ai' ? colors.tertiary : colors.ink;
@@ -29,11 +32,16 @@ export function Fab({ iconName, onPress, accessibilityLabel, tone = 'ink', style
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={accessibilityState}
-      style={({ pressed }) => [styles.fab, { backgroundColor: pressed ? pressedBg : bg }, pressed && styles.pressed, style]}
+      style={({ pressed }) => [styles.fab, label ? styles.extended : null, { backgroundColor: pressed ? pressedBg : bg }, pressed && styles.pressed, style]}
     >
       <Animated.View style={iconRotation ? { transform: [{ rotate: iconRotation }] } : undefined}>
-        <Ionicons name={iconName} size={26} color={colors.onInk} />
+        <Ionicons name={iconName} size={label ? 22 : 26} color={colors.onInk} />
       </Animated.View>
+      {label ? (
+        <AppText weight="semibold" color={colors.onInk} numberOfLines={1}>
+          {label}
+        </AppText>
+      ) : null}
     </Pressable>
   );
 }
@@ -47,6 +55,13 @@ const useStyles = makeStyles((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
     ...elevations.lg,
+  },
+  extended: {
+    width: undefined,
+    flexDirection: 'row',
+    gap: 8,
+    paddingLeft: 16,
+    paddingRight: 20,
   },
   pressed: {
     transform: [{ scale: 0.94 }],

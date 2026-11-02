@@ -24,9 +24,11 @@ export function OnboardingSlide({ photo, tags, width, height, accessibilityLabel
   const scale = width / 390;
   // «cover» con punto de enfoque horizontal (object-position del mockup): se calcula el tamaño a mano.
   const src = Image.resolveAssetSource(photo);
-  const k = src ? Math.max(width / src.width, height / src.height) : 1;
-  const imgW = src ? src.width * k : width;
-  const imgH = src ? src.height * k : height;
+  const srcW = src?.width;
+  const srcH = src?.height;
+  const k = srcW && srcH ? Math.max(width / srcW, height / srcH) : 1;
+  const imgW = srcW && srcH ? srcW * k : width;
+  const imgH = srcW && srcH ? srcH * k : height;
   return (
     <View style={{ width, height, overflow: 'hidden' }} accessible accessibilityRole="image" accessibilityLabel={accessibilityLabel}>
       <Image

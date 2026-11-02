@@ -11,6 +11,6 @@ export type IconTextFieldProps = Omit<LabeledFieldProps, 'iconName' | 'large'> &
   iconName: NonNullable<LabeledFieldProps['iconName']>;
 };
 
-export const IconTextField = forwardRef<RNTextInput, IconTextFieldProps>(function IconTextField(props, ref) {
+export const IconTextField = forwardRef<React.ComponentRef<typeof RNTextInput>, IconTextFieldProps>(function IconTextField(props, ref) {
   return <LabeledField ref={ref} large {...props} />;
 });

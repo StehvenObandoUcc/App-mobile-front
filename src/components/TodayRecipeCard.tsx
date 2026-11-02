@@ -5,7 +5,7 @@ import { AppText } from './AppText';
 import { Recipe } from '../types';
 import { radii } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
-import { DIFFICULTY_LABELS } from '../utils/recipe-visuals';
+import { DIFFICULTY_LABELS, recipeStatus } from '../utils/recipe-visuals';
 import { useI18n } from '../i18n';
 
 /**
@@ -31,9 +31,9 @@ export function TodayRecipeCard({ recipe, onOpen, onEmptyAction }: TodayRecipeCa
       <View style={styles.head}>
         {recipe ? (
           <View style={styles.match}>
-            <Ionicons name="sparkles" size={13} color={colors.m3.onTertiary} />
+            <Ionicons name={recipeStatus(recipe).icon} size={13} color={colors.m3.onTertiary} />
             <AppText variant="caption" weight="semibold" color={colors.m3.onTertiary}>
-              {t('organisms.todayRecipeCard.matchBadge', { match: recipe.matchScore })}
+              {recipeStatus(recipe).label}
             </AppText>
           </View>
         ) : (

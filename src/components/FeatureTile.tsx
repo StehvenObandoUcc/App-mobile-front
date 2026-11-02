@@ -24,7 +24,7 @@ export type FeatureTileProps = {
   label: string;
   value: number | string;
   tone: FeatureTileTone;
-  /** Por defecto la flecha diagonal ↗ del mockup (señal de «abrir», no un segundo botón). */
+  /** Por defecto un chevron (señal de «abrir», no un segundo botón). Antes era una flecha girada 45°. */
   iconName?: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   accessibilityLabel: string;
@@ -65,10 +65,10 @@ export function FeatureTile({
         </AppText>
         {lg ? (
           <View style={styles.iconCircle}>
-            <Ionicons name={iconName ?? 'arrow-forward'} size={18} color={t.fg} style={!iconName && styles.diagonal} />
+            <Ionicons name={iconName ?? 'chevron-forward'} size={18} color={t.fg} />
           </View>
         ) : (
-          <Ionicons name={iconName ?? 'arrow-forward'} size={18} color={t.fg} style={!iconName && styles.diagonal} />
+          <Ionicons name={iconName ?? 'chevron-forward'} size={18} color={t.fg} />
         )}
       </View>
       <View style={styles.bottom}>
@@ -105,10 +105,6 @@ const useStyles = makeStyles((colors) => ({
     flex: 1,
     fontSize: 15,
     lineHeight: 20,
-  },
-  // Ionicons no trae ↗: se gira la flecha →  45° hacia arriba.
-  diagonal: {
-    transform: [{ rotate: '-45deg' }],
   },
   iconCircle: {
     width: 36,

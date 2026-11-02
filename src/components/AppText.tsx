@@ -91,7 +91,8 @@ export function AppText({
   const resolvedWeight = weight ?? spec?.weight;
 
   // includeFontPadding: evita el relleno extra de Android que descuadra el centrado en botones y chips.
-  const base: TextStyle = { includeFontPadding: false };
+  // RN 0.88 marca TextStyle como solo lectura: este objeto se arma campo a campo antes de pasarlo.
+  const base: { -readonly [K in keyof TextStyle]: TextStyle[K] } = { includeFontPadding: false };
   if (spec) {
     base.fontSize = spec.size;
     base.lineHeight = spec.lineHeight;

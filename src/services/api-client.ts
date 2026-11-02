@@ -48,10 +48,12 @@ export interface ApiScanResponse {
     confidence?: number | null;
     source?: 'ai' | 'manual';
     confirmed?: boolean;
+    /** «label» = impresa en el empaque · «estimated» = vida útil típica. Los backends antiguos no lo envían. */
+    expirationSource?: string | null;
   }[];
 }
 
-import { Ingredient, Recipe, ShoppingItem } from '../types';
+import { ExpirationSource, Ingredient, Recipe, ShoppingItem } from '../types';
 import { normalizeGeneratedRecipe, readRecipeImage } from '../utils/recipe-merge';
 
 let getAuthTokenFn: (() => string | null) | null = null;
@@ -64,10 +66,21 @@ export function registerAuthTokenProvider(fn: () => string | null) {
   getAuthTokenFn = fn;
 }
 
-async function requestJson<T = any>(url: string, options?: RequestInit): Promise<T> {
+let onUnauthorizedFn: (() => Promise<boolean>) | null = null;
+
+/**
+ * Qué hacer cuando el servidor rechaza el token de la sesión (401): el manejador intenta renovar la
+ * sesión y devuelve true si lo logró (entonces el pedido se repite una vez con el token nuevo).
+ * Si no se pudo renovar, el manejador cierra la sesión y la app vuelve al login.
+ */
+export function registerUnauthorizedHandler(fn: () => Promise<boolean>) {
+  onUnauthorizedFn = fn;
+}
+
+async function requestJson<T = any>(url: string, options?: RequestInit, isRetry = false): Promise<T> {
   let response: Response;
+  const token = getAuthTokenFn ? getAuthTokenFn() : null;
   try {
-    const token = getAuthTokenFn ? getAuthTokenFn() : null;
     const baseHeaders: Record<string, string> = {};
     if (!(options?.body instanceof FormData)) {
       baseHeaders['Content-Type'] = 'application/json';
@@ -88,6 +101,12 @@ async function requestJson<T = any>(url: string, options?: RequestInit): Promise
       0,
       true
     );
+  }
+
+  // Solo las rutas de datos pasan por aquí (login y borrar cuenta usan su propio fetch), así que un 401
+  // con token significa sesión vencida o inválida: se renueva y se repite el pedido una sola vez.
+  if (response.status === 401 && token && !isRetry && onUnauthorizedFn) {
+    if (await onUnauthorizedFn()) return requestJson<T>(url, options, true);
   }
 
   if (!response.ok) {
@@ -260,6 +279,14 @@ export async function getRecipeStepsWithApi(recipe: {
   return data.steps || [];
 }
 
+const EXPIRATION_SOURCES: ExpirationSource[] = ['manual', 'label', 'estimated', 'unknown'];
+
+/** Origen de la fecha de vencimiento; si el servidor no lo sabe, `undefined` (no se inventa uno). */
+export function readExpirationSource(raw: any): ExpirationSource | undefined {
+  const v = String(raw?.expirationSource ?? raw?.expiration_source ?? '').toLowerCase();
+  return (EXPIRATION_SOURCES as string[]).includes(v) ? (v as ExpirationSource) : undefined;
+}
+
 /**
  * Obtiene el inventario completo del usuario desde el backend (conectado a Supabase).
  */
@@ -277,6 +304,7 @@ export async function fetchInventoryFromApi(): Promise<Ingredient[]> {
     confirmed: item.confirmed ?? true,
     imageUri: item.imageUri || item.image_uri,
     notes: item.notes,
+    expirationSource: readExpirationSource(item),
   }));
 }
 
@@ -296,6 +324,7 @@ export async function createInventoryItemWithApi(item: Partial<Ingredient>): Pro
     confirmed: item.confirmed ?? true,
     imageUri: item.imageUri,
     notes: item.notes,
+    expirationSource: item.expirationSource ?? 'unknown',
   };
   const created = await requestJson<any>(`${API_BASE_URL}/api/v1/inventory`, {
     method: 'POST',
@@ -313,6 +342,7 @@ export async function createInventoryItemWithApi(item: Partial<Ingredient>): Pro
     confirmed: created.confirmed ?? true,
     imageUri: created.imageUri || created.image_uri,
     notes: created.notes,
+    expirationSource: readExpirationSource(created),
   };
 }
 
@@ -331,6 +361,7 @@ export async function updateInventoryItemWithApi(
   if (updates.expirationDate !== undefined) payload.expirationDate = updates.expirationDate;
   if (updates.confirmed !== undefined) payload.confirmed = updates.confirmed;
   if (updates.notes !== undefined) payload.notes = updates.notes;
+  if (updates.expirationSource !== undefined) payload.expirationSource = updates.expirationSource;
 
   const updated = await requestJson<any>(`${API_BASE_URL}/api/v1/inventory/${encodeURIComponent(id)}`, {
     method: 'PUT',
@@ -348,6 +379,7 @@ export async function updateInventoryItemWithApi(
     confirmed: updated.confirmed ?? true,
     imageUri: updated.imageUri || updated.image_uri,
     notes: updated.notes,
+    expirationSource: readExpirationSource(updated),
   };
 }
 
@@ -365,6 +397,15 @@ export async function deleteInventoryItemWithApi(id: string): Promise<boolean> {
 // ─── Recetas Persistentes (Supabase / Cloud API) ──────────────────────────────
 
 /**
+ * % guardado de la receta. Ya no se inventa un 90 cuando falta: la app lo recalcula contra la despensa actual
+ * (withLiveAvailability en useRecipes) y este valor solo queda para recetas antiguas sin ingredientes.
+ */
+function readMatchScore(raw: any): number {
+  const n = Number(raw?.matchScore ?? raw?.match_score);
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : 0;
+}
+
+/**
  * Obtiene las recetas guardadas del usuario desde la base de datos en la nube.
  */
 export async function fetchSavedRecipesFromApi(): Promise<Recipe[]> {
@@ -379,7 +420,7 @@ export async function fetchSavedRecipesFromApi(): Promise<Recipe[]> {
     prepTimeMinutes: r.prepTimeMinutes || r.prep_time_minutes || 30,
     servings: r.servings || 2,
     difficulty: r.difficulty || 'easy',
-    matchScore: r.matchScore || r.match_score || 90,
+    matchScore: readMatchScore(r),
     availableIngredients: Array.isArray(r.availableIngredients) ? r.availableIngredients : [],
     missingIngredients: Array.isArray(r.missingIngredients) ? r.missingIngredients : [],
     steps: Array.isArray(r.steps) ? r.steps : [],
@@ -421,7 +462,7 @@ export async function saveRecipeWithApi(recipe: Recipe): Promise<Recipe> {
     prepTimeMinutes: saved.prepTimeMinutes || saved.prep_time_minutes || 30,
     servings: saved.servings || 2,
     difficulty: saved.difficulty || 'easy',
-    matchScore: saved.matchScore || saved.match_score || 90,
+    matchScore: readMatchScore(saved),
     availableIngredients: Array.isArray(saved.availableIngredients) ? saved.availableIngredients : [],
     missingIngredients: Array.isArray(saved.missingIngredients) ? saved.missingIngredients : [],
     steps: Array.isArray(saved.steps) ? saved.steps : [],

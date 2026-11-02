@@ -56,3 +56,17 @@ export function secondsLeft(untilMs: number, nowMs: number): number {
   if (!Number.isFinite(diff) || diff <= 0) return 0;
   return Math.ceil(diff / 1000);
 }
+
+/** Días antes del vencimiento en que la app renueva la sesión sola (al abrirse o volver a primer plano). */
+export const SESSION_REFRESH_BEFORE_DAYS = 3;
+
+/**
+ * ¿Hay que renovar la sesión ya? Sí si vence en menos de SESSION_REFRESH_BEFORE_DAYS, si ya venció
+ * (el servidor la renueva dentro de su plazo de gracia) o si la fecha falta o no se entiende.
+ */
+export function shouldRefreshSession(expiresAt: string | null | undefined, now: number = Date.now()): boolean {
+  if (!expiresAt) return true;
+  const end = Date.parse(expiresAt);
+  if (Number.isNaN(end)) return true;
+  return end - now < SESSION_REFRESH_BEFORE_DAYS * 86_400_000;
+}

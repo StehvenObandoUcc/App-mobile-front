@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useRouter, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInventory } from '../src/hooks/useInventory';
@@ -31,12 +31,12 @@ import {
   ScreenHeader,
   M3Dialog,
   IngredientFormSheet,
-  SpeedDialFab,
+  Fab,
   SelectionHeader,
   SelectionActionBar,
 } from '../src/components';
 import { getExpirationStatus } from '../src/utils/expiration';
-import { daysUntil } from '../src/utils/dates';
+import { daysUntil, resolveFormExpirationSource } from '../src/utils/dates';
 import { radii, spacing, CATEGORY_LIST } from '../src/theme';
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
@@ -54,12 +54,10 @@ export default function InventoryScreen() {
   const { t, tp } = useI18n();
   const styles = useStyles();
   const router = useRouter();
-  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ filter?: string; from?: string; add?: string }>();
   const { items, status, error, reload, addItem, updateItem, deleteItem, deleteMultipleItems, consumeItem } =
     useInventory();
-  const isLeavingRef = useRef(false);
   const categories: CategoryChip[] = [
     { key: 'all', label: t('screensMain.inventory.all') },
     { key: 'expiring', label: t('screensMain.inventory.expiring'), icon: 'time-outline' },
@@ -72,18 +70,11 @@ export default function InventoryScreen() {
 
   // Intercepción universal de retroceso tras escanear:
   // Redirigir a Inicio (/) cubriendo header, botón físico Android y gesto swipe-back en iOS
-  useEffect(() => {
-    if (params.from !== 'scan') return;
-
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (isLeavingRef.current) return;
-      e.preventDefault();
-      isLeavingRef.current = true;
-      router.replace('/');
-    });
-
-    return unsubscribe;
-  }, [navigation, params.from]);
+  // Expo Router 58: `usePreventRemove` reemplaza al evento «beforeRemove».
+  const disableBackToHome = usePreventRemove(params.from === 'scan', () => {
+    disableBackToHome();
+    router.replace('/');
+  });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>(
@@ -329,6 +320,7 @@ export default function InventoryScreen() {
       quantity: parsedQty,
       unit,
       expirationDate: expirationDate.trim() || null,
+      expirationSource: resolveFormExpirationSource(editingItem, expirationDate.trim() || null),
       confidence: editingItem ? editingItem.confidence : null,
       source: editingItem ? editingItem.source : 'manual',
       confirmed: true,
@@ -521,7 +513,7 @@ export default function InventoryScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           renderItem={renderIngredientItem}
-          ListHeaderComponent={listHeader}
+          ListHeaderComponent={listHeader ?? undefined}
           keyboardShouldPersistTaps="handled"
           initialNumToRender={8}
           maxToRenderPerBatch={10}
@@ -573,15 +565,18 @@ export default function InventoryScreen() {
         />
       )}
 
-      {/* ── FAB extendido «Agregar» (oculto en modo selección) ── */}
+      {/*
+        ── FAB «Agregar» (oculto en modo selección) ──
+        Abre directo el formulario. Antes era un menú con «Escanear», que repetía el botón central de la barra:
+        eran dos botones flotantes para lo mismo.
+      */}
       {!isSelectMode && (
-        <SpeedDialFab
+        <Fab
+          iconName="add"
+          label={t('screensMain.inventory.addLabel')}
           accessibilityLabel={t('screensMain.inventory.addA11y')}
+          onPress={() => openAddModal()}
           style={{ right: spacing.screenGutter, bottom: bottomBarPosition + NAV_HEIGHT + 16 }}
-          actions={[
-            { key: 'scan', label: t('screensMain.inventory.scanWithCamera'), iconName: 'scan-outline', tone: 'brand', onPress: () => router.push('/scan') },
-            { key: 'manual', label: t('screensMain.inventory.writeByHand'), iconName: 'create-outline', onPress: () => openAddModal() },
-          ]}
         />
       )}
 
@@ -610,6 +605,7 @@ export default function InventoryScreen() {
         onSubmit={handleSave}
         onClose={() => setModalVisible(false)}
         onOpenCalendar={() => setIsDatePickerVisible(true)}
+        estimatedDate={editingItem?.expirationSource === 'estimated' ? editingItem.expirationDate : null}
         onDelete={
           editingItem
             ? () => {

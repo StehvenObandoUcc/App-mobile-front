@@ -6,11 +6,11 @@
 
 **Escanea tu despensa, controla los vencimientos y cocina con ayuda de IA.**
 
-![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white)
-![React Native](https://img.shields.io/badge/React_Native-0.86-61DAFB?logo=react&logoColor=black)
-![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)
+![Expo](https://img.shields.io/badge/Expo-58-000020?logo=expo&logoColor=white)
+![React Native](https://img.shields.io/badge/React_Native-0.88-61DAFB?logo=react&logoColor=black)
+![React](https://img.shields.io/badge/React-19.3-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)
-![Expo Router](https://img.shields.io/badge/Expo_Router-57-000020?logo=expo&logoColor=white)
+![Expo Router](https://img.shields.io/badge/Expo_Router-58-000020?logo=expo&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-APK-3DDC84?logo=android&logoColor=white)
 
 </div>
@@ -51,15 +51,15 @@ Está dirigida a usuarios finales que quieren organizar su despensa, su lista de
 
 | Componente | Tecnología | Versión |
 |---|---|---|
-| Framework | Expo | ~57.0.26 |
-| Runtime | React Native | 0.86.3 |
-| UI | React | 19.2.3 |
+| Framework | Expo | ~58.0.19 |
+| Runtime | React Native | 0.88.0 |
+| UI | React | 19.3.0 |
 | Lenguaje | TypeScript | ~6.0.3 |
-| Navegación | Expo Router | ~57.0.24 |
-| Cámara / imágenes | expo-camera, expo-image-picker, expo-image-manipulator | ~57.0.x |
-| Notificaciones | expo-notifications | ~57.0.21 |
+| Navegación | Expo Router | ~58.0.26 |
+| Cámara / imágenes | expo-camera, expo-image-picker, expo-image-manipulator | ~58.0.x |
+| Notificaciones | expo-notifications | ~58.1.6 |
 | Almacenamiento local | @react-native-async-storage/async-storage | ^2.2.0 |
-| Almacenamiento seguro | expo-secure-store | ~57.0.4 |
+| Almacenamiento seguro | expo-secure-store | ~58.0.2 |
 | Compilación | EAS Build (perfiles `development`, `preview`, `production`) | CLI ≥ 12.0.0 |
 | Pruebas | Node test runner (`node --test`) | — |
 

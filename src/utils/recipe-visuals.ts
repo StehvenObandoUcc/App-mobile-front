@@ -1,5 +1,6 @@
 import type { ThemeColors } from '../theme/colors';
 import { t, tp } from '../i18n';
+import { missingRequiredOf } from './consumption';
 
 /**
  * Franja pastel para recetas sin foto (RecipeCard, RecipeMiniCard, TodayRecipeCard).
@@ -26,10 +27,23 @@ export const DIFFICULTY_LABELS = {
   get hard() { return t('misc.difficulty.hard'); },
 } as const;
 
-/** «Falta 1» · «Faltan 3» · «Tienes todo» */
+/** «Tienes todo» · «Te falta 1» · «Te faltan 3» */
 export function missingLabel(missing: number): string {
   if (missing === 0) return t('misc.recipeCard.noneMissing');
   return tp('misc.recipeCard.missing', missing);
+}
+
+/**
+ * Estado de una receta frente a la despensa de hoy, en palabras: «Tienes todo» · «Te falta 1».
+ * Reemplaza al «87 % con tu despensa»: el número no decía si se podía cocinar. Cuenta solo los
+ * obligatorios, igual que `isCookable` (los opcionales no impiden cocinar).
+ */
+export function recipeStatus(recipe: Parameters<typeof missingRequiredOf>[0]): {
+  label: string;
+  icon: 'checkmark-circle' | 'cart-outline';
+} {
+  const missing = missingRequiredOf(recipe);
+  return { label: missingLabel(missing), icon: missing === 0 ? 'checkmark-circle' : 'cart-outline' };
 }
 
 /**

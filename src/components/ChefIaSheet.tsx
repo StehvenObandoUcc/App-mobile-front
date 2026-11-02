@@ -3,6 +3,7 @@ import { View, StyleSheet, Modal, ScrollView, Pressable, KeyboardAvoidingView } 
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
+import { joinTitle } from './DialogTitle';
 import { LabeledField } from './LabeledField';
 import { IconButton } from './IconButton';
 import { PrimaryButton } from './PrimaryButton';
@@ -109,7 +110,9 @@ export function ChefIaSheet({
   const shown = showAll ? sorted : sorted.slice(0, VISIBLE_INGREDIENTS);
   const hidden = sorted.length - shown.length;
   const canClose = !isGenerating;
-  const close = () => canClose && onClose();
+  const close = () => {
+    if (canClose) onClose();
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
@@ -122,8 +125,8 @@ export function ChefIaSheet({
             <View style={styles.badge}>
               <Ionicons name="sparkles" size={24} color={colors.m3.onTertiary} />
             </View>
-            <AppText variant="headline" weight="light" style={styles.title} accessibilityRole="header">
-              {t('sheets.chefIa.title')} <AppText weight="semibold">{t('sheets.chefIa.titleEmphasis')}</AppText>
+            <AppText variant="headline" weight="semibold" style={styles.title} accessibilityRole="header">
+              {joinTitle(t('sheets.chefIa.title'), t('sheets.chefIa.titleEmphasis'))}
             </AppText>
             <IconButton
               iconName="close"

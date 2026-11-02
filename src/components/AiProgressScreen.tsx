@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
+import { joinTitle } from './DialogTitle';
 import { SecondaryButton } from './SecondaryButton';
 import { HeroArt } from './HeroArt';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,9 +67,8 @@ export function AiProgressScreen({
         {topSlot && <View style={[styles.top, { top: insets.top + 24 }]}>{topSlot}</View>}
         <HeroArt iconName={iconName} blobColor={colors.tertiaryContainer} tileColor={colors.tertiary} iconColor={colors.m3.onTertiary} />
 
-        <AppText variant="headline" weight="light" align="center" accessibilityRole="header">
-          {`${title} `}
-          <AppText weight="semibold">{emphasis}</AppText>
+        <AppText variant="headline" weight="semibold" align="center" accessibilityRole="header">
+          {joinTitle(title, emphasis)}
         </AppText>
 
         <View style={styles.steps}>

@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { t } from '../i18n';
-import { AsyncStatus, Recipe, DietaryPreference } from '../types';
+import { AsyncStatus, Recipe, DietaryPreference, Ingredient } from '../types';
 import { RecipeService, mockRecipeService, PrepareRecipeResult } from '../services/recipe-service';
 import { LocalStorage } from '../storage/local-storage';
 import type { RecipeGenerationExtras } from '../services/api-client';
+import { withLiveAvailability } from '../utils/consumption';
 
 let memoryRecipes: Recipe[] | null = null;
 
@@ -18,7 +19,14 @@ LocalStorage.subscribe(() => {
 });
 
 export function useRecipes(service: RecipeService = mockRecipeService) {
-  const [recipes, setRecipes] = useState<Recipe[]>(memoryRecipes || []);
+  const [storedRecipes, setRecipes] = useState<Recipe[]>(memoryRecipes || []);
+  // Despensa local: «tienes / te falta» y el % se recalculan con lo que hay HOY, no con lo que había al generar.
+  // null = aún no se leyó (unos ms): no se recalcula para no mostrar un «0 %» momentáneo.
+  const [pantry, setPantry] = useState<Ingredient[] | null>(null);
+  const recipes = useMemo(
+    () => (pantry ? storedRecipes.map((r) => withLiveAvailability(r, pantry)) : storedRecipes),
+    [storedRecipes, pantry]
+  );
   const [status, setStatus] = useState<AsyncStatus>(memoryRecipes && memoryRecipes.length > 0 ? 'success' : 'loading');
   const [error, setError] = useState<string | null>(null);
 
@@ -37,8 +45,11 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
 
   useEffect(() => {
     loadRecipes();
+    const loadPantry = () => LocalStorage.getInventory().then(setPantry).catch(() => {});
+    loadPantry();
 
     const unsubscribe = LocalStorage.subscribe(() => {
+      loadPantry();
       // Solo lectura local: getRecipes() también sincroniza con la nube y eso
       // volvía a emitir cambios en bucle (reordenaba la lista y causaba lag).
       LocalStorage.getRecipes().then((data) => {
@@ -52,7 +63,8 @@ export function useRecipes(service: RecipeService = mockRecipeService) {
 
   const getRecipeById = useCallback(
     async (id: string): Promise<Recipe | null> => {
-      return service.getRecipeById(id);
+      const [recipe, current] = await Promise.all([service.getRecipeById(id), LocalStorage.getInventory().catch(() => [])]);
+      return recipe ? withLiveAvailability(recipe, current) : null;
     },
     [service]
   );

@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
+import { joinTitle } from './DialogTitle';
 import { HeroArt, HeroArtProps } from './HeroArt';
 import { PrimaryButton } from './PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
@@ -42,9 +43,8 @@ export function StatusScreen({ art, title, emphasis, message, primary, secondary
     >
       {topSlot && <View style={[styles.top, { top: insets.top + 24 }]}>{topSlot}</View>}
       <HeroArt {...art} />
-      <AppText variant="headline" weight="light" align="center" accessibilityRole="header">
-        {emphasis ? `${title} ` : title}
-        {emphasis ? <AppText weight="semibold">{emphasis}</AppText> : null}
+      <AppText variant="headline" weight="semibold" align="center" accessibilityRole="header">
+        {joinTitle(title, emphasis)}
       </AppText>
       <AppText variant="body" color={colors.textSecondary} align="center">
         {message}

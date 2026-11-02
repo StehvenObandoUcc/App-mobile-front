@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Modal, ScrollView, Pressable, KeyboardAvoidingView } from 'react-native';
 import { AppText } from './AppText';
+import { joinTitle } from './DialogTitle';
 import { LabeledField } from './LabeledField';
 import { IconButton } from './IconButton';
 import { PrimaryButton } from './PrimaryButton';
@@ -40,6 +41,8 @@ export type IngredientFormSheetProps = {
   onClose: () => void;
   onOpenCalendar: () => void;
   onDelete?: () => void;
+  /** Fecha que calculó la IA ('YYYY-MM-DD'). Mientras el campo la conserve, se avisa que es estimada. */
+  estimatedDate?: string | null;
 };
 
 const NAME_MAX = 60;
@@ -64,6 +67,7 @@ export function IngredientFormSheet({
   onClose,
   onOpenCalendar,
   onDelete,
+  estimatedDate,
 }: IngredientFormSheetProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -96,9 +100,11 @@ export function IngredientFormSheet({
           <View style={styles.handle} />
 
           <View style={styles.header}>
-            <AppText variant="headline" weight="light" style={styles.title} accessibilityRole="header">
-              {mode === 'edit' ? t('sheets.ingredientForm.titleEdit') : t('sheets.ingredientForm.titleAdd')}{' '}
-              <AppText weight="semibold">{t('sheets.ingredientForm.titleEmphasis')}</AppText>
+            <AppText variant="headline" weight="semibold" style={styles.title} accessibilityRole="header">
+              {joinTitle(
+                mode === 'edit' ? t('sheets.ingredientForm.titleEdit') : t('sheets.ingredientForm.titleAdd'),
+                t('sheets.ingredientForm.titleEmphasis')
+              )}
             </AppText>
             <IconButton iconName="close" variant="neutral" accessibilityLabel={t('common.close')} onPress={requestClose} style={styles.closeBtn} />
           </View>
@@ -167,6 +173,11 @@ export function IngredientFormSheet({
                 onChange={(v) => onChange('expirationDate', v)}
                 onOpenCalendar={onOpenCalendar}
               />
+              {estimatedDate && values.expirationDate === estimatedDate ? (
+                <AppText variant="caption" color={colors.textSecondary}>
+                  {t('sheets.ingredientForm.expirationEstimated')}
+                </AppText>
+              ) : null}
             </View>
 
             {mode === 'edit' && onDelete && (

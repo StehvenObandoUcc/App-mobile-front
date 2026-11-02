@@ -26,7 +26,7 @@ export const screensFlow = {
     tagCheese_other: 'Queso fresco · {count} días',
     tagTomatoSauce_one: 'Salsa de tomate · {count} día',
     tagTomatoSauce_other: 'Salsa de tomate · {count} días',
-    tagPantryMatch: '92 % con tu despensa',
+    tagPantryMatch: 'Tienes todo para cocinarla',
     tagAsparagus_one: 'Espárragos · {count} día',
     tagAsparagus_other: 'Espárragos · {count} días',
     tagChickenWings: 'Alitas de pollo',

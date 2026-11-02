@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ingredient, Recipe, ShoppingItem, IngredientCategory, OutboxMutation } from '../types';
+import { Ingredient, Recipe, ShoppingItem, IngredientCategory, OutboxMutation, ExpirationSource } from '../types';
 import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
-import { addDaysISO, earliestISODate } from '../utils/dates';
+import { addDaysISO, earliestExpiry } from '../utils/dates';
 import { convertQuantity } from '../utils/consumption';
 import { generateOperationId } from '../utils/uuid';
 
@@ -39,7 +39,8 @@ export interface MoveBoughtSnapshot {
     /** Unidad final (al reponer un agotado cambia). Opcional para snapshots viejos. */
     unit?: Ingredient['unit'];
     expirationDate: string | null;
-    expirationSource: 'estimated';
+    /** Origen de la fecha que quedó: «estimated» si ganó la del traspaso, el original si ganó la que ya tenías. */
+    expirationSource: ExpirationSource;
   }[];
 }
 
@@ -709,21 +710,23 @@ export const LocalStorage = {
           existing.quantity = cleanQty;
           existing.unit = cleanUnit;
           existing.expirationDate = estimatedExp;
+          existing.expirationSource = 'estimated';
         } else {
           if (extra !== null && existing.quantity !== null) {
             existing.quantity = Math.round((existing.quantity + extra) * 1000) / 1000;
           }
-          // Conservar la fecha más próxima si ambas existen (texto ISO: sin pasar por UTC)
-          existing.expirationDate = earliestISODate(existing.expirationDate, estimatedExp);
+          // Conservar la fecha más próxima si ambas existen (texto ISO: sin pasar por UTC), con su origen.
+          const kept = earliestExpiry(existing, { expirationDate: estimatedExp, expirationSource: 'estimated' });
+          existing.expirationDate = kept.expirationDate;
+          existing.expirationSource = kept.expirationSource;
         }
-        existing.expirationSource = 'estimated';
 
         updatedIngredients.push({
           id: existing.id,
           quantity: existing.quantity,
           unit: existing.unit,
           expirationDate: existing.expirationDate,
-          expirationSource: 'estimated',
+          expirationSource: existing.expirationSource ?? 'estimated',
         });
       } else {
         // Producto nuevo en inventario

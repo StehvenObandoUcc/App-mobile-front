@@ -3,6 +3,7 @@ import type { data as Es } from '../es/data';
 /** English texts · zone «data». Must have exactly the same keys as ../es/data.ts. */
 export const data: typeof Es = {
   auth: {
+    sessionExpired: 'Your session expired. Sign in again; your data is still saved.',
     noSession: 'There is no active session.',
     deleteAccountError: "We couldn't delete your account. Please try again.",
     saveError: 'Could not store the session securely on this device.',

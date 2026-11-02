@@ -39,8 +39,8 @@ export const misc = {
   },
   recipeCard: {
     noneMissing: 'Tienes todo',
-    missing_one: 'Falta {count}',
-    missing_other: 'Faltan {count}',
+    missing_one: 'Te falta {count}',
+    missing_other: 'Te faltan {count}',
   },
   units: {
     short: {

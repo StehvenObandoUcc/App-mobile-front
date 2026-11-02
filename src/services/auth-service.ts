@@ -1,9 +1,10 @@
 import { t } from '../i18n';
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL, registerAuthTokenProvider } from './api-client';
+import { AppState } from 'react-native';
+import { API_BASE_URL, registerAuthTokenProvider, registerUnauthorizedHandler } from './api-client';
 import { AuthSession } from '../types';
 import { LocalStorage } from '../storage/local-storage';
-import { parseAuthError } from '../utils/auth-flow';
+import { parseAuthError, shouldRefreshSession } from '../utils/auth-flow';
 import { setPending, clearPending } from './pending-auth';
 
 const SESSION_SECURE_KEY = 'food_ai_session_v1';
@@ -91,7 +92,17 @@ async function hydrateAuth() {
   }
 }
 
-hydrateAuth();
+hydrateAuth().then(() => AuthService.refreshIfNeeded());
+
+// Al volver a la app (estaba en segundo plano) se revisa si la sesión está por vencer.
+AppState.addEventListener('change', (state) => {
+  if (state === 'active') AuthService.refreshIfNeeded();
+});
+
+type RefreshResult = 'ok' | 'expired' | 'unavailable';
+let refreshInFlight: Promise<RefreshResult> | null = null;
+// La sesión se cerró porque el servidor ya no la renueva: el login lo explica una vez.
+let sessionExpiredNotice = false;
 
 /** Códigos de error del backend que tienen mensaje propio en i18n (data.auth.errors.<code>). */
 const KNOWN_ERROR_CODES = [
@@ -145,6 +156,75 @@ export class AuthService {
       };
       check();
     });
+  }
+
+  /**
+   * Cambia el token actual por uno nuevo (POST /auth/refresh). Una sola llamada a la vez: los pedidos que
+   * fallan juntos esperan la misma renovación.
+   * - 'ok': sesión renovada.
+   * - 'expired': el servidor ya no la renueva (vencida hace demasiado, contraseña cambiada, cuenta borrada).
+   * - 'unavailable': sin red o servidor caído. La sesión se conserva y se intentará después.
+   */
+  static refreshSession(): Promise<RefreshResult> {
+    if (refreshInFlight) return refreshInFlight;
+    const token = currentSession?.accessToken;
+    if (!token) return Promise.resolve('expired');
+    refreshInFlight = (async (): Promise<RefreshResult> => {
+      let response: Response;
+      try {
+        response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {
+        return 'unavailable';
+      }
+      if (response.status === 401) return 'expired';
+      if (!response.ok) return 'unavailable'; // 429 / 5xx: no es culpa de la sesión
+      const data = await response.json().catch(() => null);
+      // Si mientras tanto se cerró sesión o se cambió de cuenta, la respuesta ya no aplica.
+      if (!currentSession || currentSession.accessToken !== token) return 'unavailable';
+      if (typeof data?.access_token !== 'string' || !data.access_token || data?.user?.id !== currentSession.user.id) {
+        return 'unavailable';
+      }
+      const session: AuthSession = {
+        accessToken: data.access_token,
+        expiresAt: data.expires_at,
+        user: { id: data.user.id, email: data.user.email, name: data.user.name },
+      };
+      currentSession = session;
+      try {
+        await saveSecureSession(session);
+      } catch {
+        // Sin guardar sigue valiendo en memoria; al próximo arranque se renueva otra vez.
+      }
+      notifyListeners();
+      return 'ok';
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+    return refreshInFlight;
+  }
+
+  /** Renueva sola la sesión cuando está por vencer. Si el servidor ya no la acepta, la cierra con aviso. */
+  static async refreshIfNeeded(): Promise<void> {
+    if (!currentSession || !shouldRefreshSession(currentSession.expiresAt)) return;
+    const result = await AuthService.refreshSession();
+    if (result === 'expired') await AuthService.expireSession();
+  }
+
+  /** Cierra una sesión que el servidor ya no acepta y deja el aviso para la pantalla de login. */
+  static async expireSession(): Promise<void> {
+    if (!currentSession) return;
+    sessionExpiredNotice = true;
+    await AuthService.logout();
+  }
+
+  /** true una sola vez después de que la sesión venció (el login muestra «Tu sesión expiró»). */
+  static takeSessionExpiredNotice(): boolean {
+    const shown = sessionExpiredNotice;
+    sessionExpiredNotice = false;
+    return shown;
   }
 
   static subscribe(callback: (session: AuthSession | null) => void): () => void {
@@ -204,6 +284,7 @@ export class AuthService {
     };
     await saveSecureSession(session);
     currentSession = session;
+    sessionExpiredNotice = false;
     await LocalStorage.switchUser(session.user.id);
     clearPending();
     notifyListeners();
@@ -333,4 +414,13 @@ export class AuthService {
 }
 
 registerAuthTokenProvider(() => currentSession?.accessToken || null);
+// El servidor rechazó el token: se renueva y el pedido se repite. Solo si ya no se puede renovar se cierra la
+// sesión (los datos locales se conservan) y la app vuelve al login con el aviso.
+registerUnauthorizedHandler(async () => {
+  if (!currentSession) return false;
+  const result = await AuthService.refreshSession();
+  if (result === 'ok') return true;
+  if (result === 'expired') await AuthService.expireSession().catch(() => {});
+  return false;
+});
 

@@ -40,6 +40,7 @@ import {
 import { sortRecipes } from '../src/utils/recipe-sorter';
 import { getValidTimeOptionsForFocus, checkIngredientSelectionCoherence } from '../src/utils/recipe-validation';
 import { daysUntil } from '../src/utils/dates';
+import { isCookable, isAlmostCookable } from '../src/utils/consumption';
 import { loadAppSettings } from '../src/storage/app-settings';
 import { isServerReachable } from '../src/services/api-client';
 import { isNetworkErrorMessage } from '../src/utils/error-messages';
@@ -61,7 +62,7 @@ const CUSTOM_STYLE_OPTIONS = [
 
 const SORT_OPTIONS: { key: RecipeSortOption; labelKey: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'createdAt_desc', labelKey: 'screensMain.recipes.sort.recent', icon: 'time-outline' },
-  { key: 'matchScore_desc', labelKey: 'screensMain.recipes.sort.match', icon: 'sparkles-outline' },
+  { key: 'matchScore_desc', labelKey: 'screensMain.recipes.sort.match', icon: 'basket-outline' },
   { key: 'prepTime_asc', labelKey: 'screensMain.recipes.sort.quick', icon: 'flash-outline' },
   { key: 'difficulty_asc', labelKey: 'screensMain.recipes.sort.easiest', icon: 'trending-down-outline' },
 ];
@@ -341,7 +342,7 @@ export default function RecipesScreen() {
     const q = searchQuery.trim().toLowerCase();
     const matched = recipes.filter((r) => {
       if (q && !r.title.toLowerCase().includes(q) && !r.description.toLowerCase().includes(q)) return false;
-      if (activeTab === 'high_match' && r.matchScore < 80) return false;
+      if (activeTab === 'high_match' && !isAlmostCookable(r)) return false;
       if (activeTab === 'quick' && (r.prepTimeMinutes || 99) > 20) return false;
       if (activeTab === 'saved' && !r.isSaved) return false;
       if (difficultyFilter !== 'all' && r.difficulty !== difficultyFilter) return false;
@@ -354,7 +355,7 @@ export default function RecipesScreen() {
   const handleSelectAll = () =>
     setSelectedIds(allSelected ? new Set() : new Set(filteredRecipes.map((r) => r.id)));
 
-  const readyCount = recipes.filter((r) => r.missingIngredients.length === 0).length;
+  const readyCount = recipes.filter((r) => isCookable(r)).length;
   const sortLabel = t(SORT_OPTIONS.find((o) => o.key === sortBy)?.labelKey ?? 'screensMain.recipes.sort.recent');
   const diffFilter = DIFFICULTY_FILTERS.find((d) => d.key === difficultyFilter)!;
 

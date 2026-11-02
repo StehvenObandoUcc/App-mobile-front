@@ -2,6 +2,7 @@
 export const data = {
   auth: {
     noSession: 'No hay una sesión activa.',
+    sessionExpired: 'Tu sesión expiró. Vuelve a iniciar sesión; tus datos siguen guardados.',
     deleteAccountError: 'No pudimos eliminar tu cuenta. Intenta de nuevo.',
     saveError: 'No se pudo almacenar la sesión de forma segura en el dispositivo.',
     secureReadError: 'Error al acceder al almacenamiento seguro de credenciales.',

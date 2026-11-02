@@ -33,8 +33,13 @@ export type IngredientCardProps = {
   compact?: boolean;
 };
 
-function ticketContent(colors: ThemeColors, dateStr: string | null, t: typeof TFn, tp: typeof TpFn) {
+/**
+ * `estimated` = la fecha la calculó la IA por el tipo de alimento, no se leyó en la etiqueta.
+ * El número se mantiene (ordena igual), pero el ticket dice «aprox.» y un vencido estimado se pregunta («¿Vencido?»).
+ */
+function ticketContent(colors: ThemeColors, dateStr: string | null, t: typeof TFn, tp: typeof TpFn, estimated = false) {
   const status = getExpirationStatus(dateStr).status;
+  const withSource = (a11y: string) => (estimated ? t('organisms.ingredientCard.estimatedA11y', { status: a11y }) : a11y);
   const tone = colors.functional[status];
   const days = getDaysLeft(dateStr);
   if (status === 'unknown' || days === null) {
@@ -44,19 +49,25 @@ function ticketContent(colors: ThemeColors, dateStr: string | null, t: typeof TF
     return {
       tone,
       big: undefined,
-      small: t('organisms.ingredientCard.expired'),
-      a11y: t('organisms.ingredientCard.expiredA11y'),
+      small: estimated ? t('organisms.ingredientCard.expiredEstimated') : t('organisms.ingredientCard.expired'),
+      a11y: withSource(t('organisms.ingredientCard.expiredA11y')),
       icon: 'alert-circle-outline' as const,
     };
   }
   if (days === 0) {
-    return { tone, big: t('organisms.ingredientCard.today'), small: t('organisms.ingredientCard.todaySmall'), a11y: t('organisms.ingredientCard.todayA11y'), icon: undefined };
+    return {
+      tone,
+      big: t('organisms.ingredientCard.today'),
+      small: estimated ? t('organisms.ingredientCard.todaySmallEstimated') : t('organisms.ingredientCard.todaySmall'),
+      a11y: withSource(t('organisms.ingredientCard.todayA11y')),
+      icon: undefined,
+    };
   }
   return {
     tone,
     big: String(days),
-    small: tp('organisms.ingredientCard.dayUnit', days),
-    a11y: tp('organisms.ingredientCard.daysLeftA11y', days),
+    small: estimated ? tp('organisms.ingredientCard.dayUnitEstimated', days) : tp('organisms.ingredientCard.dayUnit', days),
+    a11y: withSource(tp('organisms.ingredientCard.daysLeftA11y', days)),
     icon: undefined,
   };
 }
@@ -77,7 +88,7 @@ export function IngredientCard({
   const reduceMotion = useReduceMotion();
   const catConfig = getCategoryConfig(ingredient.category);
   const catColor = colors.categories[ingredient.category] || colors.categories.other;
-  const ticket = ticketContent(colors, ingredient.expirationDate, t, tp);
+  const ticket = ticketContent(colors, ingredient.expirationDate, t, tp, ingredient.expirationSource === 'estimated');
   // Cantidad 0 = agotado: se queda en la despensa con «Sin stock» hasta que el usuario lo reponga o lo borre.
   const outOfStock = ingredient.quantity === 0;
   const quantity =

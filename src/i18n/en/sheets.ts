@@ -33,6 +33,7 @@ export const sheets: typeof Es = {
     },
     category: 'Category',
     expiration: 'Expiry date',
+    expirationEstimated: 'The AI estimated it from the type of food. If the package shows a date, use that one.',
     submitAdd: 'Add food',
     submitEdit: 'Save changes',
     deleteLabel: 'Delete this food',

@@ -28,7 +28,7 @@ export const screensFlow: typeof Es = {
     tagCheese_other: 'Fresh cheese · {count} days',
     tagTomatoSauce_one: 'Tomato sauce · {count} day',
     tagTomatoSauce_other: 'Tomato sauce · {count} days',
-    tagPantryMatch: '92% match with your pantry',
+    tagPantryMatch: 'You have everything for it',
     tagAsparagus_one: 'Asparagus · {count} day',
     tagAsparagus_other: 'Asparagus · {count} days',
     tagChickenWings: 'Chicken wings',

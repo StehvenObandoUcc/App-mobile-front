@@ -124,3 +124,29 @@ export function earliestISODate(a: string | null | undefined, b: string | null |
   if (a && b) return a <= b ? a : b;
   return a || b || null;
 }
+
+type DatedSource = { expirationDate?: string | null; expirationSource?: 'manual' | 'label' | 'estimated' | 'unknown' };
+
+/**
+ * Al juntar dos lotes del mismo alimento gana la fecha más próxima, y con ella SU origen:
+ * si la fecha que queda es la que escribiste a mano, no se vuelve «estimada» solo porque el otro lote lo era.
+ */
+export function earliestExpiry(a: DatedSource, b: DatedSource): Required<DatedSource> {
+  const date = earliestISODate(a.expirationDate, b.expirationDate);
+  if (!date) return { expirationDate: null, expirationSource: 'unknown' };
+  const winner = a.expirationDate === date ? a : b;
+  return { expirationDate: date, expirationSource: winner.expirationSource ?? 'unknown' };
+}
+
+/**
+ * Origen de la fecha al guardar un formulario: si la persona la cambió (o la escribió), es «manual»;
+ * si la dejó igual, conserva el origen que tenía (una fecha estimada sigue siendo estimada hasta que la corrijan).
+ */
+export function resolveFormExpirationSource(
+  previous: DatedSource | null | undefined,
+  nextDate: string | null
+): NonNullable<DatedSource['expirationSource']> {
+  if (!nextDate) return 'unknown';
+  if (previous && previous.expirationDate === nextDate) return previous.expirationSource ?? 'unknown';
+  return 'manual';
+}

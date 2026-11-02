@@ -21,18 +21,21 @@ import { FIELD_VISIBLE_MARGIN, computeScrollDelta } from '../utils/keyboard-scro
  * también cuando el teclado termina de abrirse después del foco (keyboardDidShow) o cambia el área visible.
  * Sin dependencias nuevas: solo KeyboardAvoidingView, ScrollView y Keyboard de react-native.
  */
-type Ctx = { ensureVisible: (target: View | null) => void; release: (target: View | null) => void };
+/** Instancia nativa de un View (RN 0.88: los componentes ya no son clases). */
+type ViewRef = React.ComponentRef<typeof View>;
+
+type Ctx = { ensureVisible: (target: ViewRef | null) => void; release: (target: ViewRef | null) => void };
 const KeyboardAwareContext = createContext<Ctx | null>(null);
 
 const noop = () => {};
 
 /** Devuelve `ensureVisible(view)`; fuera de un KeyboardAwareScroll no hace nada. */
-export function useEnsureFieldVisible(): (target: View | null) => void {
+export function useEnsureFieldVisible(): (target: ViewRef | null) => void {
   return useContext(KeyboardAwareContext)?.ensureVisible ?? noop;
 }
 
 /** Suelta el campo registrado (al perder el foco o desmontarse); solo actúa si sigue siendo el enfocado. */
-export function useReleaseField(): (target: View | null) => void {
+export function useReleaseField(): (target: ViewRef | null) => void {
   return useContext(KeyboardAwareContext)?.release ?? noop;
 }
 
@@ -45,10 +48,10 @@ export type KeyboardAwareScrollProps = {
 };
 
 export function KeyboardAwareScroll({ children, contentContainerStyle, style, fieldMargin = FIELD_VISIBLE_MARGIN }: KeyboardAwareScrollProps) {
-  const scrollRef = useRef<ScrollView>(null);
-  const viewportRef = useRef<View>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const viewportRef = useRef<ViewRef>(null);
   const scrollY = useRef(0);
-  const focused = useRef<View | null>(null);
+  const focused = useRef<ViewRef | null>(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   const viewportHeight = useRef(0);
@@ -80,7 +83,7 @@ export function KeyboardAwareScroll({ children, contentContainerStyle, style, fi
     if (inner && viewportHeight.current > 0 && typeof target.measureLayout === 'function') {
       try {
         target.measureLayout(
-          inner as Parameters<View['measureLayout']>[0],
+          inner as Parameters<ViewRef['measureLayout']>[0],
           (_x, y, _w, h) => {
             if (focused.current === target) scrollBy(y - scrollY.current, h, viewportHeight.current);
           },
@@ -95,14 +98,14 @@ export function KeyboardAwareScroll({ children, contentContainerStyle, style, fi
   }, [scrollBy]);
 
   const ensureVisible = useCallback(
-    (target: View | null) => {
+    (target: ViewRef | null) => {
       focused.current = target;
       reveal();
     },
     [reveal]
   );
 
-  const release = useCallback((target: View | null) => {
+  const release = useCallback((target: ViewRef | null) => {
     if (focused.current === target) focused.current = null;
   }, []);
 

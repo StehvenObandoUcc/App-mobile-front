@@ -31,6 +31,7 @@ export const sheets = {
     },
     category: 'Categoría',
     expiration: 'Fecha de vencimiento',
+    expirationEstimated: 'La estimó la IA según el tipo de alimento. Si el empaque trae fecha, usa esa.',
     submitAdd: 'Añadir alimento',
     submitEdit: 'Guardar cambios',
     deleteLabel: 'Eliminar este alimento',
