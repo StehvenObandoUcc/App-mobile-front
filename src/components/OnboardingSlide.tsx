@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Image, ImageSourcePropType } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PhotoTag, PhotoTagSpec } from './PhotoTag';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
@@ -21,6 +22,8 @@ export type OnboardingSlideProps = {
 export function OnboardingSlide({ photo, tags, width, height, accessibilityLabel, focusX = 0.5 }: OnboardingSlideProps) {
   const { colors } = useTheme();
   const styles = useStyles();
+  // La foto llega hasta el borde superior: las etiquetas bajan lo que ocupa la barra de estado para no pisarla.
+  const topInset = useSafeAreaInsets().top;
   const scale = width / 390;
   // «cover» con punto de enfoque horizontal (object-position del mockup): se calcula el tamaño a mano.
   const src = Image.resolveAssetSource(photo);
@@ -40,7 +43,13 @@ export function OnboardingSlide({ photo, tags, width, height, accessibilityLabel
         style={[styles.fade, { height: 120 * scale }]}
         pointerEvents="none"
       />
-      <View style={StyleSheet.absoluteFill} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+      {/* Velo suave bajo la barra de estado: el reloj y la batería se leen sobre fotos claras. */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.38)', 'rgba(0,0,0,0)']}
+        style={[styles.topScrim, { height: topInset + 28 }]}
+        pointerEvents="none"
+      />
+      <View style={[StyleSheet.absoluteFill, { top: topInset }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
         {tags.map((t) => (
           <PhotoTag key={t.label} spec={t} scale={scale} />
         ))}
@@ -50,6 +59,12 @@ export function OnboardingSlide({ photo, tags, width, height, accessibilityLabel
 }
 
 const useStyles = makeStyles((colors) => ({
+  topScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+  },
   fade: {
     position: 'absolute',
     left: 0,
