@@ -129,7 +129,7 @@ export default function ScanResultScreen() {
     }
   }, [params.warningsData]);
 
-  // ── Hoja de edición / alta manual (la misma de la Despensa) ──
+  // Hoja de edición / alta manual (la misma de la Despensa)
   const [sheetVisible, setSheetVisible] = useState(false);
   const [dateVisible, setDateVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -322,7 +322,7 @@ export default function ScanResultScreen() {
     </>
   );
 
-  // ── A · Nada detectado ──
+  // A · Nada detectado
   if (detectedItems.length === 0) {
     return (
       <View style={[styles.screen, styles.emptyScreen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }]}>

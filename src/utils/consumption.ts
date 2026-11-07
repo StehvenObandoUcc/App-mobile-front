@@ -141,7 +141,7 @@ export function planConsumption(
   return { updates, deletes: [], depleted: [...depleted], consumed, skipped };
 }
 
-// ─── Disponibilidad de recetas frente a la despensa ACTUAL ──────────────────────
+// Disponibilidad de recetas frente a la despensa ACTUAL
 //
 // El porcentaje que traía la IA («matchScore») se calculaba una sola vez al generar y luego quedaba congelado
 // (o se inventaba un 90 si faltaba). Aquí se recalcula cada vez con lo que hay hoy en la despensa,

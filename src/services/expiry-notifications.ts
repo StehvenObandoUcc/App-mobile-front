@@ -135,7 +135,7 @@ export function cancelExpiryReminders(): Promise<void> {
   return queue;
 }
 
-// ─── Funciones para la pantalla de Configuración ─────────────────────────────
+// Funciones para la pantalla de Configuración
 
 export type NotificationPermissionInfo = { granted: boolean; canAskAgain: boolean };
 

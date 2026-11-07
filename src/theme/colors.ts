@@ -48,7 +48,7 @@ function build(m3: M3, ext: Extended, f: Record<'fresh' | 'expiringSoon' | 'expi
     m3,
     ...ext,
 
-    // ═══ Alias heredados (misma API de siempre) ═══
+    // Alias heredados (misma API de siempre)
     background: m3.surface,
     surface: m3.surfaceContainerLowest,
     surfaceVariant: m3.surfaceContainerLow,
@@ -113,7 +113,7 @@ function build(m3: M3, ext: Extended, f: Record<'fresh' | 'expiringSoon' | 'expi
   };
 }
 
-// ─── Claro ──────────────────────────────────────────────────────────────────
+// Claro
 export const lightColors = build(
   {
     primary: '#C33149', // Sandía · blanco 5.45:1 · sobre fondo 5.03:1
@@ -185,7 +185,7 @@ export const lightColors = build(
 
 export type ThemeColors = typeof lightColors;
 
-// ─── Oscuro · Cacao suave (no negro; texto crema ~12:1 para cansar menos la vista) ──
+// Oscuro · Cacao suave (no negro; texto crema ~12:1 para cansar menos la vista)
 export const darkColors: ThemeColors = build(
   {
     primary: '#EF7487', // 5.58:1 sobre fondo

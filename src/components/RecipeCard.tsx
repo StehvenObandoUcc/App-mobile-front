@@ -119,7 +119,7 @@ export function RecipeCard({
         accessibilityState={isSelectMode ? { selected: isSelected } : undefined}
         accessibilityLabel={t('organisms.recipeCard.a11y', { title: recipe.title, status: status.label, difficulty: diffLabel })}
       >
-        {/* ── Franja superior ── */}
+        {/* Franja superior */}
         <View style={[styles.banner, { backgroundColor: banner.bg }]}>
           {recipe.imageUri && failedUri !== recipe.imageUri ? (
             <Image
@@ -182,7 +182,7 @@ export function RecipeCard({
           )}
         </View>
 
-        {/* ── Cuerpo ── */}
+        {/* Cuerpo */}
         <View style={styles.body}>
           <AppText variant="sectionTitle" numberOfLines={2}>
             {recipe.title}

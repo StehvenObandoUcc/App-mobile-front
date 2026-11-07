@@ -487,7 +487,7 @@ export const LocalStorage = {
     await persistToDisk();
   },
 
-  // ─── Inventario ─────────────────────────────────────────────────────────────
+  // Inventario
   async getInventory(): Promise<Ingredient[]> {
     return memoryInventory.filter((item) => !pendingDeletedInventory.has(item.id));
   },
@@ -536,7 +536,7 @@ export const LocalStorage = {
     schedulePersist('pending_deleted_inventory');
   },
 
-  // ─── Recetas ────────────────────────────────────────────────────────────────
+  // Recetas
   async getRecipes(): Promise<Recipe[]> {
     return memoryRecipes.filter((r) => !deletedRecipeIds.has(r.id));
   },
@@ -598,7 +598,7 @@ export const LocalStorage = {
     schedulePersist('pending_deleted_recipes');
   },
 
-  // ─── Lista de Compras ────────────────────────────────────────────────────────
+  // Lista de Compras
   async getShoppingList(): Promise<ShoppingItem[]> {
     return [...memoryShoppingList];
   },
@@ -797,7 +797,7 @@ export const LocalStorage = {
     return movedCount;
   },
 
-  // ─── Control de Eliminaciones Pendientes (Anti-Zombie) ──────────────────────
+  // Control de Eliminaciones Pendientes (Anti-Zombie)
   async addPendingDeletedShopping(id: string): Promise<void> {
     ensureActiveUser();
     pendingDeletedShopping.set(id, Date.now());
@@ -864,7 +864,7 @@ export const LocalStorage = {
     }
   },
 
-  // ─── Cola de Mutaciones Offline (Outbox Pattern) ───────────────────────────
+  // Cola de Mutaciones Offline (Outbox Pattern)
   getOutboxQueue(): OutboxMutation[] {
     return [...memoryOutbox];
   },

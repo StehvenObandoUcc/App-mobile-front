@@ -99,7 +99,7 @@ export function AppBottomNav() {
   const reduceMotionRef = useRef(reduceMotion);
   reduceMotionRef.current = reduceMotion;
 
-  // ── Píldora activa que se desliza (Paso 5 · Animaciones) ──
+  // Píldora activa que se desliza (Paso 5 · Animaciones)
   // Se dibuja aparte, detrás de las pestañas, con tres piezas para que todo sea transform nativo:
   // tapa izquierda (círculo 50) + centro (rectángulo que se estira con scaleX) + tapa derecha.
   const pillX = useRef(new Animated.Value(0)).current;

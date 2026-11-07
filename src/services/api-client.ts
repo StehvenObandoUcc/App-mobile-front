@@ -394,7 +394,7 @@ export async function deleteInventoryItemWithApi(id: string): Promise<boolean> {
 }
 
 
-// ─── Recetas Persistentes (Supabase / Cloud API) ──────────────────────────────
+// Recetas Persistentes (Supabase / Cloud API)
 
 /**
  * % guardado de la receta. Ya no se inventa un 90 cuando falta: la app lo recalcula contra la despensa actual
@@ -493,7 +493,7 @@ export async function batchDeleteRecipesWithApi(ids: string[]): Promise<boolean>
   return true;
 }
 
-// ─── Lista de Compras Persistente (Supabase / Cloud API) ──────────────────────
+// Lista de Compras Persistente (Supabase / Cloud API)
 
 
 /**

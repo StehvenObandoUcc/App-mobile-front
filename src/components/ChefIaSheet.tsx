@@ -144,7 +144,7 @@ export function ChefIaSheet({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* ── Enfoque ── */}
+            {/* Enfoque */}
             <StaggerView index={0} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.focusQuestion')}
@@ -179,7 +179,7 @@ export function ChefIaSheet({
               )}
             </StaggerView>
 
-            {/* ── Ingredientes ── */}
+            {/* Ingredientes */}
             <StaggerView index={1} delayMs={70} duration={320} style={styles.section}>
               <View style={styles.rowBetween}>
                 <AppText variant="body" weight="semibold">
@@ -236,7 +236,7 @@ export function ChefIaSheet({
               )}
             </StaggerView>
 
-            {/* ── Dieta ── */}
+            {/* Dieta */}
             <StaggerView index={2} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.dietLabel')}
@@ -248,7 +248,7 @@ export function ChefIaSheet({
               </View>
             </StaggerView>
 
-            {/* ── Dificultad ── */}
+            {/* Dificultad */}
             <StaggerView index={3} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.difficultyLabel')}
@@ -256,7 +256,7 @@ export function ChefIaSheet({
               <DifficultyPicker value={values.difficulty} onChange={(d) => onChange('difficulty', d)} />
             </StaggerView>
 
-            {/* ── Tiempo ── */}
+            {/* Tiempo */}
             <StaggerView index={4} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.timeLabel')}
@@ -275,7 +275,7 @@ export function ChefIaSheet({
               {timeHint ? <Hint text={timeHint} warning icon="time-outline" /> : null}
             </StaggerView>
 
-            {/* ── Cantidad ── */}
+            {/* Cantidad */}
             <StaggerView index={5} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.howManyLabel')}
@@ -289,7 +289,7 @@ export function ChefIaSheet({
             </StaggerView>
           </ScrollView>
 
-          {/* ── Botón fijo ── */}
+          {/* Botón fijo */}
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 12, 28) }]}>
             <PrimaryButton
               tone="ai"

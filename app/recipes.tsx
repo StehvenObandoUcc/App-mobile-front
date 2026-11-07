@@ -95,7 +95,7 @@ export default function RecipesScreen() {
   const stocked = useMemo(() => items.filter((i) => i.quantity !== 0), [items]);
   const { recipes, status, error, reload, toggleSave, deleteRecipe, deleteRecipes, generateWithAi } = useRecipes();
 
-  // ── Lista: búsqueda, filtros y orden ──
+  // Lista: búsqueda, filtros y orden
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   // Recetas-Estados · B: el Chef IA necesita red (lo guardado sigue disponible sin internet).
@@ -105,13 +105,13 @@ export default function RecipesScreen() {
   const [difficultyFilter, setDifficultyFilter] = useState<RecipeDifficultyFilter>('all');
   const [picker, setPicker] = useState<'sort' | 'difficulty' | null>(null);
 
-  // ── Chef IA ──
+  // Chef IA
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [chef, setChef] = useState<ChefIaValues>({ ...DEFAULT_CHEF, ingredientIds: new Set() });
   const [isGenerating, setIsGenerating] = useState(false);
   const cancelledRef = useRef(false);
 
-  // ── Selección múltiple ──
+  // Selección múltiple
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -287,7 +287,7 @@ export default function RecipesScreen() {
     [chosenIngredients.length, chef.focus, chef.time, chef.count]
   );
 
-  // ── Selección ──
+  // Selección
   const toggleSelectRecipe = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -605,7 +605,7 @@ export default function RecipesScreen() {
         cancelLabel={t('screensMain.recipes.chefCancel')}
       />
 
-      {/* ── Ordenar / Dificultad ── */}
+      {/* Ordenar / Dificultad */}
       <ActionSheetModal
         visible={picker !== null}
         onClose={() => setPicker(null)}

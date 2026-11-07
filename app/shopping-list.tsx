@@ -74,7 +74,7 @@ export default function ShoppingListScreen() {
   const warn = (title: string, titleEmphasis: string, message: string) =>
     setDialog({ visible: true, title, titleEmphasis, message, type: 'neutral', onConfirm: closeDialog });
 
-  // ── Agregar ──
+  // Agregar
   const pendingNames = useMemo(() => new Set(pendingItems.map((p) => normalizeName(p.name))), [pendingItems]);
   const handlePick = async (inv: Ingredient) => {
     try {
@@ -104,7 +104,7 @@ export default function ShoppingListScreen() {
     }
   };
 
-  // ── Quitar / Limpiar (siempre con confirmación) ──
+  // Quitar / Limpiar (siempre con confirmación)
   const confirmRemove = (item: ShoppingItem) =>
     setDialog({
       visible: true,
@@ -143,7 +143,7 @@ export default function ShoppingListScreen() {
     });
   };
 
-  // ── Pasar a la despensa (Compras-Estados · derecha) ──
+  // Pasar a la despensa (Compras-Estados · derecha)
   const handleMove = async () => {
     if (boughtItems.length === 0 || isMoving) return;
     setIsMoving(true);
@@ -236,7 +236,7 @@ export default function ShoppingListScreen() {
     </>
   );
 
-  // ── Sin compras (Compras-Estados · izquierda) ──
+  // Sin compras (Compras-Estados · izquierda)
   if (items.length === 0) {
     return (
       <AppScreen style={styles.screen}>

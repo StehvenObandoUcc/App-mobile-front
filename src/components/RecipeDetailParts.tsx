@@ -16,7 +16,7 @@ import { isAllowedPageUrl } from '../utils/recipe-merge';
  * Organismos: RecipeCover, RecipeIngredientsCard, MissingIngredientsCard
  */
 
-// ── AiBadge ───────────────────────────────────────────────────────────────────
+// AiBadge
 export function AiBadge({
   label,
   size = 'md',
@@ -39,7 +39,7 @@ export function AiBadge({
   );
 }
 
-// ── RecipeCover ───────────────────────────────────────────────────────────────
+// RecipeCover
 export type RecipeCoverProps = {
   banner: { bg: string; fg: string };
   imageUri?: string | null;
@@ -86,7 +86,7 @@ export function RecipeCover({ banner, imageUri, imageCredit, isSaved, topInset, 
   );
 }
 
-// ── RecipePhotoCredit ─────────────────────────────────────────────────────────
+// RecipePhotoCredit
 function openLink(source: RecipeImageCredit['source'], url: string) {
   if (!isAllowedPageUrl(source, url)) return;
   Linking.openURL(url).catch(() => {});
@@ -137,7 +137,7 @@ export function RecipePhotoCredit({ credit }: { credit: RecipeImageCredit }) {
   );
 }
 
-// ── StatTile ──────────────────────────────────────────────────────────────────
+// StatTile
 export type StatTileProps = {
   value: string;
   label: string;
@@ -163,7 +163,7 @@ export function StatTile({ value, label, iconName, top, tone }: StatTileProps) {
   );
 }
 
-// ── RecipeIngredientsCard ─────────────────────────────────────────────────────
+// RecipeIngredientsCard
 export type IngredientRow = { id: string; name: string; quantity: string; badge?: { label: string; tone: { background: string; text: string } } };
 
 export function RecipeIngredientsCard({ available, total, rows }: { available: number; total: number; rows: IngredientRow[] }) {
@@ -235,7 +235,7 @@ export function RecipeIngredientsCard({ available, total, rows }: { available: n
   );
 }
 
-// ── MissingIngredientsCard ────────────────────────────────────────────────────
+// MissingIngredientsCard
 export type MissingRow = { id: string; name: string; quantity: string; optional: boolean; substitutions: string[] };
 
 export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: MissingRow[]; onAddToShopping: () => void }) {
@@ -279,7 +279,7 @@ export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: Missin
   );
 }
 
-// ── StepItem ──────────────────────────────────────────────────────────────────
+// StepItem
 export type StepState = 'done' | 'current' | 'pending';
 
 export function StepItem({ index, text, state, onPress }: { index: number; text: string; state: StepState; onPress: () => void }) {
@@ -316,7 +316,7 @@ export function StepItem({ index, text, state, onPress }: { index: number; text:
   );
 }
 
-// ── StickyActionBar ───────────────────────────────────────────────────────────
+// StickyActionBar
 /** StepsLoading — «El Chef IA está escribiendo los pasos…» + dos pasos fantasma (Recetas-Estados · D). */
 export function StepsLoading() {
   const { colors } = useTheme();

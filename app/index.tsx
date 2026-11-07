@@ -94,7 +94,7 @@ function HomeContent() {
         { paddingBottom: Math.max(110, getBottomContentPadding(insets.bottom)) },
       ]}
     >
-      {/* ── 1. Encabezado (Inicio.dc.html) ── */}
+      {/* 1. Encabezado (Inicio.dc.html) */}
       <StaggerView index={0}>
         <ScreenHeader
           title={headerTitle}
@@ -117,7 +117,7 @@ function HomeContent() {
         />
       </StaggerView>
 
-      {/* ── 1b. Aviso de sincronización (Outbox) ── */}
+      {/* 1b. Aviso de sincronización (Outbox) */}
       {outbox.state !== 'hidden' && (
         <OfflineBanner
           state={outbox.state}
@@ -152,7 +152,7 @@ function HomeContent() {
         </StaggerView>
       )}
 
-      {/* ── Escanear: tarjeta grande con la despensa vacía; fila compacta cuando ya hay alimentos ── */}
+      {/* Escanear: tarjeta grande con la despensa vacía; fila compacta cuando ya hay alimentos */}
       <StaggerView index={2}>
         <ScanHero
           onPress={() => router.push('/scan')}

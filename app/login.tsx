@@ -240,7 +240,7 @@ export default function LoginScreen() {
     }
   };
 
-  // ── Bienvenida con fotos ──
+  // Bienvenida con fotos
   if (screenView === 'welcome') {
     const last = page === SLIDES.length - 1;
     return (
@@ -324,7 +324,7 @@ export default function LoginScreen() {
     );
   }
 
-  // ── Formulario ──
+  // Formulario
   const register_ = mode === 'register';
   const shownError: FormError | null = formError ?? (error ? { message: error } : null);
   return (

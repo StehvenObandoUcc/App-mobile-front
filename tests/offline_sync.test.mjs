@@ -67,7 +67,7 @@ function syncRecipes(currentLocal, remoteRecipes, pendingDeletedRecipeIds = []) 
   return Array.from(localMap.values()).filter((r) => !pendingSet.has(r.id));
 }
 
-// ─── SUITE 1: Regresión de Sincronización No Destructiva ───────────────────────
+// SUITE 1: Regresión de Sincronización No Destructiva
 describe('1. Sincronización Offline y Prevención de Pérdida de Datos (Regresión)', () => {
   it('debe fallar si se reintroduce la sobrescritura destructiva anterior', () => {
     const offlineItems = [
@@ -99,7 +99,7 @@ describe('1. Sincronización Offline y Prevención de Pérdida de Datos (Regresi
   });
 });
 
-// ─── SUITE 2: Prevención de Artículos Zombie ──────────────────────────────────
+// SUITE 2: Prevención de Artículos Zombie
 describe('2. Prevención de Artículos Zombie (Eliminaciones Offline)', () => {
   it('escenario useShoppingList: "Leche" eliminada offline NO debe reaparecer al reconectar', () => {
     const initialSync = [
@@ -150,7 +150,7 @@ describe('2. Prevención de Artículos Zombie (Eliminaciones Offline)', () => {
   });
 });
 
-// ─── SUITE 3: Matriz Completa de Respuestas HTTP y Helper (Riesgos 1 y 3) ────
+// SUITE 3: Matriz Completa de Respuestas HTTP y Helper (Riesgos 1 y 3)
 describe('3. Matriz Completa de Respuestas HTTP y DeleteResolutionResult (Riesgos 1 y 3)', () => {
   it('1. HTTP 200 con JSON: borrado confirmado y pending limpio', async () => {
     let pending = ['item-200'];
@@ -333,7 +333,7 @@ describe('3. Matriz Completa de Respuestas HTTP y DeleteResolutionResult (Riesgo
   });
 });
 
-// ─── SUITE 4: Aislamiento de Sesión y Concurrencia (Riesgo 4) ─────────────────
+// SUITE 4: Aislamiento de Sesión y Concurrencia (Riesgo 4)
 describe('4. Aislamiento de Sesión, Renovación y Concurrencia (Riesgo 4)', () => {
   it('16. Renovación de sesión tras 401: pending se conserva y se reintenta tras renovar', async () => {
     let pending = ['item-session-renew'];
@@ -399,7 +399,7 @@ describe('4. Aislamiento de Sesión, Renovación y Concurrencia (Riesgo 4)', () 
   });
 });
 
-// ─── SUITE 5: Atomicidad y Recuperación de moveBoughtToInventory (Riesgo 2) ───
+// SUITE 5: Atomicidad y Recuperación de moveBoughtToInventory (Riesgo 2)
 describe('5. Atomicidad, Idempotencia y Recuperación de moveBoughtToInventory (Riesgo 2)', () => {
   it('19. moveBoughtToInventory repetido: segunda llamada consecutiva retorna 0 y no duplica', () => {
     let shoppingList = [
@@ -547,7 +547,7 @@ describe('5. Atomicidad, Idempotencia y Recuperación de moveBoughtToInventory (
   });
 });
 
-// ─── SUITE 6: Integridad de Inventario Offline y Aislamiento (Punto 3 - Fase A) ───
+// SUITE 6: Integridad de Inventario Offline y Aislamiento (Punto 3 - Fase A)
 describe('6. Integridad de Inventario Offline y Aislamiento por Usuario (Punto 3 - Fase A)', () => {
   function mergeInventory(currentLocal, remoteFromCloud, pendingDeletedInventoryIds = []) {
     if (!Array.isArray(remoteFromCloud)) {
@@ -817,7 +817,7 @@ describe('6. Integridad de Inventario Offline y Aislamiento por Usuario (Punto 3
   });
 });
 
-// ─── SUITE 7: Cola Durable Outbox y Despachador Secuencial FIFO (Punto 3 - Fase B1) ───
+// SUITE 7: Cola Durable Outbox y Despachador Secuencial FIFO (Punto 3 - Fase B1)
 describe('7. Cola Durable Outbox y Despachador Secuencial FIFO (Punto 3 - Fase B1)', () => {
   it('34. generateOperationId genera identificadores UUID v4 válidos y únicos', () => {
     const ids = new Set();
@@ -1261,7 +1261,7 @@ describe('7. Cola Durable Outbox y Despachador Secuencial FIFO (Punto 3 - Fase B
   });
 });
 
-// ─── SUITE 8: Integración del Outbox en Lista de Compras (Punto 3 - Fase B3) ───
+// SUITE 8: Integración del Outbox en Lista de Compras (Punto 3 - Fase B3)
 describe('8. Integración del Outbox en Lista de Compras (Punto 3 - Fase B3)', () => {
   it('47. create offline → persistencia → flush → 201: mutación se purga tras éxito en backend', async () => {
     let queue = [
@@ -1702,7 +1702,7 @@ describe('8. Integración del Outbox en Lista de Compras (Punto 3 - Fase B3)', (
   });
 });
 
-// ─── SUITE 9: Durabilidad de clearBought y moveBoughtToInventory Offline (Corrección B3) ───
+// SUITE 9: Durabilidad de clearBought y moveBoughtToInventory Offline (Corrección B3)
 describe('9. Durabilidad de clearBought y moveBoughtToInventory Offline (Corrección B3)', () => {
   it('62. clearBought offline captura todos los IDs comprados', () => {
     const list = [

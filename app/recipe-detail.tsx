@@ -291,7 +291,7 @@ export default function RecipeDetailScreen() {
         />
 
         <View style={styles.content}>
-          {/* ── Encabezado ── */}
+          {/* Encabezado */}
           <View style={styles.intro}>
             <AiBadge label={recipeStatus(recipe).label} icon={recipeStatus(recipe).icon} />
             <AppText variant="screenTitle" weight="light" accessibilityRole="header">
@@ -315,7 +315,7 @@ export default function RecipeDetailScreen() {
             </View>
           </View>
 
-          {/* ── Ingredientes ── */}
+          {/* Ingredientes */}
           <RecipeIngredientsCard
             available={available}
             total={total}
@@ -334,7 +334,7 @@ export default function RecipeDetailScreen() {
             />
           )}
 
-          {/* ── Pasos ── */}
+          {/* Pasos */}
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <AppText variant="sectionTitle" accessibilityRole="header">

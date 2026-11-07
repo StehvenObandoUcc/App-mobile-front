@@ -55,7 +55,7 @@ export function AppScreen({
   const canSwipeRef = useRef(canSwipe);
   canSwipeRef.current = canSwipe;
 
-  // ── Swipe entre pestañas (Etapa 6) ─────────────────────────────────────────
+  // Swipe entre pestañas (Etapa 6)
   // La pantalla sigue al dedo 1:1; al soltar con intención sale deslizándose y la nueva entra
   // desde el mismo lado. Todo transform/opacity en el hilo nativo. Sin inclinaciones.
   const { width } = useWindowDimensions();

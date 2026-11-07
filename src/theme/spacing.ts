@@ -16,13 +16,13 @@ export const spacing = {
   xxxl: 32,
   section: 40,
 
-  // ─── Directrices Táctiles y Accesibilidad ──────────────────────────────────
+  // Directrices Táctiles y Accesibilidad
   touchTargetMin: 48, // Touch target mínimo de 48dp para Android
   buttonHeight: 52,   // 48 → 52: alinea el token con la altura real de los botones
   inputHeight: 52,    // 48 → 52: campos de entrada
   fieldHeightLarge: 56, // campos de los formularios de acceso (mockup Login-Formulario); el resto usa inputHeight
 
-  // ─── Alias semánticos (Despensa Tonal · Etapa 2) ────────────────────────────
+  // Alias semánticos (Despensa Tonal · Etapa 2)
   screenGutter: 20,   // Margen lateral de pantalla
   cardPadding: 20,    // Relleno interno de tarjetas
   sectionGap: 32,     // Separación entre secciones

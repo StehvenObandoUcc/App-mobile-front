@@ -175,7 +175,7 @@ export default function ScanScreen() {
     />
   );
 
-  // ── Límite de fotos (B) ──
+  // Límite de fotos (B)
   if (view === 'limit') {
     return (
       <StatusScreen
@@ -197,7 +197,7 @@ export default function ScanScreen() {
     );
   }
 
-  // ── Error al analizar (C) ──
+  // Error al analizar (C)
   if (view === 'error') {
     return (
       <>
@@ -233,7 +233,7 @@ export default function ScanScreen() {
     return <View style={styles.camera} />;
   }
 
-  // ── Sin permiso de cámara ──
+  // Sin permiso de cámara
   if (!permission.granted) {
     return (
       <StatusScreen
@@ -257,7 +257,7 @@ export default function ScanScreen() {
     );
   }
 
-  // ── Cámara (Escaneo.dc.html) ──
+  // Cámara (Escaneo.dc.html)
   return (
     <View style={styles.camera}>
       {capturedPhotoUri ? (

@@ -115,7 +115,7 @@ export function IngredientFormSheet({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* ── Nombre ── */}
+            {/* Nombre */}
             <LabeledField
               label={t('sheets.ingredientForm.nameLabel')}
               required
@@ -135,7 +135,7 @@ export function IngredientFormSheet({
               }
             />
 
-            {/* ── Cantidad + unidad ── */}
+            {/* Cantidad + unidad */}
             <View style={styles.fieldWide}>
               <AppText variant="bodySmall" weight="semibold">
                 {t('sheets.ingredientForm.quantity')}
@@ -155,7 +155,7 @@ export function IngredientFormSheet({
               </View>
             </View>
 
-            {/* ── Categoría ── */}
+            {/* Categoría */}
             <View style={styles.fieldWide}>
               <AppText variant="bodySmall" weight="semibold">
                 {t('sheets.ingredientForm.category')}
@@ -163,7 +163,7 @@ export function IngredientFormSheet({
               <CategoryPicker value={values.category} onChange={(c) => onChange('category', c)} />
             </View>
 
-            {/* ── Vencimiento ── */}
+            {/* Vencimiento */}
             <View style={styles.fieldWide}>
               <AppText variant="bodySmall" weight="semibold">
                 {t('sheets.ingredientForm.expiration')}

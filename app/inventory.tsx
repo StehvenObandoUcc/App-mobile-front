@@ -393,7 +393,7 @@ export default function InventoryScreen() {
   // Buscador, filtros, salud y conteo se desplazan con la lista: al bajar, los alimentos ocupan la pantalla.
   const listHeader = isSelectMode ? null : (
     <View style={styles.listHeader}>
-          {/* ── Buscador ── */}
+          {/* Buscador */}
           <View style={styles.searchSection}>
             <SearchInput
               value={searchQuery}
@@ -402,7 +402,7 @@ export default function InventoryScreen() {
             />
           </View>
 
-          {/* ── Filtros por categoría estilo Delivery ── */}
+          {/* Filtros por categoría estilo Delivery */}
           <View style={styles.categoriesWrapper}>
             <ScrollView
               horizontal
@@ -422,7 +422,7 @@ export default function InventoryScreen() {
             </ScrollView>
           </View>
 
-          {/* ── Salud de tu despensa (Despensa.dc.html, aprobado) ── */}
+          {/* Salud de tu despensa (Despensa.dc.html, aprobado) */}
           {status === 'success' && !searchQuery.trim() && selectedCategory === 'all' && (
             <View style={styles.healthCardWrapper}>
               <PantryHealthCard
@@ -432,7 +432,7 @@ export default function InventoryScreen() {
             </View>
           )}
 
-          {/* ── Barra de conteo + Seleccionar ── */}
+          {/* Barra de conteo + Seleccionar */}
           {status === 'success' && filteredItems.length > 0 && (
             <View style={styles.countRow}>
               <AppText variant="metadata" weight="semibold" color={colors.textSecondary}>
@@ -454,7 +454,7 @@ export default function InventoryScreen() {
 
   return (
     <AppScreen style={styles.screen}>
-      {/* ── Cabecera: normal o barra contextual de selección (Despensa-Seleccion.dc.html) ── */}
+      {/* Cabecera: normal o barra contextual de selección (Despensa-Seleccion.dc.html) */}
       {isSelectMode ? (
         <View style={styles.selectionHeaderWrap}>
           <SelectionHeader
@@ -481,7 +481,7 @@ export default function InventoryScreen() {
         </View>
       )}
 
-      {/* ── Contenido de la lista según estados ── */}
+      {/* Contenido de la lista según estados */}
       {status !== 'success' && listHeader && <View style={styles.headerOutsideList}>{listHeader}</View>}
 
       {status === 'loading' && (
@@ -581,7 +581,7 @@ export default function InventoryScreen() {
         />
       )}
 
-      {/* ── Barra de acciones flotante: reemplaza la navegación mientras se selecciona ── */}
+      {/* Barra de acciones flotante: reemplaza la navegación mientras se selecciona */}
       {isSelectMode && (
         <SelectionActionBar
           count={selectedIds.size}
@@ -591,7 +591,7 @@ export default function InventoryScreen() {
         />
       )}
 
-      {/* ── Hoja «Añadir / Editar alimento» (Despensa-Formulario.dc.html) ── */}
+      {/* Hoja «Añadir / Editar alimento» (Despensa-Formulario.dc.html) */}
       <IngredientFormSheet
         visible={modalVisible}
         mode={editingItem ? 'edit' : 'add'}
@@ -617,7 +617,7 @@ export default function InventoryScreen() {
         }
       />
 
-      {/* ── Modal de Confirmación Único (BUG-08) ── */}
+      {/* Modal de Confirmación Único (BUG-08) */}
       <ActionSheetModal
         visible={confirmModal.visible}
         onClose={() => setConfirmModal((prev) => ({ ...prev, visible: false }))}
@@ -630,7 +630,7 @@ export default function InventoryScreen() {
         onConfirm={confirmModal.onConfirm}
       />
 
-      {/* ── Mini Calendario M3 ── */}
+      {/* Mini Calendario M3 */}
       <M3DatePickerModal
         visible={isDatePickerVisible}
         value={expirationDate}
@@ -638,7 +638,7 @@ export default function InventoryScreen() {
         onClose={() => setIsDatePickerVisible(false)}
       />
 
-      {/* ── Diálogo Emergente M3 ── */}
+      {/* Diálogo Emergente M3 */}
       <M3Dialog
         visible={dialogConfig.visible}
         title={dialogConfig.title}
@@ -667,7 +667,7 @@ const useStyles = makeStyles((colors) => ({
     paddingTop: spacing.md,
     paddingBottom: spacing.xs,
   },
-  // ── Barra contextual de selección (reemplaza el header) ──
+  // Barra contextual de selección (reemplaza el header)
   selectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -680,7 +680,7 @@ const useStyles = makeStyles((colors) => ({
     borderRadius: radii.floatingNav,
     backgroundColor: colors.surface,
   },
-  // ── Barra de acciones flotante de selección (sobre la nav inferior) ──
+  // Barra de acciones flotante de selección (sobre la nav inferior)
   searchSection: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xs,
