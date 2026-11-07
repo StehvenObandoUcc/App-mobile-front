@@ -81,6 +81,8 @@ export const organisms = {
     viewAll: 'Ver todos',
     missing_one: 'Te falta {count} ingrediente',
     missing_other: 'Te faltan {count} ingredientes',
+    missingOptional_one: 'Opcional que no tienes ({count})',
+    missingOptional_other: 'Opcionales que no tienes ({count})',
     optional: 'opcional',
     canUse: 'Puedes usar: {list}',
     orJoin: ' o ',

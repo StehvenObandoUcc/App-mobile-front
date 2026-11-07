@@ -82,6 +82,8 @@ export const organisms: typeof Es = {
     viewAll: 'View all',
     missing_one: 'You are missing {count} ingredient',
     missing_other: 'You are missing {count} ingredients',
+    missingOptional_one: 'Optional you do not have ({count})',
+    missingOptional_other: 'Optionals you do not have ({count})',
     optional: 'optional',
     canUse: 'You can use: {list}',
     orJoin: ' or ',

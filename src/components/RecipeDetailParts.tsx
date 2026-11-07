@@ -248,7 +248,7 @@ export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: Missin
   return (
     <View style={[styles.missing, { backgroundColor: tone.background }]}>
       <AppText variant="bodySmall" weight="semibold" color={tone.text}>
-        {tp('organisms.recipeDetailParts.missing', n)}
+        {tp(rows.every((r) => r.optional) ? 'organisms.recipeDetailParts.missingOptional' : 'organisms.recipeDetailParts.missing', n)}
       </AppText>
       {rows.map((r) => (
         <View key={r.id} style={styles.missingItem}>
