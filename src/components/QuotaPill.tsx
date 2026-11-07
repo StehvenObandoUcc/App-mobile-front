@@ -19,7 +19,7 @@ export type QuotaPillProps = {
 };
 
 const tonesFor = (colors: ThemeColors) => ({
-  camera: { bg: colors.bar, fg: colors.onInk, on: colors.accent, off: colors.quotaDotIdle, height: 40, weight: 'medium' as const, size: 14 },
+  camera: { bg: colors.bar, fg: colors.textInverse, on: colors.accent, off: colors.quotaDotIdle, height: 40, weight: 'medium' as const, size: 14 },
   light: { bg: colors.m3.surfaceContainerLow, fg: colors.textPrimary, on: colors.accent, off: colors.m3.outlineVariant, height: 36, weight: 'semibold' as const, size: 13 },
   warning: {
     bg: colors.functional.expiringSoon.background,
