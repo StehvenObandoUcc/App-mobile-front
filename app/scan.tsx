@@ -32,6 +32,8 @@ export default function ScanScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   // Linterna: ilumina la vista y la foto cuando hay poca luz (solo cámara trasera).
   const [torchOn, setTorchOn] = useState(false);
+  // Alto real del título: el visor empieza justo debajo para que el texto no se monte sobre sus esquinas.
+  const [headingHeight, setHeadingHeight] = useState(150);
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
@@ -291,7 +293,10 @@ export default function ScanScreen() {
       </View>
 
       {/* Título + guía */}
-      <View style={[styles.heading, { top: insets.top + 84 }]}>
+      <View
+        style={[styles.heading, { top: insets.top + 84 }]}
+        onLayout={(e) => setHeadingHeight(e.nativeEvent.layout.height)}
+      >
         <AppText variant="screenTitle" weight="light" color={colors.textInverse} accessibilityRole="header">
           {t('screensFlow.scan.headingLight')}
           <AppText weight="semibold" color={colors.textInverse}>
@@ -304,7 +309,10 @@ export default function ScanScreen() {
       </View>
 
       {/* Visor + consejos */}
-      <View pointerEvents="none" style={styles.center}>
+      <View
+        pointerEvents="none"
+        style={[styles.center, { paddingTop: insets.top + 84 + headingHeight + 12, paddingBottom: insets.bottom + 150 }]}
+      >
         <View style={styles.frame} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <View style={[styles.corner, styles.cornerTL]} />
           <View style={[styles.corner, styles.cornerTR]} />
@@ -400,11 +408,10 @@ const useStyles = makeStyles((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 28,
-    paddingBottom: 40, // el visor queda un poco arriba del centro, como en el mockup
   },
   frame: {
-    width: 320,
-    maxWidth: '82%',
+    width: 300,
+    maxWidth: '78%',
     aspectRatio: 320 / 340,
   },
   corner: {
