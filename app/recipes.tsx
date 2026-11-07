@@ -550,8 +550,9 @@ export default function RecipesScreen() {
         />
       )}
 
-      {/* ── FAB «Generar con IA»: solo el icono; el Chef IA se despliega al tocarlo ── */}
-      {!isSelectMode && status === 'success' && (
+      {/* ── FAB «Generar con IA»: solo el icono; el Chef IA se despliega al tocarlo.
+          Sin recetas, el estado vacío ya trae el mismo botón: no se repite (se montaba sobre su texto). ── */}
+      {!isSelectMode && status === 'success' && (recipes.length > 0 || aiOffline) && (
         <Fab
           iconName="sparkles"
           tone="ai"

@@ -570,7 +570,8 @@ export default function InventoryScreen() {
         Abre directo el formulario. Antes era un menú con «Escanear», que repetía el botón central de la barra:
         eran dos botones flotantes para lo mismo.
       */}
-      {!isSelectMode && (
+      {/* Sin alimentos, el estado vacío ya trae «Agregar a mano»: el flotante lo tapaba. */}
+      {!isSelectMode && items.length > 0 && (
         <Fab
           iconName="add"
           label={t('screensMain.inventory.addLabel')}
