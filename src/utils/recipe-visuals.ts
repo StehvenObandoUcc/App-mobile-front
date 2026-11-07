@@ -28,7 +28,9 @@ export const DIFFICULTY_LABELS = {
 } as const;
 
 /** «Tienes todo» · «Te falta 1» · «Te faltan 3» */
-export function missingLabel(missing: number): string {
+export function missingLabel(missing: number, optionalMissing = 0): string {
+  // Solo faltan opcionales (aceite, sal…): se puede cocinar, pero no se tiene «todo».
+  if (missing === 0 && optionalMissing > 0) return t('misc.recipeCard.essentialsOnly');
   if (missing === 0) return t('misc.recipeCard.noneMissing');
   return tp('misc.recipeCard.missing', missing);
 }
@@ -43,7 +45,8 @@ export function recipeStatus(recipe: Parameters<typeof missingRequiredOf>[0]): {
   icon: 'checkmark-circle' | 'cart-outline';
 } {
   const missing = missingRequiredOf(recipe);
-  return { label: missingLabel(missing), icon: missing === 0 ? 'checkmark-circle' : 'cart-outline' };
+  const optionalMissing = recipe.missingIngredients.length - missing;
+  return { label: missingLabel(missing, optionalMissing), icon: missing === 0 ? 'checkmark-circle' : 'cart-outline' };
 }
 
 /**

@@ -39,6 +39,7 @@ export const misc = {
   },
   recipeCard: {
     noneMissing: 'Tienes todo',
+    essentialsOnly: 'Tienes lo esencial',
     missing_one: 'Te falta {count}',
     missing_other: 'Te faltan {count}',
   },
