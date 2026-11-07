@@ -22,7 +22,7 @@ export const screensMain: typeof Es = {
     settingsA11y: 'Settings',
     profileA11y: "{name}'s profile",
     loginOrProfileA11y: 'Sign in or view profile',
-    pantryTitle: 'Food items\nin pantry',
+    pantryTitle: 'In pantry',
     pantryA11y: 'Pantry with {total} {foodNoun}: {fresh} {freshNoun}, {expiring} expiring soon',
     shoppingTitle: 'To buy',
     shoppingA11y_one: '{count} pending purchase',

@@ -28,7 +28,8 @@ export type FeatureTileProps = {
   iconName?: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   accessibilityLabel: string;
-  size?: 'sm' | 'lg';
+  /** `inline`: cifra y etiqueta en una sola fila (ficha baja, para que quepa sobre la barra inferior). */
+  size?: 'sm' | 'lg' | 'inline';
   /** Solo en `lg`: contenido bajo la cifra (barra de frescura, texto). */
   footer?: React.ReactNode;
 };
@@ -47,6 +48,7 @@ export function FeatureTile({
   const styles = useStyles();
   const t = tonesFor(colors)[tone];
   const lg = size === 'lg';
+  const inline = size === 'inline';
   return (
     <Pressable
       onPress={onPress}
@@ -54,12 +56,17 @@ export function FeatureTile({
       accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [
         styles.tile,
-        lg ? styles.tileLg : styles.tileSm,
+        lg ? styles.tileLg : inline ? styles.tileInline : styles.tileSm,
         { backgroundColor: t.bg },
         pressed && styles.pressed,
       ]}
     >
-      <View style={styles.top}>
+      {inline && (
+        <AppText weight="medium" color={t.fg} style={styles.valueInline}>
+          {value}
+        </AppText>
+      )}
+      <View style={inline ? styles.topInline : styles.top}>
         <AppText variant="body" weight="medium" color={t.fg} style={styles.label}>
           {label}
         </AppText>
@@ -71,12 +78,14 @@ export function FeatureTile({
           <Ionicons name={iconName ?? 'chevron-forward'} size={18} color={t.fg} />
         )}
       </View>
-      <View style={styles.bottom}>
-        <AppText weight="medium" color={t.fg} style={lg ? styles.valueLg : styles.valueSm}>
-          {value}
-        </AppText>
-        {lg && footer}
-      </View>
+      {!inline && (
+        <View style={styles.bottom}>
+          <AppText weight="medium" color={t.fg} style={lg ? styles.valueLg : styles.valueSm}>
+            {value}
+          </AppText>
+          {lg && footer}
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -94,6 +103,25 @@ const useStyles = makeStyles((colors) => ({
   tileSm: {
     minHeight: 116,
     padding: 16,
+  },
+  tileInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 76,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  topInline: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 6,
+  },
+  valueInline: {
+    fontSize: 34,
+    lineHeight: 38,
   },
   top: {
     flexDirection: 'row',

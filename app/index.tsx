@@ -60,7 +60,7 @@ function HomeContent() {
   const expiringItems = items.filter((item) => {
     const s = getExpirationStatus(item.expirationDate);
     return s.status === 'expiringSoon' || s.status === 'expired';
-  });
+  }).sort((a, b) => (a.expirationDate ?? '9999').localeCompare(b.expirationDate ?? '9999')); // el más urgente primero
   const expiringCount = expiringItems.length;
   // Misma regla que el filtro «Con lo que tienes» de Recetas: te falta a lo sumo 1 ingrediente obligatorio.
   // Primero las que puedes cocinar ya; luego por mayor % de ingredientes que tienes (ambos calculados con la despensa de hoy).
@@ -142,10 +142,10 @@ function HomeContent() {
           <View style={styles.sectionTight}>
             <SectionHeader
               title={t('screensMain.home.useFirstTitle')}
-              actionLabel={expiringCount > 3 ? t('screensMain.home.seeAllExpiring', { count: expiringCount }) : undefined}
+              actionLabel={expiringCount > 1 ? t('screensMain.home.seeAllExpiring', { count: expiringCount }) : undefined}
               onAction={openExpiring}
             />
-            {expiringItems.slice(0, 3).map((item) => (
+            {expiringItems.slice(0, 1).map((item) => (
               <IngredientCard key={item.id} ingredient={item} compact onPress={openExpiring} />
             ))}
           </View>
@@ -207,11 +207,14 @@ function HomeContent() {
         </View>
       </StaggerView>
 
+      {/* Con despensa y compras en cero las fichas solo dirían «0» y quedarían bajo la barra: aparecen al haber algo. */}
+      {(ingredientCount > 0 || pendingItems.length > 0) && (
       <StaggerView index={4}>
         <View style={styles.metrics}>
           <View style={styles.metric}>
             <FeatureTile
               tone="fresh"
+              size="inline"
               label={t('screensMain.home.pantryTitle')}
               value={ingredientCount}
               accessibilityLabel={t('screensMain.home.pantryA11y', { total: ingredientCount, foodNoun: tp('screensMain.shared.food', ingredientCount), fresh: freshCount, freshNoun: tp('screensMain.shared.fresh', freshCount), expiring: expiringCount })}
@@ -221,6 +224,7 @@ function HomeContent() {
           <View style={styles.metric}>
             <FeatureTile
               tone="brand"
+              size="inline"
               label={t('screensMain.home.shoppingTitle')}
               value={pendingItems.length}
               accessibilityLabel={tp('screensMain.home.shoppingA11y', pendingItems.length)}
@@ -229,6 +233,7 @@ function HomeContent() {
           </View>
         </View>
       </StaggerView>
+      )}
 
     </AppScreen>
   );

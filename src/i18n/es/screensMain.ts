@@ -20,7 +20,7 @@ export const screensMain = {
     settingsA11y: 'Configuración',
     profileA11y: 'Perfil de {name}',
     loginOrProfileA11y: 'Iniciar sesión o ver perfil',
-    pantryTitle: 'Alimentos\nen despensa',
+    pantryTitle: 'En despensa',
     pantryA11y: 'Despensa con {total} {foodNoun}: {fresh} {freshNoun}, {expiring} por vencer',
     shoppingTitle: 'Por comprar',
     shoppingA11y_one: '{count} compra pendiente',
