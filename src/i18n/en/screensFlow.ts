@@ -64,6 +64,7 @@ export const screensFlow: typeof Es = {
     emailPlaceholder: 'you@email.com',
     passwordLabel: 'Password',
     passwordPlaceholder: 'At least 8 characters',
+    passwordPlaceholderLogin: 'Your password',
     forgotLink: 'Forgot your password?',
     secure: 'Your data travels encrypted and protected.',
     submitRegister: 'Register account',

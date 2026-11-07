@@ -62,6 +62,7 @@ export const screensFlow = {
     emailPlaceholder: 'tu@correo.com',
     passwordLabel: 'Contraseña',
     passwordPlaceholder: 'Mínimo 8 caracteres',
+    passwordPlaceholderLogin: 'Tu contraseña',
     forgotLink: '¿Olvidaste tu contraseña?',
     secure: 'Tus datos viajan cifrados y protegidos.',
     submitRegister: 'Registrar cuenta',

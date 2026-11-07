@@ -383,7 +383,7 @@ export default function LoginScreen() {
           secure
           value={password}
           onChangeText={setPassword}
-          placeholder={t('screensFlow.login.passwordPlaceholder')}
+          placeholder={mode === 'login' ? t('screensFlow.login.passwordPlaceholderLogin') : t('screensFlow.login.passwordPlaceholder')}
           autoCapitalize="none"
           maxLength={128}
           returnKeyType="done"
