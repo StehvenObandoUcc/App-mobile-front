@@ -683,7 +683,9 @@ const useStyles = makeStyles((colors) => ({
   },
   tools: {
     flexDirection: 'row',
+    flexWrap: 'wrap', // en español «Más recientes» + «Cualquier dificultad» no caben juntas
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
 }));
