@@ -11,13 +11,11 @@ import { useI18n } from '../i18n';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
- * ActionSheetModal — Organismos.dc.html
  * Hoja inferior radio 32 con asa. Cabecera opcional con icono pastel (p. ej. el alimento).
  * - action_sheet: filas de 56 dp (icono 22 + texto 16); las destructivas van al final, en rojo,
  *   separadas por un filete.
  * - confirmation: se muestra como la tarjeta centrada de M3Dialog (destructiva: tipo `error`, icono de
  *   basura y confirmar en Ladrillo; no destructiva: tipo `neutral` y confirmar en Sandía).
- * Misma API que antes; `headerIconName`/`headerTone` son opcionales.
  */
 export interface ActionSheetOption {
   label: string;
@@ -296,7 +294,7 @@ const useStyles = makeStyles((colors) => ({
   },
   choices: {
     gap: 12,
-    paddingHorizontal: 4, // 16 + 4 = 20 como el mockup
+    paddingHorizontal: 4,
   },
   choicesSubtitle: {
     fontSize: 14,

@@ -67,7 +67,7 @@ export function SkeletonCard({ variant = 'ingredient' }: SkeletonCardProps) {
 }
 
 const useStyles = makeStyles((colors) => ({
-  // Forma del ticket de IngredientCard (Despensa-Estados.dc.html): 84 dp, icono 52, bloque 60.
+  // Forma del ticket de IngredientCard: 84 dp, icono 52, bloque 60.
   ingredientCard: {
     flexDirection: 'row',
     alignItems: 'center',

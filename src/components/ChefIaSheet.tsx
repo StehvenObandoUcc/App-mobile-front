@@ -22,7 +22,7 @@ import { daysUntil } from '../utils/dates';
 import { useI18n, type t as TFn } from '../i18n';
 
 /**
- * ChefIaSheet — hoja «Chef IA» (Chef-IA.dc.html). Solo presentación: el estado vive en app/recipes.tsx.
+ * ChefIaSheet — hoja «Chef IA». Solo presentación: el estado vive en app/recipes.tsx.
  * Enfoque en carpetas · ingredientes (los que vencen primero, ya marcados) · dieta · dificultad ·
  * tiempo · cantidad · botón fijo frambuesa «Generar N recetas con IA».
  */
@@ -66,7 +66,7 @@ const FOCUS_TITLE_KEYS: Record<RecipeFocus, string> = {
   quick: 'sheets.chefIa.focusTitle.quick',
   waste_reduction: 'sheets.chefIa.focusTitle.waste_reduction',
 };
-// Orden del mockup: las lengüetas de arriba y la elegida desplegada abajo.
+// Las lengüetas de arriba y la elegida desplegada abajo.
 const FOCUS_ORDER: RecipeFocus[] = ['custom', 'quick', 'waste_reduction'];
 const focusOptionsFor = (colors: ThemeColors, t: typeof TFn): FocusFolderOption<RecipeFocus>[] => FOCUS_ORDER.map((key) => {
   const base = RECIPE_FOCUS_OPTIONS.find((o) => o.key === key)!;

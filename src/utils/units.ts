@@ -2,7 +2,7 @@ import { IngredientUnit } from '../types';
 import { t, tp } from '../i18n';
 
 /**
- * Unidades (Etapa 3 · Implementación de mockups), traducidas con i18n.
+ * Unidades traducidas con i18n.
  * `unitShortLabel` es lo que se muestra junto a la cantidad ("500 g", "4 u", "1 L").
  * `unitFullLabel` es lo que se muestra en los selectores del formulario.
  */

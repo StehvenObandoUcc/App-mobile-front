@@ -9,7 +9,6 @@ import { setPending, clearPending } from './pending-auth';
 
 const SESSION_SECURE_KEY = 'food_ai_session_v1';
 
-// Estado de sesión en memoria
 let currentSession: AuthSession | null = null;
 let isHydrated = false;
 const authListeners = new Set<(session: AuthSession | null) => void>();
@@ -399,12 +398,7 @@ export class AuthService {
     await AuthService.logout();
   }
 
-  /**
-   * Cierra la sesión activa:
-   * - Elimina la sesión de SecureStore
-   * - Limpia el estado en memoria de LocalStorage (conservando datos en AsyncStorage)
-   * - Notifica a los observadores
-   */
+  /** Cierra la sesión: borra SecureStore y el estado en memoria (conserva los datos en AsyncStorage) y avisa a los observadores. */
   static async logout(): Promise<void> {
     currentSession = null;
     await removeSecureSession();

@@ -45,13 +45,7 @@ type DialogState = {
   onCancel?: () => void;
 };
 
-/**
- * Detalle de receta — Receta-Detalle.dc.html.
- * Portada pastel con volver/guardar · estado «Tienes todo · Te falta N» · título 300 + 600 · 3 fichas ·
- * ingredientes con progreso y «vence en N d» · faltantes con sustitutos · pasos con progreso
- * (hechos en salvia, el actual con anillo cacao) · barra fija «Preparar receta».
- * Sin «Volver a recetas» (decisión aprobada): se vuelve con la flecha de la portada.
- */
+/** Detalle de receta. Sin «Volver a recetas»: se vuelve con la flecha de la portada. */
 export default function RecipeDetailScreen() {
   const { colors } = useTheme();
   const { t, tp } = useI18n();
@@ -291,7 +285,6 @@ export default function RecipeDetailScreen() {
         />
 
         <View style={styles.content}>
-          {/* Encabezado */}
           <View style={styles.intro}>
             <AiBadge label={recipeStatus(recipe).label} icon={recipeStatus(recipe).icon} />
             <AppText variant="screenTitle" weight="light" accessibilityRole="header">
@@ -315,7 +308,6 @@ export default function RecipeDetailScreen() {
             </View>
           </View>
 
-          {/* Ingredientes */}
           <RecipeIngredientsCard
             available={available}
             total={total}
@@ -334,7 +326,6 @@ export default function RecipeDetailScreen() {
             />
           )}
 
-          {/* Pasos */}
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <AppText variant="sectionTitle" accessibilityRole="header">

@@ -6,7 +6,7 @@ import { PhotoTag, PhotoTagSpec } from './PhotoTag';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
- * OnboardingSlide — foto real de la bienvenida con etiquetas de alimentos (Bienvenida-Fotos.dc.html).
+ * OnboardingSlide — foto real de la bienvenida con etiquetas de alimentos.
  * Alto 470 en el lienzo de 390; se escala al ancho del teléfono. Degradado a avena abajo.
  */
 export type OnboardingSlideProps = {
@@ -15,7 +15,7 @@ export type OnboardingSlideProps = {
   width: number;
   height: number;
   accessibilityLabel: string;
-  /** Recorte horizontal de la foto (object-position del mockup), 0 = izquierda · 0.5 = centro. */
+  /** Recorte horizontal de la foto (como object-position), 0 = izquierda · 0.5 = centro. */
   focusX?: number;
 };
 
@@ -25,7 +25,7 @@ export function OnboardingSlide({ photo, tags, width, height, accessibilityLabel
   // La foto llega hasta el borde superior: las etiquetas bajan lo que ocupa la barra de estado para no pisarla.
   const topInset = useSafeAreaInsets().top;
   const scale = width / 390;
-  // «cover» con punto de enfoque horizontal (object-position del mockup): se calcula el tamaño a mano.
+  // «cover» con punto de enfoque horizontal (como object-position): se calcula el tamaño a mano.
   const src = Image.resolveAssetSource(photo);
   const srcW = src?.width;
   const srcH = src?.height;

@@ -7,7 +7,6 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import type { ThemeColors } from '../theme/colors';
 
 /**
- * FeatureTile (NUEVO) — Componentes.dc.html / Inicio.dc.html
  * Ficha pastel con etiqueta arriba, icono a la derecha y cifra grande abajo.
  * Toda la ficha es el objetivo táctil. `size="lg"` ocupa dos filas (cifra 52) y admite `footer`.
  */

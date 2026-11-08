@@ -7,7 +7,7 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
- * IngredientToggleChip — ingrediente a usar en el Chef IA (Chef-IA.dc.html).
+ * IngredientToggleChip — ingrediente a usar en el Chef IA.
  * 40 dp. Marcado: cacao + icono de familia + insignia «2 d» si vence pronto. Sin marcar: borde outline.
  */
 export type IngredientToggleChipProps = {

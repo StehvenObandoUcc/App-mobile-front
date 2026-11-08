@@ -25,9 +25,6 @@ interface DispatchResult {
   status?: number;
 }
 
-/**
- * Ejecuta la llamada HTTP correspondiente para una mutación individual.
- */
 async function dispatchMutation(mutation: OutboxMutation): Promise<DispatchResult> {
   const { entity, action, entityId, payload } = mutation;
 
@@ -152,7 +149,6 @@ async function dispatchMutation(mutation: OutboxMutation): Promise<DispatchResul
       }
     }
 
-    // Entidad no implementada
     return { isFatal: true, error: `Entidad ${entity} no soportada en el despachador Outbox` };
   } catch (err: any) {
     const status = err?.status ?? 0;
@@ -175,10 +171,7 @@ async function dispatchMutation(mutation: OutboxMutation): Promise<DispatchResul
   }
 }
 
-/**
- * Despachador global secuencial FIFO de la cola Outbox.
- * Procesa mutaciones en estricto orden cronológico.
- */
+/** Despachador global FIFO de la cola Outbox: procesa en orden cronológico. */
 export async function flushOutbox(): Promise<{ processed: number; remaining: number }> {
   if (isFlushing) {
     return { processed: 0, remaining: LocalStorage.getOutboxQueue().length };
@@ -193,11 +186,10 @@ export async function flushOutbox(): Promise<{ processed: number; remaining: num
   let processedCount = 0;
 
   try {
-    // 1. Recuperar cualquier mutación que haya quedado en 'processing' tras cierre abrupto
+    // Recupera las mutaciones que quedaron en 'processing' tras un cierre abrupto
     await LocalStorage.recoverProcessingOutbox();
 
     let queue = LocalStorage.getOutboxQueue();
-    // 2. Ordenar cronológicamente (FIFO global estricto)
     queue.sort((a, b) => a.createdAt - b.createdAt);
 
     // Registro de entidades bloqueadas para evitar procesar mutaciones dependientes
@@ -206,7 +198,6 @@ export async function flushOutbox(): Promise<{ processed: number; remaining: num
     for (const mutation of queue) {
       if (LocalStorage.getCurrentUserId() !== startUserId) break;
 
-      // Ignorar mutaciones en estados terminales
       if (mutation.status === 'failed' || mutation.status === 'conflict') {
         blockedEntityIds.add(mutation.entityId);
         continue;
@@ -223,19 +214,16 @@ export async function flushOutbox(): Promise<{ processed: number; remaining: num
         continue;
       }
 
-      // Si está bloqueada por auth (401/403), suspender toda la cola
       if (mutation.status === 'blocked') {
         break;
       }
 
-      // Si está pendiente, verificar elegibilidad temporal (backoff)
       if (mutation.status === 'pending') {
         if (Date.now() < mutation.nextAttemptAt) {
           // Aún en periodo de retroceso: pausar avance FIFO global
           break;
         }
 
-        // Marcar como processing
         const currentAttempt = mutation.attemptCount + 1;
         await LocalStorage.updateOutboxMutation(mutation.operationId, {
           status: 'processing',
@@ -246,11 +234,9 @@ export async function flushOutbox(): Promise<{ processed: number; remaining: num
         if (LocalStorage.getCurrentUserId() !== startUserId) break;
 
         if (result.success) {
-          // Éxito confirmado: purgar de la cola
           await LocalStorage.removeOutboxMutation(mutation.operationId);
           processedCount++;
         } else if (result.isAuth) {
-          // 401/403: marcar blocked y suspender cola
           await LocalStorage.updateOutboxMutation(mutation.operationId, {
             status: 'blocked',
             lastError: result.error,
@@ -264,7 +250,6 @@ export async function flushOutbox(): Promise<{ processed: number; remaining: num
           });
           blockedEntityIds.add(mutation.entityId);
         } else if (result.isFatal || currentAttempt >= MAX_ATTEMPTS) {
-          // Error fatal o límite de reintentos excedido: marcar failed
           await LocalStorage.updateOutboxMutation(mutation.operationId, {
             status: 'failed',
             lastError: result.error || `Excedido límite de ${MAX_ATTEMPTS} reintentos`,
@@ -278,7 +263,6 @@ export async function flushOutbox(): Promise<{ processed: number; remaining: num
             nextAttemptAt: Date.now() + delay,
             lastError: result.error,
           });
-          // Suspender avance FIFO hasta que transcurra el backoff
           break;
         }
       }

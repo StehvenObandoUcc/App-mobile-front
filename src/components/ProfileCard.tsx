@@ -7,7 +7,7 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
- * ProfileCard — tarjeta de identidad (Perfil.dc.html).
+ * ProfileCard — tarjeta de identidad.
  * Avatar 112 (fondo neutro con silueta cacao, o la foto) con insignia de cámara cacao de 40 y aro blanco,
  * «Chef **Nombre**» 24/30, correo 14 y la píldora salvia «Sesión segura».
  */

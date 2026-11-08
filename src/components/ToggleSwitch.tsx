@@ -5,7 +5,7 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
- * ToggleSwitch — interruptor M3 (Configuracion.dc.html). 52×32.
+ * ToggleSwitch — interruptor M3. 52×32.
  * Encendido: riel cacao, perilla blanca de 24 a la derecha. Apagado: riel avena con filete, perilla de 16 gris.
  * Solo transform/opacity (hilo nativo).
  */

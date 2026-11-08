@@ -106,10 +106,7 @@ export const mockRecipeService: RecipeService = {
     return recipes.find((r) => r.id === id) || null;
   },
 
-  /**
-   * Fase 2 (Opción A Stateless): Obtiene los pasos detallados de preparación bajo demanda
-   * y los guarda en LocalStorage y base de datos para evitar re-consultar a la IA.
-   */
+  /** Obtiene los pasos detallados bajo demanda y los guarda en local y en la nube para no volver a consultar a la IA. */
   async getRecipeSteps(recipe: Recipe): Promise<string[]> {
     if (recipe.steps && recipe.steps.length > 0) {
       return recipe.steps;
@@ -226,7 +223,6 @@ export const mockRecipeService: RecipeService = {
 
       for (const rec of enriched) {
         await LocalStorage.saveRecipe(rec);
-        // Persistencia garantizada en base de datos en segundo plano
         saveRecipeWithApi(rec).catch((err) =>
           console.warn('[RecipeService] Error persistiendo receta generada en base de datos:', err?.message)
         );

@@ -14,7 +14,7 @@ import { useReduceMotion } from '../hooks/useReduceMotion';
 export { getExpirationStatus };
 
 /**
- * IngredientCard — «ticket de caducidad» (Organismos.dc.html · Despensa.dc.html)
+ * IngredientCard — «ticket de caducidad»
  * Izquierda: icono de familia 56 (48 en selección) + nombre 17/600 + cantidad en píldora + familia.
  * Derecha, tras una línea punteada: bloque de 84 dp con la cifra de días (dato principal).
  * Seleccionado: anillo cacao de 2 dp (no depende solo del color) + check circular 26 en área de 48.

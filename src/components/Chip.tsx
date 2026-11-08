@@ -8,7 +8,6 @@ import { useI18n } from '../i18n';
 import { IngredientCategory, ExpirationStatus } from '../types';
 
 /**
- * Chip — Componentes.dc.html
  * - filter: seleccionado = cacao + check (no depende solo del color); sin seleccionar = blanco + borde outline.
  * - category: pastel de la familia de despensa.
  * - status: pastel del estado de caducidad.

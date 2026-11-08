@@ -8,7 +8,7 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
- * SettingsSection + SettingsRow — Configuracion.dc.html.
+ * SettingsSection + SettingsRow.
  * Sección: rótulo en mayúsculas 13/600 y tarjeta blanca radio 24.
  * Fila: 64 dp, icono 40 (radio 13) en su pastel, título 16/600, subtítulo 13, y a la derecha
  * chevron · valor + chevron · interruptor · botón · nada. Destructiva = título rojo.

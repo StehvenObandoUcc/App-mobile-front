@@ -18,7 +18,7 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
- * IngredientFormSheet — hoja «Añadir / Editar alimento» (Despensa-Formulario.dc.html).
+ * IngredientFormSheet — hoja «Añadir / Editar alimento».
  * El estado y la validación viven en la pantalla (Despensa, Resultado del escaneo).
  * - «Guardar» queda fijo abajo, siempre visible mientras se edita.
  * - Si hay cambios sin guardar y se intenta cerrar (✕, tocar fuera, atrás), avisa:

@@ -1,5 +1,5 @@
 /**
- * Despensa Tonal — Elevation Tokens (rediseño M3 · Etapa 2)
+ * Despensa Tonal — Elevation Tokens
  *
  * Plano y tonal: las tarjetas no llevan sombra (blanco sobre avena).
  * Solo lo que flota (nav, FAB, hojas, diálogos) se eleva, con sombra de tinta cálida.

@@ -6,8 +6,8 @@ import { radii } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
- * PhotoTag — etiqueta sobre una foto con línea guía y punto (Bienvenida-Fotos.dc.html).
- * Las coordenadas vienen del mockup (lienzo de 390 dp) y se multiplican por `scale`.
+ * PhotoTag — etiqueta sobre una foto con línea guía y punto.
+ * Las coordenadas son del lienzo de 390 dp y se multiplican por `scale`.
  * tone 'ai' = píldora frambuesa con destello (dato de la IA).
  */
 export type PhotoTagSpec = {
@@ -63,7 +63,7 @@ const useStyles = makeStyles((colors) => ({
     width: 2,
     backgroundColor: colors.textInverse,
   },
-  // Punto blanco de 12 con anillo tomate de 3 (box-shadow del mockup)
+  // Punto blanco de 12 con anillo tomate de 3
   dotRing: {
     position: 'absolute',
     width: 18,

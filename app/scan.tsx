@@ -14,13 +14,7 @@ import { radii } from '../src/theme';
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 
-/**
- * Escaneo (Escaneo.dc.html + Escaneo-Estados.dc.html).
- * - Cámara: barra con volver y cuota, título, visor, consejos y controles (galería · obturador · girar).
- * - Analizando: AiProgressScreen a pantalla completa, sin salida hasta terminar.
- * - Límite de 5 fotos y Error: StatusScreen en la misma pantalla (sin Alert).
- * Un intento fallido no cuenta como foto de prueba: el contador sube solo si el análisis funciona.
- */
+/** Escaneo. Un intento fallido no cuenta como foto de prueba: el contador sube solo si el análisis funciona. */
 type ScanView = 'camera' | 'limit' | 'error';
 
 export default function ScanScreen() {
@@ -175,7 +169,6 @@ export default function ScanScreen() {
     />
   );
 
-  // Límite de fotos (B)
   if (view === 'limit') {
     return (
       <StatusScreen
@@ -197,7 +190,6 @@ export default function ScanScreen() {
     );
   }
 
-  // Error al analizar (C)
   if (view === 'error') {
     return (
       <>
@@ -233,7 +225,6 @@ export default function ScanScreen() {
     return <View style={styles.camera} />;
   }
 
-  // Sin permiso de cámara
   if (!permission.granted) {
     return (
       <StatusScreen
@@ -257,7 +248,6 @@ export default function ScanScreen() {
     );
   }
 
-  // Cámara (Escaneo.dc.html)
   return (
     <View style={styles.camera}>
       {capturedPhotoUri ? (

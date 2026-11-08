@@ -11,7 +11,7 @@ import { todayISO, addDaysISO, parseLocalDate, formatPickerHeader } from '../uti
 import { useI18n } from '../i18n';
 
 /**
- * M3DatePickerModal — organismo (Organismos.dc.html).
+ * M3DatePickerModal — organismo.
  * «VENCE EL / viernes, **2 de oct.**» · atajos Hoy / +3 días / +1 sem / +1 mes (Chip choice) ·
  * CalendarMonth · «Sin fecha» (borde) + «Confirmar» (cacao).
  * Fechas SIEMPRE en calendario local (utils/dates.ts); «hoy» se recalcula cada vez que se abre.

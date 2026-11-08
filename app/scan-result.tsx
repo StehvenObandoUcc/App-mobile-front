@@ -27,11 +27,7 @@ import { radii, spacing } from '../src/theme';
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 
-/**
- * Resultado del escaneo (Escaneo-Resultado.dc.html + Escaneo-Resultado-Estados.dc.html).
- * Lista de DetectedItemCard, «Añadir manual», barra fija «Confirmar N alimentos».
- * Estados: nada detectado (A) y éxito con desglose (B, M3Dialog + SummaryRow).
- */
+/** Resultado del escaneo: estados «nada detectado» y éxito con desglose. */
 type DialogState = {
   visible: boolean;
   title: string;
@@ -322,7 +318,6 @@ export default function ScanResultScreen() {
     </>
   );
 
-  // A · Nada detectado
   if (detectedItems.length === 0) {
     return (
       <View style={[styles.screen, styles.emptyScreen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }]}>

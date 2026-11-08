@@ -55,8 +55,7 @@ export function AppScreen({
   const canSwipeRef = useRef(canSwipe);
   canSwipeRef.current = canSwipe;
 
-  // Swipe entre pestañas (Etapa 6)
-  // La pantalla sigue al dedo 1:1; al soltar con intención sale deslizándose y la nueva entra
+  // Swipe entre pestañas: la pantalla sigue al dedo 1:1; al soltar con intención sale deslizándose y la nueva entra
   // desde el mismo lado. Todo transform/opacity en el hilo nativo. Sin inclinaciones.
   const { width } = useWindowDimensions();
   const widthRef = useRef(width);
@@ -106,7 +105,7 @@ export function AppScreen({
     // navigate (no push): si la pestaña ya está en la pila vuelve a ella; la pila no crece sin fin.
     router.navigate(MAIN_TABS[targetIndex] as any);
 
-    // Desbloqueo de seguridad
+    // Desbloqueo de seguridad por si la navegación no termina.
     setTimeout(() => {
       isNavigatingRef.current = false;
       dragX.setValue(0);

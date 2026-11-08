@@ -1,6 +1,6 @@
 /**
  * Credenciales de un registro/inicio de sesión que espera verificación de correo.
- * Viven SOLO en memoria (variable de módulo): nunca en SecureStore, AsyncStorage, parámetros de ruta ni logs.
+ * Viven solo en memoria (variable de módulo): nunca en SecureStore, AsyncStorage, parámetros de ruta ni logs.
  * Si la app se reinicia se pierden y la pantalla de verificación vuelve a pedir la contraseña.
  */
 type Pending = { email: string; password: string };

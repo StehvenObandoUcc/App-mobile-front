@@ -2,7 +2,7 @@
  * Estado compartido de transición entre pestañas principales.
  * Permite distinguir navegaciones iniciadas por gesto físico (swipe)
  * de pulsaciones directas (tap en barra de navegación), evitando animaciones
- * no deseadas en pulsaciones directas conforme a los estándares de UX y Ponytail.
+ * no deseadas en pulsaciones directas.
  */
 
 export const MAIN_TABS = ['/', '/inventory', '/recipes', '/shopping-list'] as const;

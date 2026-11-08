@@ -11,9 +11,8 @@ import { useI18n } from '../i18n';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
- * RecipeCard — Organismos.dc.html
  * Franja superior de 150 dp: foto si hay `imageUri`; si no, pastel + plato blanco con icono.
- * Coincidencia en frambuesa (dato de la IA). Botón 48 dp: solo guardar (corazón), como el mockup; borrar = mantener presionado → selección.
+ * Coincidencia en frambuesa (dato de la IA). Botón 48 dp: solo guardar (corazón); borrar = mantener presionado → selección.
  * Cuerpo: título 20/600, descripción, meta (tiempo · dificultad segmentada · porciones)
  * y progreso de ingredientes segmentado «Tienes 7 de 8 · Falta 1».
  * Seleccionado: anillo cacao 2 dp + check circular en la esquina.
@@ -275,7 +274,7 @@ const useStyles = makeStyles((colors) => ({
     overflow: 'hidden',
   },
   banner: {
-    height: 132, // Recetas.dc.html
+    height: 132,
     overflow: 'hidden',
   },
   bannerHalo: {

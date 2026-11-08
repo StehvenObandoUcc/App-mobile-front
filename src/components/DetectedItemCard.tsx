@@ -12,7 +12,7 @@ import { daysUntil } from '../utils/dates';
 import { useI18n, type t as TFn, type tp as TpFn } from '../i18n';
 
 /**
- * DetectedItemCard — alimento detectado por la IA (Escaneo-Resultado.dc.html).
+ * DetectedItemCard — alimento detectado por la IA.
  * Check circular (área 48) · icono de familia 44 · nombre, cantidad y vencimiento · confianza ·
  * Editar y Quitar siempre visibles. Si ya existe en la despensa, fila «Sumar» con casilla cuadrada.
  * No marcado: tarjeta al 62 % de opacidad.

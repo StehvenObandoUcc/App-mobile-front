@@ -8,8 +8,7 @@
  * activo con `useTheme()` / `makeStyles()` (src/theme/ThemeProvider.tsx). El export `colors`
  * (= claro) queda para el código que aún no migró y para lo que vive fuera de React.
  *
- * Contrastes WCAG 2.1 medidos: texto >= 4.5:1, UI >= 3:1. Ver tablero «2 · Paleta Sandía» del lienzo.
- * Respaldo de la paleta anterior (Despensa Tonal): .design-backup/fase0-tema/colors.ts
+ * Contrastes WCAG 2.1 medidos: texto >= 4.5:1, UI >= 3:1.
  */
 
 type M3 = {

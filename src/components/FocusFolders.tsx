@@ -8,7 +8,7 @@ import { radii, typography } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
- * FocusFolders — enfoque del Chef IA como pestañas apiladas tipo carpeta (Chef-IA.dc.html, ref. C).
+ * FocusFolders — enfoque del Chef IA como pestañas apiladas tipo carpeta.
  * Las opciones no elegidas se ven como lengüetas que se solapan 14 dp;
  * la elegida queda abajo, desplegada con su descripción, anillo cacao y check.
  *

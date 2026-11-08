@@ -50,7 +50,7 @@ export function recipeStatus(recipe: Parameters<typeof missingRequiredOf>[0]): {
 }
 
 /**
- * Divide el título de una receta para el contraste de peso del mockup:
+ * Divide el título de una receta para el contraste de peso:
  * «Arroz con pollo **y verduras**». Corta en el último « y », « con », « al » o « de »
  * de la segunda mitad; si no hay, resalta la última palabra.
  */

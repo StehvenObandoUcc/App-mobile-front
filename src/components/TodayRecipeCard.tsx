@@ -9,7 +9,7 @@ import { DIFFICULTY_LABELS, recipeStatus } from '../utils/recipe-visuals';
 import { useI18n } from '../i18n';
 
 /**
- * TodayRecipeCard — «Para hoy» del Inicio (Inicio.dc.html).
+ * TodayRecipeCard — «Para hoy» del Inicio.
  * Tarjeta frambuesa (es una sugerencia de la IA): coincidencia, «PARA HOY», título 22/600,
  * descripción, tiempo · dificultad y botón cacao «Ver receta →».
  * Sin receta: invita a llenar la despensa.

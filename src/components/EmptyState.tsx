@@ -10,7 +10,6 @@ import { spacing } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
- * EmptyState — Componentes.dc.html / Despensa-Estados.dc.html
  * Ilustración pastel + título 600 + descripción + hasta 2 botones a lo ancho.
  * `titleEmphasis` (opcional) se une al final del título: «Tu despensa está» + «vacía».
  */

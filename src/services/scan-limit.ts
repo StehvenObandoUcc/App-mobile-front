@@ -10,9 +10,6 @@ export function subscribeTestPhotoCount(listener: (count: number) => void): () =
   return () => listeners.delete(listener);
 }
 
-/**
- * Obtiene la cantidad de fotos escaneadas durante la fase de pruebas.
- */
 export async function getTestPhotoCount(): Promise<number> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -25,9 +22,6 @@ export async function getTestPhotoCount(): Promise<number> {
   }
 }
 
-/**
- * Incrementa el conteo de fotos de prueba escaneadas tras un escaneo exitoso.
- */
 export async function incrementTestPhotoCount(): Promise<number> {
   try {
     const current = await getTestPhotoCount();

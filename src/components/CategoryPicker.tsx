@@ -8,7 +8,6 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
- * CategoryPicker — Despensa-Formulario.dc.html
  * Cuadrícula de 3 columnas con fichas de 64 dp. La elegida toma su pastel + anillo cacao;
  * las demás en avena. Muestra 5 + «N más»; al tocarlo se despliegan todas.
  */

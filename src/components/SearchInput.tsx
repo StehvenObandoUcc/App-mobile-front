@@ -8,7 +8,6 @@ import { useI18n } from '../i18n';
 
 import { TextInput } from './Text';
 /**
- * SearchInput — Componentes.dc.html
  * 52 dp, píldora avena con borde outline. Foco: fondo blanco + borde cacao 2 px.
  * Botón limpiar de 44 dp reales. `trailingAction` opcional (p. ej. filtros) en botón cacao.
  */

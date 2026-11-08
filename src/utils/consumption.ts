@@ -8,7 +8,7 @@
  * - Si las unidades no son compatibles (p. ej. «2 unidades» contra «1 kg»), si la receta no dice cantidad
  *   o si la despensa no tiene cantidad, NO toca ese alimento y lo reporta en `skipped` para que el usuario lo ajuste.
  * - Si lo que queda es 0 o menos, el alimento NO se borra: queda en 0 («Sin stock») para que el usuario
- *   decida si lo repone o lo elimina (decisión de Stehven, 28-09-2026). Los que ya están en 0 no se emparejan.
+ *   decida si lo repone o lo elimina. Los que ya están en 0 no se emparejan.
  */
 type Unit = 'units' | 'grams' | 'kilograms' | 'milliliters' | 'liters' | 'package' | 'unknown';
 
@@ -141,11 +141,8 @@ export function planConsumption(
   return { updates, deletes: [], depleted: [...depleted], consumed, skipped };
 }
 
-// Disponibilidad de recetas frente a la despensa ACTUAL
-//
-// El porcentaje que traía la IA («matchScore») se calculaba una sola vez al generar y luego quedaba congelado
-// (o se inventaba un 90 si faltaba). Aquí se recalcula cada vez con lo que hay hoy en la despensa,
-// usando el mismo emparejamiento que el descuento al preparar.
+// Disponibilidad de recetas frente a la despensa actual: el «matchScore» de la IA queda congelado al generar,
+// así que se recalcula en cada uso con el mismo emparejamiento que el descuento al preparar.
 
 type AvailabilityIngredient = { name: string; isOptional?: boolean; inventoryIngredientId?: string | null };
 

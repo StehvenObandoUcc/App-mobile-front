@@ -11,7 +11,7 @@ import type { RecipeImageCredit } from '../types';
 import { isAllowedPageUrl } from '../utils/recipe-merge';
 
 /**
- * Piezas del detalle de receta (Receta-Detalle.dc.html).
+ * Piezas del detalle de receta.
  * Átomo: AiBadge · Moléculas: StatTile, StepItem, StickyActionBar
  * Organismos: RecipeCover, RecipeIngredientsCard, MissingIngredientsCard
  */

@@ -39,10 +39,6 @@ import {
 import { spacing } from '../src/theme';
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 
-/**
- * Configuración (Configuracion.dc.html): Cuenta · Preferencias de cocina · Despensa y avisos ·
- * Sincronización · Permisos y escaneo · Accesibilidad · Información · Pruebas (BETA) · Zona de datos.
- */
 const TEST_DELAY_SECONDS = 10;
 const NOTIFICATIONS_AVAILABLE = areNotificationsAvailable();
 

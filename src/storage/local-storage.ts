@@ -92,10 +92,7 @@ function buildMoveOutbox(
   return { outbox: next, purgedShoppingIds };
 }
 
-/**
- * Genera la clave namespaced para el almacenamiento.
- * Lanza error si no hay un usuario activo para evitar colisiones o escrituras en claves globales.
- */
+/** Clave namespaced por usuario; lanza si no hay usuario activo para no escribir en claves globales. */
 export function getStorageKey(baseKey: string, userId: string): string {
   if (!userId || !userId.trim()) {
     throw new Error('Acceso de almacenamiento denegado: no hay usuario activo autenticado');
@@ -470,9 +467,6 @@ export const LocalStorage = {
     emitChange();
   },
 
-  /**
-   * Limpia todos los datos de muestra o inventario del usuario actual.
-   */
   async clearAllUserData(): Promise<void> {
     ensureActiveUser();
     memoryInventory = [];
@@ -682,7 +676,6 @@ export const LocalStorage = {
     const newIngredients: Ingredient[] = [];
     const updatedIngredients: MoveBoughtSnapshot['updatedIngredients'] = [];
 
-    // Clonar lista actual para mutación inmutable
     const nextInventory: Ingredient[] = memoryInventory.map((item) => ({ ...item }));
 
     for (const bought of boughtItems) {
@@ -729,7 +722,6 @@ export const LocalStorage = {
           expirationSource: existing.expirationSource ?? 'estimated',
         });
       } else {
-        // Producto nuevo en inventario
         const newIngredient: Ingredient = {
           id: `ing-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name: bought.name,
@@ -769,10 +761,10 @@ export const LocalStorage = {
       updatedIngredients,
     };
 
-    // 1. Snapshot previo de transacción para recuperación tras fallo/cierre
+    // Snapshot previo de la transacción para recuperarla tras un fallo o cierre
     await AsyncStorage.setItem(txKey, JSON.stringify(tx));
 
-    // 2. Persistencia coordinada multiSet (transaccional a nivel de almacenamiento)
+    // multiSet: escritura coordinada de despensa, compras y Outbox
     await AsyncStorage.multiSet([
       [getStorageKey(BASE_KEY_INVENTORY, uid), JSON.stringify(nextInventory)],
       [getStorageKey(BASE_KEY_SHOPPING_LIST, uid), JSON.stringify(nextShoppingList)],
@@ -784,10 +776,8 @@ export const LocalStorage = {
       [getStorageKey(BASE_KEY_OUTBOX, uid), JSON.stringify(nextOutbox)],
     ]);
 
-    // 3. Limpiar snapshot una vez confirmadas las escrituras
     await AsyncStorage.removeItem(txKey);
 
-    // 4. Actualizar memoria y emitir cambios
     memoryInventory = nextInventory;
     memoryShoppingList = nextShoppingList;
     pendingDeletedShopping = nextPendingDeletedShopping;

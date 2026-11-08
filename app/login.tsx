@@ -33,12 +33,7 @@ import { useI18n, type t as TFn, type tp as TpFn } from '../src/i18n';
 import { isStrongEnough } from '../src/utils/auth-flow';
 import { AuthService } from '../src/services/auth-service';
 
-/**
- * Bienvenida (Bienvenida-Fotos.dc.html) + Formulario (Login-Formulario.dc.html).
- * Bienvenida: 3 pasos con foto real, etiquetas de alimentos, puntos, «Saltar / Siguiente»;
- * el último paso lleva «Crear cuenta», «Ya tengo cuenta» y los enlaces legales.
- * El perfil vive ahora en /profile.
- */
+/** Bienvenida de 3 pasos y formulario de acceso (iniciar sesión / crear cuenta). */
 type Slide = {
   photo: number;
   alt: string;
@@ -49,7 +44,6 @@ type Slide = {
   tags: PhotoTagSpec[];
 };
 
-// Coordenadas tomadas del mockup (lienzo de 390 × 470).
 function buildSlides(t: typeof TFn, tp: typeof TpFn): Slide[] {
   return [
     {
@@ -240,7 +234,6 @@ export default function LoginScreen() {
     }
   };
 
-  // Bienvenida con fotos
   if (screenView === 'welcome') {
     const last = page === SLIDES.length - 1;
     return (
@@ -324,7 +317,6 @@ export default function LoginScreen() {
     );
   }
 
-  // Formulario
   const register_ = mode === 'register';
   const shownError: FormError | null = formError ?? (error ? { message: error } : null);
   return (

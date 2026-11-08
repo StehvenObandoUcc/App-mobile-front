@@ -32,10 +32,7 @@ import { spacing } from '../src/theme';
 import { makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 
-/**
- * Sin sesión no se monta Inicio: antes se cargaban despensa, recetas y compras (y una llamada al servidor)
- * solo para redirigir al login después. Ahora se redirige de inmediato.
- */
+/** Sin sesión no se monta Inicio: evita cargar datos solo para redirigir al login. */
 export default function HomeScreen() {
   const { isAuthenticated, isHydrated } = useAuth();
   if (!isHydrated) return null;
@@ -55,7 +52,6 @@ function HomeContent() {
   const { user } = useAuth();
   const { uri: avatarUri } = useAvatar(user?.id);
 
-  // Estadísticas reales calculadas reactivamente
   const ingredientCount = items.length;
   const expiringItems = items.filter((item) => {
     const s = getExpirationStatus(item.expirationDate);
@@ -72,7 +68,6 @@ function HomeContent() {
   const moreIdeas = availableRecipes.slice(1, 6);
   const hasPantry = ingredientCount > 0;
 
-  // Encabezado «Mi **Cocina**» (mockup) o «Chef **Steve**» cuando hay sesión.
   const firstName = user?.name ? user.name.replace(/^chef\s+/i, '').split(' ')[0] : null;
   const headerTitle = firstName ? t('screensMain.home.headerChef') : t('screensMain.home.headerMine');
   const headerEmphasis = firstName ?? t('screensMain.home.headerKitchen');
@@ -94,7 +89,6 @@ function HomeContent() {
         { paddingBottom: Math.max(110, getBottomContentPadding(insets.bottom)) },
       ]}
     >
-      {/* 1. Encabezado (Inicio.dc.html) */}
       <StaggerView index={0}>
         <ScreenHeader
           title={headerTitle}
@@ -117,7 +111,6 @@ function HomeContent() {
         />
       </StaggerView>
 
-      {/* 1b. Aviso de sincronización (Outbox) */}
       {outbox.state !== 'hidden' && (
         <OfflineBanner
           state={outbox.state}
@@ -129,13 +122,8 @@ function HomeContent() {
       )}
 
       {/*
-        Inicio según el estado: cada dato aparece una sola vez.
-        - Despensa vacía: tarjeta grande de escaneo; la sugerencia explica que sale de lo que agregues.
-        - Con alimentos: lo que vence → escanear (fila compacta) → qué cocinar → fichas de despensa y compras
-          (las fichas repiten pestañas, por eso van al final).
-        - «Por vencer» ya no es ficha: lo dice «Aprovecha primero», que solo aparece si hay algo por vencer.
-        - «¿Qué cocinamos hoy?» y las ideas son una sola sección: la sugerencia y, debajo, las demás.
-        - Las ideas no se borran con pulsación larga (en el resto de la app eso selecciona); se borran en Recetas.
+        Cada dato aparece una sola vez; las fichas repiten pestañas, por eso van al final.
+        Las ideas no se borran con pulsación larga (en el resto de la app eso selecciona); se borran en Recetas.
       */}
       {expiringCount > 0 && (
         <StaggerView index={1}>
@@ -239,7 +227,6 @@ function HomeContent() {
   );
 }
 
-// Inicio.dc.html: margen lateral 20, 20 entre bloques, +8 antes de cada sección.
 const useStyles = makeStyles((colors) => ({
   screen: {
     backgroundColor: colors.background,

@@ -5,13 +5,13 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { fontFamilyFor } from '../utils/brand-font';
 
 /**
- * Átomo de texto — escala tipográfica de Fundamentos.dc.html (Outfit).
+ * Átomo de texto con la escala tipográfica (Outfit).
  *
  * En Android una familia personalizada no interpola `fontWeight`: cada peso es un archivo.
  * Por eso el peso se resuelve a `fontFamily` (Outfit-Light, Outfit-SemiBold…) y solo si la
  * fuente no cargó se manda `fontWeight` para que la del sistema mantenga la jerarquía.
  *
- * Títulos con contraste de peso (mockups): <AppText variant="screenTitle">Mi <AppText weight="semibold">Despensa</AppText></AppText>
+ * Títulos con contraste de peso: <AppText variant="screenTitle">Mi <AppText weight="semibold">Despensa</AppText></AppText>
  */
 export type TextVariant =
   | 'displayNumber'

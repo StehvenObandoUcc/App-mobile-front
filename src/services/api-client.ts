@@ -145,10 +145,7 @@ async function requestJson<T = any>(url: string, options?: RequestInit, isRetry 
   }
 }
 
-/**
- * Envía una imagen al endpoint /api/v1/scan de FastAPI.
- * Usa JSON con base64 para máxima confiabilidad y compatibilidad universal en Android/iOS.
- */
+/** Envía la imagen a /api/v1/scan; prefiere JSON con base64 porque FormData da problemas en Android. */
 export async function scanImageWithApi(
   photoUri: string,
   base64Data?: string
@@ -161,7 +158,7 @@ export async function scanImageWithApi(
     b64 = photoUri.split(',')[1];
   }
 
-  // 1. Envío directo JSON si tenemos base64 (cero bugs de FormData en Android)
+  // Base64 directo en JSON (FormData falla en Android)
   if (b64) {
     return requestJson<ApiScanResponse>(`${API_BASE_URL}/api/v1/scan`, {
       method: 'POST',
@@ -173,7 +170,7 @@ export async function scanImageWithApi(
     });
   }
 
-  // 2. Si es una URI local file://, convertir a base64 mediante FileReader estándar
+  // URI local file://: se convierte a base64 con FileReader
   try {
     const fileRes = await fetch(photoUri);
     const blob = await fileRes.blob();
@@ -197,7 +194,7 @@ export async function scanImageWithApi(
     });
   } catch (convErr: any) {
     if (convErr instanceof ApiError) throw convErr;
-    // 3. Fallback con FormData si la conversión previa fallase
+    // Fallback con FormData si la conversión falla
     const formData = new FormData();
     formData.append('image', {
       uri: photoUri,
@@ -215,9 +212,7 @@ export async function scanImageWithApi(
 /** Preferencias de Configuración que viajan al Chef IA: porciones e ingredientes a evitar. */
 export type RecipeGenerationExtras = { servings?: number; avoid?: string[] };
 
-/**
- * Envía el inventario actual y preferencias al endpoint de IA /api/v1/recipes/generate (Fase 1: Resumen liviano).
- */
+/** Fase 1: envía un resumen liviano del inventario y las preferencias a /api/v1/recipes/generate. */
 export async function generateRecipesWithApi(
   ingredients: any[],
   maxPrepTime: number = 30,
@@ -253,9 +248,7 @@ export async function generateRecipesWithApi(
   return Array.isArray(generated) ? generated.map(normalizeGeneratedRecipe) : generated;
 }
 
-/**
- * Fase 2 (Opción A Stateless): Solicita los pasos detallados de preparación para una receta específica.
- */
+/** Fase 2: pide los pasos detallados de una receta específica (sin estado en el servidor). */
 export async function getRecipeStepsWithApi(recipe: {
   title: string;
   description?: string;
@@ -287,9 +280,6 @@ export function readExpirationSource(raw: any): ExpirationSource | undefined {
   return (EXPIRATION_SOURCES as string[]).includes(v) ? (v as ExpirationSource) : undefined;
 }
 
-/**
- * Obtiene el inventario completo del usuario desde el backend (conectado a Supabase).
- */
 export async function fetchInventoryFromApi(): Promise<Ingredient[]> {
   const data = await requestJson<any[]>(`${API_BASE_URL}/api/v1/inventory`);
   return (data || []).map((item) => ({
@@ -308,9 +298,6 @@ export async function fetchInventoryFromApi(): Promise<Ingredient[]> {
   }));
 }
 
-/**
- * Persiste un nuevo alimento en la base de datos (Supabase) a través de la API.
- */
 export async function createInventoryItemWithApi(item: Partial<Ingredient>): Promise<Ingredient> {
   const payload = {
     id: item.id,
@@ -346,9 +333,6 @@ export async function createInventoryItemWithApi(item: Partial<Ingredient>): Pro
   };
 }
 
-/**
- * Actualiza un alimento en la base de datos (Supabase) a través de la API.
- */
 export async function updateInventoryItemWithApi(
   id: string,
   updates: Partial<Ingredient>
@@ -383,9 +367,6 @@ export async function updateInventoryItemWithApi(
   };
 }
 
-/**
- * Elimina físicamente un alimento de la base de datos a través de la API.
- */
 export async function deleteInventoryItemWithApi(id: string): Promise<boolean> {
   await requestJson(`${API_BASE_URL}/api/v1/inventory/${encodeURIComponent(id)}`, {
     method: 'DELETE',
@@ -405,9 +386,6 @@ function readMatchScore(raw: any): number {
   return Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : 0;
 }
 
-/**
- * Obtiene las recetas guardadas del usuario desde la base de datos en la nube.
- */
 export async function fetchSavedRecipesFromApi(): Promise<Recipe[]> {
   const data = await requestJson<any[]>(`${API_BASE_URL}/api/v1/recipes/saved`, {
     method: 'GET',
@@ -431,9 +409,6 @@ export async function fetchSavedRecipesFromApi(): Promise<Recipe[]> {
   }));
 }
 
-/**
- * Guarda o actualiza una receta en la base de datos en la nube.
- */
 export async function saveRecipeWithApi(recipe: Recipe): Promise<Recipe> {
   const payload = {
     id: recipe.id,
@@ -472,9 +447,6 @@ export async function saveRecipeWithApi(recipe: Recipe): Promise<Recipe> {
   };
 }
 
-/**
- * Elimina una receta guardada de la base de datos en la nube.
- */
 export async function deleteRecipeWithApi(id: string): Promise<boolean> {
   await requestJson(`${API_BASE_URL}/api/v1/recipes/saved/${encodeURIComponent(id)}`, {
     method: 'DELETE',
@@ -482,9 +454,6 @@ export async function deleteRecipeWithApi(id: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Elimina un lote de recetas guardadas de la base de datos en la nube.
- */
 export async function batchDeleteRecipesWithApi(ids: string[]): Promise<boolean> {
   await requestJson(`${API_BASE_URL}/api/v1/recipes/saved/batch-delete`, {
     method: 'POST',
@@ -496,9 +465,6 @@ export async function batchDeleteRecipesWithApi(ids: string[]): Promise<boolean>
 // Lista de Compras Persistente (Supabase / Cloud API)
 
 
-/**
- * Obtiene los artículos de la lista de compras del usuario desde la base de datos en la nube.
- */
 export async function fetchShoppingListFromApi(): Promise<ShoppingItem[]> {
   const data = await requestJson<any[]>(`${API_BASE_URL}/api/v1/shopping`, {
     method: 'GET',
@@ -516,9 +482,6 @@ export async function fetchShoppingListFromApi(): Promise<ShoppingItem[]> {
   }));
 }
 
-/**
- * Persiste un nuevo artículo en la lista de compras en la nube.
- */
 export async function createShoppingItemWithApi(item: Partial<ShoppingItem>): Promise<ShoppingItem> {
   const payload = {
     id: item.id,
@@ -545,9 +508,6 @@ export async function createShoppingItemWithApi(item: Partial<ShoppingItem>): Pr
   };
 }
 
-/**
- * Actualiza un artículo de la lista de compras en la nube.
- */
 export async function updateShoppingItemWithApi(
   id: string,
   updates: Partial<ShoppingItem>
@@ -576,9 +536,6 @@ export async function updateShoppingItemWithApi(
   };
 }
 
-/**
- * Elimina físicamente un artículo de la lista de compras en la nube.
- */
 export async function deleteShoppingItemWithApi(id: string): Promise<boolean> {
   await requestJson(`${API_BASE_URL}/api/v1/shopping/${encodeURIComponent(id)}`, {
     method: 'DELETE',

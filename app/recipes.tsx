@@ -95,23 +95,20 @@ export default function RecipesScreen() {
   const stocked = useMemo(() => items.filter((i) => i.quantity !== 0), [items]);
   const { recipes, status, error, reload, toggleSave, deleteRecipe, deleteRecipes, generateWithAi } = useRecipes();
 
-  // Lista: búsqueda, filtros y orden
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
-  // Recetas-Estados · B: el Chef IA necesita red (lo guardado sigue disponible sin internet).
+  // El Chef IA necesita red (lo guardado sigue disponible sin internet).
   const [aiOffline, setAiOffline] = useState(false);
   const outbox = useOutboxStatus();
   const [sortBy, setSortBy] = useState<RecipeSortOption>('createdAt_desc');
   const [difficultyFilter, setDifficultyFilter] = useState<RecipeDifficultyFilter>('all');
   const [picker, setPicker] = useState<'sort' | 'difficulty' | null>(null);
 
-  // Chef IA
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [chef, setChef] = useState<ChefIaValues>({ ...DEFAULT_CHEF, ingredientIds: new Set() });
   const [isGenerating, setIsGenerating] = useState(false);
   const cancelledRef = useRef(false);
 
-  // Selección múltiple
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -287,7 +284,6 @@ export default function RecipesScreen() {
     [chosenIngredients.length, chef.focus, chef.time, chef.count]
   );
 
-  // Selección
   const toggleSelectRecipe = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -550,8 +546,7 @@ export default function RecipesScreen() {
         />
       )}
 
-      {/* ── FAB «Generar con IA»: solo el icono; el Chef IA se despliega al tocarlo.
-          Sin recetas, el estado vacío ya trae el mismo botón: no se repite (se montaba sobre su texto). ── */}
+      {/* FAB «Generar con IA»: sin recetas el estado vacío ya trae el mismo botón, por eso no se repite. */}
       {!isSelectMode && status === 'success' && (recipes.length > 0 || aiOffline) && (
         <Fab
           iconName="sparkles"
@@ -605,7 +600,6 @@ export default function RecipesScreen() {
         cancelLabel={t('screensMain.recipes.chefCancel')}
       />
 
-      {/* Ordenar / Dificultad */}
       <ActionSheetModal
         visible={picker !== null}
         onClose={() => setPicker(null)}
@@ -652,7 +646,6 @@ export default function RecipesScreen() {
   );
 }
 
-// Recetas.dc.html: margen 20, 16 entre bloques del encabezado, 14 entre tarjetas.
 const useStyles = makeStyles((colors) => ({
   offlineWrap: {
     flex: 1,

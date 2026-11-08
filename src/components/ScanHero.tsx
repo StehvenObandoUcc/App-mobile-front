@@ -8,7 +8,7 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
- * ScanHero — tarjeta principal del Inicio (Inicio.dc.html).
+ * ScanHero — tarjeta principal del Inicio.
  * Fondo ciruela (color de la IA), título 300 + 600 y botón de pastilla claro «Escanear». Sin anillo ni etiqueta
  * «IA DE VISIÓN» sobre el título: eran adorno y el título ya dice qué hace.
  * Toda la tarjeta abre el escáner. Junto al botón dice cuántas fotos de prueba quedan; sin fotos, la tarjeta

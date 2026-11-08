@@ -6,7 +6,7 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import type { ThemeColors } from '../theme/colors';
 
 /**
- * Ilustración de estados (Componentes.dc.html · EmptyState / ErrorState).
+ * Ilustración de estados.
  * Mancha pastel orgánica + círculo blanco con icono + puntos decorativos.
  * tone: fresh (salvia) · neutral (avena) · ai (frambuesa) · error (chile) · brand (durazno)
  */
@@ -25,7 +25,7 @@ export type IllustrationBlobProps = {
   tone?: BlobTone;
   /** 'md' = 120×104 (estados dentro de lista) · 'lg' = 150×128 (pantalla completa) */
   size?: 'md' | 'lg';
-  /** Colores de los puntos decorativos [arriba-derecha, abajo-izquierda] si el mockup usa otros. */
+  /** Colores de los puntos decorativos [arriba-derecha, abajo-izquierda] si se quieren otros. */
   dotColors?: [string, string];
 };
 
@@ -46,7 +46,7 @@ export function IllustrationBlob({ iconName, tone = 'fresh', size = 'md', dotCol
             width: 104 * k,
             height: 88 * k,
             backgroundColor: t.blob,
-            // Forma orgánica: radios distintos por esquina (44 52 40 56 en el mockup)
+            // Forma orgánica: radios distintos por esquina (44 52 40 56)
             borderTopLeftRadius: (tone === 'error' ? 52 : 44) * k,
             borderTopRightRadius: (tone === 'error' ? 40 : 52) * k,
             borderBottomRightRadius: (tone === 'error' ? 56 : 40) * k,

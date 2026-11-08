@@ -6,7 +6,6 @@ import { spacing, radii } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
- * SecondaryButton — Componentes.dc.html
  * variant 'tint': durazno (primaryContainer) con texto onPrimaryContainer (10.25:1).
  * variant 'outline': blanco con borde outline 1.5 px y texto onSurface.
  * variant 'text': sin fondo, 48 dp, texto Sandía (enlaces de acción como «Usar otro correo»).

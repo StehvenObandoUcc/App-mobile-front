@@ -9,7 +9,6 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
- * ErrorState — Componentes.dc.html / Despensa-Estados.dc.html
  * Mancha chile + alerta, título 300 con énfasis 600, mensaje y «Reintentar» con borde.
  */
 export type ErrorStateProps = {

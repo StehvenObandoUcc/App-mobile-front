@@ -10,7 +10,7 @@ import { recipeBanner, DIFFICULTY_LABELS, recipeStatus } from '../utils/recipe-v
 import { useI18n } from '../i18n';
 
 /**
- * RecipeMiniCard — tarjeta horizontal de «Ideas para cocinar» (Inicio.dc.html).
+ * RecipeMiniCard — tarjeta horizontal de «Ideas para cocinar».
  * 236 dp de ancho: franja pastel 104 con plato, coincidencia en frambuesa, título 16/22 y meta.
  */
 export type RecipeMiniCardProps = {

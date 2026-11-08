@@ -12,7 +12,7 @@ import { useI18n } from '../i18n';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
- * AiProgressScreen — pantalla completa de «IA trabajando» por pasos (Recetas-Estados.dc.html · A).
+ * AiProgressScreen — pantalla completa de «IA trabajando» por pasos.
  * Se reutiliza en el Escaneo («Analizando»). Los pasos se completan uno a uno cada `stepMs`;
  * el último queda activo (girando) hasta que la pantalla se cierra.
  * Sin `onCancel` no hay salida hasta terminar (decisión para el Escaneo).

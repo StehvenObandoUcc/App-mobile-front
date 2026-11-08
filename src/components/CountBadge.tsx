@@ -5,8 +5,8 @@ import { radii } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
- * CountBadge (NUEVO) — contador numérico (nav de Compras, avisos).
- * Fundamentos.dc.html: 20 dp de alto, acento del tema (`colors.accent`) con su texto (`colors.onAccent`), micro 11/700.
+ * CountBadge — contador numérico (nav de Compras, avisos).
+ * 20 dp de alto, acento del tema (`colors.accent`) con su texto (`colors.onAccent`), micro 11/700.
  */
 export type CountBadgeProps = {
   count: number;

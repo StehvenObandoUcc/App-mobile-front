@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
-/** LegalDocument — tarjeta blanca con secciones numeradas (Legal.dc.html): título 17/24 600 y párrafo 15/23. */
+/** LegalDocument — tarjeta blanca con secciones numeradas: título 17/24 600 y párrafo 15/23. */
 export function LegalDocument({ sections }: { sections: { title: string; body: string }[] }) {
   const { colors } = useTheme();
   const styles = useStyles();

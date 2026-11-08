@@ -2,14 +2,14 @@ import { IngredientUnit } from '../types';
 
 /**
  * Utilidades compartidas de normalización y coincidencia léxica 100% local.
- * Cero costos de red, cero tokens consumidos.
+ * Sin red ni tokens.
  */
 
 export function normalizeText(text: string): string {
   return (text || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Quita tildes
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -56,12 +56,11 @@ export function findSimilarItem<T extends { name: string }>(
     const normItem = normalizeText(item.name);
     const itemWords = getKeywords(item.name);
 
-    // 1. Coincidencia idéntica exacta
     if (normTarget === normItem) {
       return { item, score: 1.0, isExact: true, isAmbiguous: false };
     }
 
-    // 2. Coincidencia de plural/singular simple (ej: tomate / tomates)
+    // Plural/singular simple (tomate / tomates)
     const isPlural1 = normTarget.endsWith('s') && normTarget.slice(0, -1) === normItem;
     const isPlural2 = normItem.endsWith('s') && normItem.slice(0, -1) === normTarget;
     const isPluralEs1 = normTarget.endsWith('es') && normTarget.slice(0, -2) === normItem;
@@ -71,7 +70,6 @@ export function findSimilarItem<T extends { name: string }>(
       return { item, score: 0.98, isExact: true, isAmbiguous: false };
     }
 
-    // 3. Contención de subcadena
     if (normTarget.includes(normItem) || normItem.includes(normTarget)) {
       const score = 0.85;
       if (score > bestScore) {
@@ -80,7 +78,6 @@ export function findSimilarItem<T extends { name: string }>(
       }
     }
 
-    // 4. Coincidencia por palabras clave
     if (targetWords.length > 0 && itemWords.length > 0) {
       const commonWords = targetWords.filter((w) => itemWords.includes(w));
       const score = (commonWords.length * 2) / (targetWords.length + itemWords.length);
