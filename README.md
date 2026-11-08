@@ -13,6 +13,8 @@
 ![Expo Router](https://img.shields.io/badge/Expo_Router-58-000020?logo=expo&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-APK-3DDC84?logo=android&logoColor=white)
 
+[**Descargar APK para Android**](https://github.com/StehvenObandoUcc/App-mobile-front/releases/download/v1.0.0-apk/FoodAI-1.0.0.apk) · [Ver release](https://github.com/StehvenObandoUcc/App-mobile-front/releases/tag/v1.0.0-apk)
+
 </div>
 
 ---
@@ -208,7 +210,9 @@ npm test
 
 ### Generar un APK
 
-Con [EAS CLI](https://docs.expo.dev/eas/) y sesión iniciada:
+Si solo quieres probar la app, descarga la [APK ya compilada](https://github.com/StehvenObandoUcc/App-mobile-front/releases/download/v1.0.0-apk/FoodAI-1.0.0.apk) (52 MB, Android; hay que permitir la instalación de orígenes desconocidos). Usa el backend de producción.
+
+Para compilarla tú, con [EAS CLI](https://docs.expo.dev/eas/) y sesión iniciada:
 
 ```bash
 eas build --platform android --profile preview
