@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useRouter, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInventory } from '../src/hooks/useInventory';
@@ -31,12 +31,12 @@ import {
   ScreenHeader,
   M3Dialog,
   IngredientFormSheet,
-  SpeedDialFab,
+  Fab,
   SelectionHeader,
   SelectionActionBar,
 } from '../src/components';
 import { getExpirationStatus } from '../src/utils/expiration';
-import { daysUntil } from '../src/utils/dates';
+import { daysUntil, resolveFormExpirationSource } from '../src/utils/dates';
 import { radii, spacing, CATEGORY_LIST } from '../src/theme';
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
@@ -54,12 +54,10 @@ export default function InventoryScreen() {
   const { t, tp } = useI18n();
   const styles = useStyles();
   const router = useRouter();
-  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ filter?: string; from?: string; add?: string }>();
   const { items, status, error, reload, addItem, updateItem, deleteItem, deleteMultipleItems, consumeItem } =
     useInventory();
-  const isLeavingRef = useRef(false);
   const categories: CategoryChip[] = [
     { key: 'all', label: t('screensMain.inventory.all') },
     { key: 'expiring', label: t('screensMain.inventory.expiring'), icon: 'time-outline' },
@@ -70,20 +68,12 @@ export default function InventoryScreen() {
     })),
   ];
 
-  // Intercepción universal de retroceso tras escanear:
-  // Redirigir a Inicio (/) cubriendo header, botón físico Android y gesto swipe-back en iOS
-  useEffect(() => {
-    if (params.from !== 'scan') return;
-
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (isLeavingRef.current) return;
-      e.preventDefault();
-      isLeavingRef.current = true;
-      router.replace('/');
-    });
-
-    return unsubscribe;
-  }, [navigation, params.from]);
+  // Tras escanear, el retroceso (header, botón Android, swipe iOS) lleva a Inicio.
+  // Expo Router 58: `usePreventRemove` reemplaza al evento «beforeRemove».
+  const disableBackToHome = usePreventRemove(params.from === 'scan', () => {
+    disableBackToHome();
+    router.replace('/');
+  });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>(
@@ -93,7 +83,6 @@ export default function InventoryScreen() {
   const [editingItem, setEditingItem] = useState<Ingredient | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Form state
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState<IngredientUnit>('units');
@@ -115,7 +104,6 @@ export default function InventoryScreen() {
     onConfirm: () => {},
   });
 
-  // Modal de confirmación compartido (BUG-08)
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
     title: string;
@@ -179,7 +167,6 @@ export default function InventoryScreen() {
     });
   };
 
-  // Actualizar filtro si cambian los parámetros de ruta
   React.useEffect(() => {
     if (params.filter === 'expiring') {
       setSelectedCategory('expiring');
@@ -208,7 +195,7 @@ export default function InventoryScreen() {
       const oa = a.quantity === 0 ? 1 : 0;
       const ob = b.quantity === 0 ? 1 : 0;
       if (oa !== ob) return oa - ob;
-      // «por vencimiento»: lo que vence antes arriba; sin fecha al final (Despensa.dc.html)
+      // «por vencimiento»: lo que vence antes arriba; sin fecha al final
       const da = daysUntil(a.expirationDate);
       const db = daysUntil(b.expirationDate);
       if (da === null && db === null) return a.name.localeCompare(b.name, 'es');
@@ -329,6 +316,7 @@ export default function InventoryScreen() {
       quantity: parsedQty,
       unit,
       expirationDate: expirationDate.trim() || null,
+      expirationSource: resolveFormExpirationSource(editingItem, expirationDate.trim() || null),
       confidence: editingItem ? editingItem.confidence : null,
       source: editingItem ? editingItem.source : 'manual',
       confirmed: true,
@@ -401,7 +389,6 @@ export default function InventoryScreen() {
   // Buscador, filtros, salud y conteo se desplazan con la lista: al bajar, los alimentos ocupan la pantalla.
   const listHeader = isSelectMode ? null : (
     <View style={styles.listHeader}>
-          {/* ── Buscador ── */}
           <View style={styles.searchSection}>
             <SearchInput
               value={searchQuery}
@@ -410,7 +397,6 @@ export default function InventoryScreen() {
             />
           </View>
 
-          {/* ── Filtros por categoría estilo Delivery ── */}
           <View style={styles.categoriesWrapper}>
             <ScrollView
               horizontal
@@ -430,7 +416,6 @@ export default function InventoryScreen() {
             </ScrollView>
           </View>
 
-          {/* ── Salud de tu despensa (Despensa.dc.html, aprobado) ── */}
           {status === 'success' && !searchQuery.trim() && selectedCategory === 'all' && (
             <View style={styles.healthCardWrapper}>
               <PantryHealthCard
@@ -440,7 +425,6 @@ export default function InventoryScreen() {
             </View>
           )}
 
-          {/* ── Barra de conteo + Seleccionar ── */}
           {status === 'success' && filteredItems.length > 0 && (
             <View style={styles.countRow}>
               <AppText variant="metadata" weight="semibold" color={colors.textSecondary}>
@@ -462,7 +446,6 @@ export default function InventoryScreen() {
 
   return (
     <AppScreen style={styles.screen}>
-      {/* ── Cabecera: normal o barra contextual de selección (Despensa-Seleccion.dc.html) ── */}
       {isSelectMode ? (
         <View style={styles.selectionHeaderWrap}>
           <SelectionHeader
@@ -485,11 +468,10 @@ export default function InventoryScreen() {
               }
             />
           </View>
-          {/* Escaneo con IA: solo desde el FAB central de la barra inferior (decisión de diseño, Etapa 2) */}
+          {/* Escaneo con IA: solo desde el FAB central de la barra inferior */}
         </View>
       )}
 
-      {/* ── Contenido de la lista según estados ── */}
       {status !== 'success' && listHeader && <View style={styles.headerOutsideList}>{listHeader}</View>}
 
       {status === 'loading' && (
@@ -521,7 +503,7 @@ export default function InventoryScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           renderItem={renderIngredientItem}
-          ListHeaderComponent={listHeader}
+          ListHeaderComponent={listHeader ?? undefined}
           keyboardShouldPersistTaps="handled"
           initialNumToRender={8}
           maxToRenderPerBatch={10}
@@ -573,19 +555,19 @@ export default function InventoryScreen() {
         />
       )}
 
-      {/* ── FAB extendido «Agregar» (oculto en modo selección) ── */}
-      {!isSelectMode && (
-        <SpeedDialFab
+      {/* FAB «Agregar» (oculto en selección): abre el formulario directo; un menú con «Escanear» duplicaba el botón central de la barra. */}
+      {/* Sin alimentos, el estado vacío ya trae «Agregar a mano»: el flotante lo tapaba. */}
+      {!isSelectMode && items.length > 0 && (
+        <Fab
+          iconName="add"
+          label={t('screensMain.inventory.addLabel')}
           accessibilityLabel={t('screensMain.inventory.addA11y')}
+          onPress={() => openAddModal()}
           style={{ right: spacing.screenGutter, bottom: bottomBarPosition + NAV_HEIGHT + 16 }}
-          actions={[
-            { key: 'scan', label: t('screensMain.inventory.scanWithCamera'), iconName: 'scan-outline', tone: 'brand', onPress: () => router.push('/scan') },
-            { key: 'manual', label: t('screensMain.inventory.writeByHand'), iconName: 'create-outline', onPress: () => openAddModal() },
-          ]}
         />
       )}
 
-      {/* ── Barra de acciones flotante: reemplaza la navegación mientras se selecciona ── */}
+      {/* Barra de acciones flotante: reemplaza la navegación mientras se selecciona */}
       {isSelectMode && (
         <SelectionActionBar
           count={selectedIds.size}
@@ -595,7 +577,6 @@ export default function InventoryScreen() {
         />
       )}
 
-      {/* ── Hoja «Añadir / Editar alimento» (Despensa-Formulario.dc.html) ── */}
       <IngredientFormSheet
         visible={modalVisible}
         mode={editingItem ? 'edit' : 'add'}
@@ -610,6 +591,7 @@ export default function InventoryScreen() {
         onSubmit={handleSave}
         onClose={() => setModalVisible(false)}
         onOpenCalendar={() => setIsDatePickerVisible(true)}
+        estimatedDate={editingItem?.expirationSource === 'estimated' ? editingItem.expirationDate : null}
         onDelete={
           editingItem
             ? () => {
@@ -620,7 +602,6 @@ export default function InventoryScreen() {
         }
       />
 
-      {/* ── Modal de Confirmación Único (BUG-08) ── */}
       <ActionSheetModal
         visible={confirmModal.visible}
         onClose={() => setConfirmModal((prev) => ({ ...prev, visible: false }))}
@@ -633,7 +614,6 @@ export default function InventoryScreen() {
         onConfirm={confirmModal.onConfirm}
       />
 
-      {/* ── Mini Calendario M3 ── */}
       <M3DatePickerModal
         visible={isDatePickerVisible}
         value={expirationDate}
@@ -641,7 +621,6 @@ export default function InventoryScreen() {
         onClose={() => setIsDatePickerVisible(false)}
       />
 
-      {/* ── Diálogo Emergente M3 ── */}
       <M3Dialog
         visible={dialogConfig.visible}
         title={dialogConfig.title}
@@ -670,7 +649,6 @@ const useStyles = makeStyles((colors) => ({
     paddingTop: spacing.md,
     paddingBottom: spacing.xs,
   },
-  // ── Barra contextual de selección (reemplaza el header) ──
   selectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -683,7 +661,6 @@ const useStyles = makeStyles((colors) => ({
     borderRadius: radii.floatingNav,
     backgroundColor: colors.surface,
   },
-  // ── Barra de acciones flotante de selección (sobre la nav inferior) ──
   searchSection: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xs,

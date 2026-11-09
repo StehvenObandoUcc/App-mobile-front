@@ -7,7 +7,6 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import type { ThemeColors } from '../theme/colors';
 
 /**
- * PrimaryButton — Componentes.dc.html
  * tone: 'ink' (cacao, acción principal · defecto) | 'brand' (tomate, escaneo) | 'ai' (frambuesa, Chef IA)
  *       | 'danger' (rojo, solo para confirmar acciones destructivas)
  *       | 'inverse' (blanco con texto/icono ciruela, para superficies de color como el héroe de escaneo)

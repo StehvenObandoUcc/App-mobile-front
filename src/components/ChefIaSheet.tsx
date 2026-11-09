@@ -3,6 +3,7 @@ import { View, StyleSheet, Modal, ScrollView, Pressable, KeyboardAvoidingView } 
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
+import { joinTitle } from './DialogTitle';
 import { LabeledField } from './LabeledField';
 import { IconButton } from './IconButton';
 import { PrimaryButton } from './PrimaryButton';
@@ -21,7 +22,7 @@ import { daysUntil } from '../utils/dates';
 import { useI18n, type t as TFn } from '../i18n';
 
 /**
- * ChefIaSheet — hoja «Chef IA» (Chef-IA.dc.html). Solo presentación: el estado vive en app/recipes.tsx.
+ * ChefIaSheet — hoja «Chef IA». Solo presentación: el estado vive en app/recipes.tsx.
  * Enfoque en carpetas · ingredientes (los que vencen primero, ya marcados) · dieta · dificultad ·
  * tiempo · cantidad · botón fijo frambuesa «Generar N recetas con IA».
  */
@@ -65,7 +66,7 @@ const FOCUS_TITLE_KEYS: Record<RecipeFocus, string> = {
   quick: 'sheets.chefIa.focusTitle.quick',
   waste_reduction: 'sheets.chefIa.focusTitle.waste_reduction',
 };
-// Orden del mockup: las lengüetas de arriba y la elegida desplegada abajo.
+// Las lengüetas de arriba y la elegida desplegada abajo.
 const FOCUS_ORDER: RecipeFocus[] = ['custom', 'quick', 'waste_reduction'];
 const focusOptionsFor = (colors: ThemeColors, t: typeof TFn): FocusFolderOption<RecipeFocus>[] => FOCUS_ORDER.map((key) => {
   const base = RECIPE_FOCUS_OPTIONS.find((o) => o.key === key)!;
@@ -109,7 +110,9 @@ export function ChefIaSheet({
   const shown = showAll ? sorted : sorted.slice(0, VISIBLE_INGREDIENTS);
   const hidden = sorted.length - shown.length;
   const canClose = !isGenerating;
-  const close = () => canClose && onClose();
+  const close = () => {
+    if (canClose) onClose();
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
@@ -122,8 +125,8 @@ export function ChefIaSheet({
             <View style={styles.badge}>
               <Ionicons name="sparkles" size={24} color={colors.m3.onTertiary} />
             </View>
-            <AppText variant="headline" weight="light" style={styles.title} accessibilityRole="header">
-              {t('sheets.chefIa.title')} <AppText weight="semibold">{t('sheets.chefIa.titleEmphasis')}</AppText>
+            <AppText variant="headline" weight="semibold" style={styles.title} accessibilityRole="header">
+              {joinTitle(t('sheets.chefIa.title'), t('sheets.chefIa.titleEmphasis'))}
             </AppText>
             <IconButton
               iconName="close"
@@ -141,7 +144,7 @@ export function ChefIaSheet({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* ── Enfoque ── */}
+            {/* Enfoque */}
             <StaggerView index={0} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.focusQuestion')}
@@ -176,7 +179,7 @@ export function ChefIaSheet({
               )}
             </StaggerView>
 
-            {/* ── Ingredientes ── */}
+            {/* Ingredientes */}
             <StaggerView index={1} delayMs={70} duration={320} style={styles.section}>
               <View style={styles.rowBetween}>
                 <AppText variant="body" weight="semibold">
@@ -233,7 +236,7 @@ export function ChefIaSheet({
               )}
             </StaggerView>
 
-            {/* ── Dieta ── */}
+            {/* Dieta */}
             <StaggerView index={2} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.dietLabel')}
@@ -245,7 +248,7 @@ export function ChefIaSheet({
               </View>
             </StaggerView>
 
-            {/* ── Dificultad ── */}
+            {/* Dificultad */}
             <StaggerView index={3} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.difficultyLabel')}
@@ -253,7 +256,7 @@ export function ChefIaSheet({
               <DifficultyPicker value={values.difficulty} onChange={(d) => onChange('difficulty', d)} />
             </StaggerView>
 
-            {/* ── Tiempo ── */}
+            {/* Tiempo */}
             <StaggerView index={4} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.timeLabel')}
@@ -272,7 +275,7 @@ export function ChefIaSheet({
               {timeHint ? <Hint text={timeHint} warning icon="time-outline" /> : null}
             </StaggerView>
 
-            {/* ── Cantidad ── */}
+            {/* Cantidad */}
             <StaggerView index={5} delayMs={70} duration={320} style={styles.section}>
               <AppText variant="body" weight="semibold">
                 {t('sheets.chefIa.howManyLabel')}
@@ -286,7 +289,7 @@ export function ChefIaSheet({
             </StaggerView>
           </ScrollView>
 
-          {/* ── Botón fijo ── */}
+          {/* Botón fijo */}
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 12, 28) }]}>
             <PrimaryButton
               tone="ai"

@@ -2,29 +2,25 @@ import React from 'react';
 import { AppText } from './AppText';
 
 /**
- * DialogTitle — título de diálogos y hojas con contraste de peso (300 + 600).
- * «¿Eliminar **3 alimentos**?»: si no se pasa `emphasis`, se resalta la última palabra.
- * Un solo tamaño para todas las hojas y diálogos: el token `headline` (24/32). Antes había 22, 24 y 26; se eligió
- * 24 porque ya lo usaban la mayoría de las hojas (OptionSheet, Avoid, Compras, ActionSheet) y es la escala existente.
+ * DialogTitle — título de diálogos y hojas: una sola frase en seminegrita, token `headline` (24/32).
+ * El contraste de peso (300 + 600, «Mi **Despensa**») queda solo para los títulos de pantalla (ScreenHeader):
+ * repetido en cada diálogo y estado vacío dejaba de marcar jerarquía y partía frases como «¿Eliminar **3 alimentos**?».
+ * `emphasis` se mantiene para no tocar los textos: se une al título con un espacio.
  */
 export type DialogTitleProps = {
   title: string;
   emphasis?: string;
 };
 
-export function splitTitle(title: string, emphasis?: string): { lead: string; bold: string } {
-  if (emphasis) return { lead: title, bold: emphasis };
-  const t = title.trim();
-  const i = t.lastIndexOf(' ');
-  return i > 0 ? { lead: t.slice(0, i), bold: t.slice(i + 1) } : { lead: '', bold: t };
+/** «¿Eliminar esta» + «receta?» → «¿Eliminar esta receta?» */
+export function joinTitle(title: string, emphasis?: string): string {
+  return [title.trim(), emphasis?.trim()].filter(Boolean).join(' ');
 }
 
 export function DialogTitle({ title, emphasis }: DialogTitleProps) {
-  const { lead, bold } = splitTitle(title, emphasis);
   return (
-    <AppText variant="headline" weight="light" accessibilityRole="header">
-      {lead ? `${lead} ` : ''}
-      <AppText weight="semibold">{bold}</AppText>
+    <AppText variant="headline" weight="semibold" accessibilityRole="header">
+      {joinTitle(title, emphasis)}
     </AppText>
   );
 }

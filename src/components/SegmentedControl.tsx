@@ -5,7 +5,7 @@ import { radii, elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
- * SegmentedControl — «¿Cuántas recetas?» 1 · 2 · 3 (Chef-IA.dc.html).
+ * SegmentedControl — «¿Cuántas recetas?» 1 · 2 · 3.
  * Riel avena de 52 dp; la opción elegida es una píldora blanca que flota.
  */
 export type SegmentedControlProps<V extends string | number> = {

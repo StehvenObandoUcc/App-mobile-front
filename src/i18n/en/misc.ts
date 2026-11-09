@@ -41,6 +41,7 @@ export const misc: typeof Es = {
   },
   recipeCard: {
     noneMissing: 'You have everything',
+    essentialsOnly: 'You have the essentials',
     missing_one: '{count} missing',
     missing_other: '{count} missing',
   },

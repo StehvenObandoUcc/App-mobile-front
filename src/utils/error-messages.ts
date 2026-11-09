@@ -14,7 +14,7 @@ export function isNetworkErrorMessage(message: string | null | undefined): boole
 
 /**
  * Traduce errores de red y respuestas HTTP del backend a mensajes
- * estandarizados y amigables para el usuario (BUG-05).
+ * estandarizados y amigables para el usuario.
  * Cero códigos numéricos ni mensajes crudos en la interfaz.
  */
 export function getFriendlyErrorMessage(

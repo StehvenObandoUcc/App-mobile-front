@@ -55,7 +55,7 @@ export function Text({ style, children, ...rest }: TextProps) {
   );
 }
 
-export const TextInput = forwardRef<RNTextInput, TextInputProps>(function TextInput({ style, placeholderTextColor, ...rest }, ref) {
+export const TextInput = forwardRef<React.ComponentRef<typeof RNTextInput>, TextInputProps>(function TextInput({ style, placeholderTextColor, ...rest }, ref) {
   const { colors } = useTheme();
   const font = resolveFont(style, 'regular');
   const flat = StyleSheet.flatten(style) as TextStyle | undefined;

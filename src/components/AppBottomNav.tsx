@@ -2,14 +2,13 @@ import React, { useRef, useEffect, useState, useSyncExternalStore } from 'react'
 import { View, StyleSheet, Pressable, PanResponder, Animated, Easing, LayoutAnimation, LayoutChangeEvent } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShoppingList } from '../hooks/useShoppingList';
+import { useScanQuota } from '../hooks/useScanQuota';
 import { CountBadge } from './CountBadge';
 import { isBottomNavHidden, subscribeBottomNav } from '../utils/nav-visibility';
 import { typography, spacing, radii, elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
-import { withAlpha } from '../theme/colors';
 import {
   MAIN_TABS,
   setSwipeNavigation,
@@ -19,9 +18,8 @@ import {
 import { AppText } from './AppText';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 import { useI18n } from '../i18n';
-export const NAV_HEIGHT = 72; // Organismos.dc.html: barra flotante de 72 dp
+export const NAV_HEIGHT = 72;
 export const NAV_BOTTOM_OFFSET = 12;
-const FADE_HEIGHT = 150; // degradado bajo la barra flotante
 
 export const getBottomContentPadding = (bottomInset: number) =>
   NAV_HEIGHT + Math.max(bottomInset, 0) + NAV_BOTTOM_OFFSET + 16;
@@ -86,6 +84,14 @@ export function AppBottomNav() {
   const insets = useSafeAreaInsets();
   const { pendingItems } = useShoppingList();
   const { t, tp } = useI18n();
+  // Fotos de prueba: el FAB muestra cuántas quedan solo cuando son pocas (2 o menos), para no ser ruido.
+  const scanQuota = useScanQuota();
+  const fewScansLeft = scanQuota.loaded && scanQuota.remaining > 0 && scanQuota.remaining <= 2;
+  const scanA11y = !scanQuota.loaded
+    ? t('organisms.appBottomNav.scanA11y')
+    : scanQuota.exhausted
+      ? t('organisms.appBottomNav.scanA11yDone')
+      : tp('organisms.appBottomNav.scanA11yLeft', scanQuota.remaining);
   const isNavigatingRef = useRef(false);
 
   const reduceMotion = useReduceMotion();
@@ -93,8 +99,7 @@ export function AppBottomNav() {
   const reduceMotionRef = useRef(reduceMotion);
   reduceMotionRef.current = reduceMotion;
 
-  // ── Píldora activa que se desliza (Paso 5 · Animaciones) ──
-  // Se dibuja aparte, detrás de las pestañas, con tres piezas para que todo sea transform nativo:
+  // Píldora activa que se desliza: se dibuja aparte, detrás de las pestañas, con tres piezas para que todo sea transform nativo:
   // tapa izquierda (círculo 50) + centro (rectángulo que se estira con scaleX) + tapa derecha.
   const pillX = useRef(new Animated.Value(0)).current;
   const pillW = useRef(new Animated.Value(PILL_H)).current;
@@ -102,7 +107,6 @@ export function AppBottomNav() {
   const [pillVisible, setPillVisible] = useState(false);
   const tabLayouts = useRef<Record<number, { x: number; w: number }>>({}).current;
 
-  // Arrastre interactivo en la barra con traslación e inclinación elástica suave
   const navDragX = useRef(new Animated.Value(0)).current;
 
   const navDragTilt = navDragX.interpolate({
@@ -172,7 +176,7 @@ export function AppBottomNav() {
     }
     router.navigate(MAIN_TABS[targetIndex] as any); // navigate: no apila pestañas
 
-    // Timeout de seguridad que previene bloqueos bajo cualquier circunstancia
+    // Desbloqueo de seguridad por si la navegación no termina.
     setTimeout(() => {
       isNavigatingRef.current = false;
     }, 280);
@@ -222,7 +226,7 @@ export function AppBottomNav() {
         const { dx, vx } = gestureState;
         const curr = currentTabIndexRef.current;
 
-        // Deslizar con intención hacia la izquierda -> Pestaña siguiente
+        // Hacia la izquierda: pestaña siguiente.
         if ((dx < -35 || (dx < -20 && vx < -0.35)) && curr < MAIN_TABS.length - 1) {
           setSwipeNavigation(1);
           navigateToTab(curr + 1);
@@ -233,7 +237,7 @@ export function AppBottomNav() {
             useNativeDriver: true,
           }).start();
         }
-        // Deslizar con intención hacia la derecha -> Pestaña anterior
+        // Hacia la derecha: pestaña anterior.
         else if ((dx > 35 || (dx > 20 && vx > 0.35)) && curr > 0) {
           setSwipeNavigation(-1);
           navigateToTab(curr - 1);
@@ -244,7 +248,6 @@ export function AppBottomNav() {
             useNativeDriver: true,
           }).start();
         } else {
-          // Rebote elástico si no superó el umbral
           Animated.spring(navDragX, {
             toValue: 0,
             tension: 200,
@@ -317,12 +320,6 @@ export function AppBottomNav() {
 
   return (
     <>
-      {/* Degradado de transparente al fondo del tema: la barra no flota sobre contenido cortado. No recibe toques. */}
-      <LinearGradient
-        pointerEvents="none"
-        colors={[withAlpha(colors.background, 0), colors.background]}
-        style={styles.fade}
-      />
       <View style={[styles.bottomNavWrapper, { bottom: bottomPosition }]} {...navPanResponder.panHandlers}>
         <Animated.View
           style={[
@@ -358,12 +355,17 @@ export function AppBottomNav() {
             onPressOut={fabOut}
             onPress={() => router.push('/scan')}
             accessibilityRole="button"
-            accessibilityLabel={t('organisms.appBottomNav.scanA11y')}
+            accessibilityLabel={scanA11y}
           >
             <Animated.View style={[styles.fab, { transform: [{ scale: fabScale }] }]}>
-              {/* Icono del mockup: marco de escaneo + lente circular al centro */}
+              {/* Marco de escaneo + lente circular al centro */}
               <Ionicons name="scan-outline" size={26} color={colors.m3.onPrimary} />
               <View style={styles.fabLens} pointerEvents="none" />
+              {fewScansLeft && (
+                <View style={styles.fabBadge} pointerEvents="none">
+                  <CountBadge count={scanQuota.remaining} />
+                </View>
+              )}
             </Animated.View>
           </Pressable>
 
@@ -376,15 +378,6 @@ export function AppBottomNav() {
 }
 
 const useStyles = makeStyles((colors) => ({
-  // Organismos.dc.html / Despensa.dc.html: barra cacao flotante de 72 dp, radio 36, márgenes 14.
-  fade: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: FADE_HEIGHT,
-    zIndex: 998,
-  },
   bottomNavWrapper: {
     position: 'absolute',
     left: 14,
@@ -463,6 +456,11 @@ const useStyles = makeStyles((colors) => ({
     position: 'absolute',
     top: 3,
     right: 1,
+  },
+  fabBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
   },
   pressed: {
     opacity: 0.85,

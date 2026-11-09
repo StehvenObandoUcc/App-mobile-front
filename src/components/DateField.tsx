@@ -10,7 +10,7 @@ import { formatShortDate, formatLongDate, relativeDayLabel, addDaysISO } from '.
 import { getExpirationStatus } from '../utils/expiration';
 
 /**
- * DateField — fecha de vencimiento del formulario (Despensa-Formulario.dc.html).
+ * DateField — fecha de vencimiento del formulario.
  * Campo de 56 dp «vie, 2 de oct. 2026» + chip de estado «en 4 días» (color por caducidad).
  * Debajo, atajos: +3 días · +1 sem · +1 mes · Sin fecha. Todas las fechas en calendario local.
  */

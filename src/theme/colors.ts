@@ -8,8 +8,7 @@
  * activo con `useTheme()` / `makeStyles()` (src/theme/ThemeProvider.tsx). El export `colors`
  * (= claro) queda para el código que aún no migró y para lo que vive fuera de React.
  *
- * Contrastes WCAG 2.1 medidos: texto >= 4.5:1, UI >= 3:1. Ver tablero «2 · Paleta Sandía» del lienzo.
- * Respaldo de la paleta anterior (Despensa Tonal): .design-backup/fase0-tema/colors.ts
+ * Contrastes WCAG 2.1 medidos: texto >= 4.5:1, UI >= 3:1.
  */
 
 type M3 = {
@@ -48,7 +47,7 @@ function build(m3: M3, ext: Extended, f: Record<'fresh' | 'expiringSoon' | 'expi
     m3,
     ...ext,
 
-    // ═══ Alias heredados (misma API de siempre) ═══
+    // Alias heredados (misma API de siempre)
     background: m3.surface,
     surface: m3.surfaceContainerLowest,
     surfaceVariant: m3.surfaceContainerLow,
@@ -113,7 +112,7 @@ function build(m3: M3, ext: Extended, f: Record<'fresh' | 'expiringSoon' | 'expi
   };
 }
 
-// ─── Claro ──────────────────────────────────────────────────────────────────
+// Claro
 export const lightColors = build(
   {
     primary: '#C33149', // Sandía · blanco 5.45:1 · sobre fondo 5.03:1
@@ -185,7 +184,7 @@ export const lightColors = build(
 
 export type ThemeColors = typeof lightColors;
 
-// ─── Oscuro · Cacao suave (no negro; texto crema ~12:1 para cansar menos la vista) ──
+// Oscuro · Cacao suave (no negro; texto crema ~12:1 para cansar menos la vista)
 export const darkColors: ThemeColors = build(
   {
     primary: '#EF7487', // 5.58:1 sobre fondo

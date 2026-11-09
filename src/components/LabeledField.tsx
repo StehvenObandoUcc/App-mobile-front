@@ -29,7 +29,7 @@ export type LabeledFieldProps = Omit<TextInputProps, 'style'> & {
   footer?: React.ReactNode;
 };
 
-export const LabeledField = forwardRef<RNTextInput, LabeledFieldProps>(function LabeledField(
+export const LabeledField = forwardRef<React.ComponentRef<typeof RNTextInput>, LabeledFieldProps>(function LabeledField(
   { label, iconName, secure = false, required = false, invalid = false, large = false, footer, accessibilityLabel, onFocus, onBlur, ...inputProps },
   ref
 ) {
@@ -38,7 +38,7 @@ export const LabeledField = forwardRef<RNTextInput, LabeledFieldProps>(function 
   const { t } = useI18n();
   const [focused, setFocused] = useState(false);
   const [visible, setVisible] = useState(false);
-  const groupRef = useRef<View>(null);
+  const groupRef = useRef<React.ComponentRef<typeof View>>(null);
   const ensureVisible = useEnsureFieldVisible();
   const release = useReleaseField();
   useEffect(() => () => release(groupRef.current), [release]);

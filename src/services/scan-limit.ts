@@ -3,9 +3,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const MAX_TEST_PHOTOS = 5;
 const STORAGE_KEY = '@food_ai_test_photo_count_v1';
 
-/**
- * Obtiene la cantidad de fotos escaneadas durante la fase de pruebas.
- */
+// Avisa a Inicio, la barra inferior y Despensa cuando se gasta una foto (useScanQuota).
+const listeners = new Set<(count: number) => void>();
+export function subscribeTestPhotoCount(listener: (count: number) => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 export async function getTestPhotoCount(): Promise<number> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -18,14 +22,12 @@ export async function getTestPhotoCount(): Promise<number> {
   }
 }
 
-/**
- * Incrementa el conteo de fotos de prueba escaneadas tras un escaneo exitoso.
- */
 export async function incrementTestPhotoCount(): Promise<number> {
   try {
     const current = await getTestPhotoCount();
     const next = current + 1;
     await AsyncStorage.setItem(STORAGE_KEY, next.toString());
+    listeners.forEach((l) => l(next));
     return next;
   } catch (err) {
     console.warn('[ScanLimit] Error al incrementar el conteo de fotos de prueba:', err);

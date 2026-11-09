@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
+import { joinTitle } from './DialogTitle';
 import { PrimaryButton, ButtonTone } from './PrimaryButton';
 import { SecondaryButton } from './SecondaryButton';
 import { IllustrationBlob, BlobTone } from './IllustrationBlob';
@@ -9,9 +10,8 @@ import { spacing } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
- * EmptyState — Componentes.dc.html / Despensa-Estados.dc.html
- * Ilustración pastel + título 300 con énfasis 600 + descripción + hasta 2 botones a lo ancho.
- * `title` se muestra fino; `titleEmphasis` (opcional) va en seminegrita al final: «Tu despensa está **vacía**».
+ * Ilustración pastel + título 600 + descripción + hasta 2 botones a lo ancho.
+ * `titleEmphasis` (opcional) se une al final del título: «Tu despensa está» + «vacía».
  */
 export type EmptyStateProps = {
   title: string;
@@ -54,9 +54,8 @@ export function EmptyState({
   return (
     <View style={styles.container}>
       <IllustrationBlob iconName={iconName} tone={tone} size={blobSize} dotColors={blobDotColors} />
-      <AppText variant="headline" weight="light" align="center" style={styles.title}>
-        {title}
-        {titleEmphasis ? <AppText weight="semibold">{` ${titleEmphasis}`}</AppText> : null}
+      <AppText variant="headline" weight="semibold" align="center" style={styles.title} accessibilityRole="header">
+        {joinTitle(title, titleEmphasis)}
       </AppText>
       <AppText variant="body" color={colors.textSecondary} align="center" style={styles.description}>
         {description}

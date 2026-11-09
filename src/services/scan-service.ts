@@ -1,6 +1,6 @@
 import { t } from '../i18n';
 import { ScanInput, ScanResult, IngredientCategory, IngredientUnit } from '../types';
-import { scanImageWithApi } from './api-client';
+import { scanImageWithApi, readExpirationSource } from './api-client';
 import { getFriendlyErrorMessage } from '../utils/error-messages';
 
 export interface ScanService {
@@ -36,6 +36,9 @@ export const mockScanService: ScanService = {
             quantity: item.quantity !== undefined ? item.quantity : null,
             unit: (item.unit as IngredientUnit) || 'package',
             expirationDate: item.expirationDate || null,
+            // Si el servidor no dice de dónde salió la fecha, se asume estimada: es más seguro pedir que la
+            // revisen que hacer pasar una fecha adivinada por una leída de la etiqueta.
+            expirationSource: readExpirationSource(item) ?? (item.expirationDate ? 'estimated' : 'unknown'),
             confidence: item.confidence !== undefined ? item.confidence : null,
             source: 'ai',
             confirmed: false,

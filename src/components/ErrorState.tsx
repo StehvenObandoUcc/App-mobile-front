@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
+import { joinTitle } from './DialogTitle';
 import { SecondaryButton } from './SecondaryButton';
 import { IllustrationBlob } from './IllustrationBlob';
 import { spacing } from '../theme';
@@ -8,7 +9,6 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
- * ErrorState — Componentes.dc.html / Despensa-Estados.dc.html
  * Mancha chile + alerta, título 300 con énfasis 600, mensaje y «Reintentar» con borde.
  */
 export type ErrorStateProps = {
@@ -28,9 +28,8 @@ export function ErrorState({ title: titleProp, titleEmphasis: emphasisProp, mess
   return (
     <View style={styles.container} accessibilityRole="alert">
       <IllustrationBlob iconName="alert-circle-outline" tone="error" size="md" />
-      <AppText variant="headline" weight="light" align="center">
-        {title}
-        {titleEmphasis ? <AppText weight="semibold">{` ${titleEmphasis}`}</AppText> : null}
+      <AppText variant="headline" weight="semibold" align="center">
+        {joinTitle(title, titleEmphasis)}
       </AppText>
       <AppText variant="body" color={colors.textSecondary} align="center" style={styles.message}>
         {message}

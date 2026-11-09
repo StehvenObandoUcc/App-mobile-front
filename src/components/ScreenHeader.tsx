@@ -5,7 +5,7 @@ import { spacing } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 
 /**
- * ScreenHeader — encabezado de pantalla de los mockups.
+ * ScreenHeader — encabezado de pantalla.
  * «Mi **Despensa**»: `title` en peso 300 + `emphasis` en 600 (32/40). Subtítulo 14 debajo
  * y un texto opcional encima (`overline`, p. ej. «Aprovecha mejor tu despensa hoy»).
  * `right`: acciones a la derecha (IconButton de perfil, ajustes…).

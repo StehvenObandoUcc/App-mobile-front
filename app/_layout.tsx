@@ -73,14 +73,14 @@ function RootLayout() {
     const publicScreens = ['login', 'legal', 'verify-email', 'forgot-password', 'reset-password'];
     const inLoginScreen = publicScreens.includes(String(segments[0]));
 
-    // Punto de entrada natural: si no hay sesión activa ni modo invitado, dirigir a bienvenida/onboarding
+    // Sin sesión activa ni modo invitado, se dirige a la bienvenida.
     if (!isAuthenticated && !inLoginScreen) {
       router.replace('/login');
     }
   }, [isAuthenticated, isHydrated, segments, router]);
 
-  // Buena práctica: solicitar los permisos necesarios (cámara, galería) una sola vez al
-  // arrancar la app con sesión activa, en vez de sorprender al usuario a mitad de una tarea.
+  // Los permisos (cámara, galería) se piden una sola vez al arrancar con sesión activa,
+  // para no sorprender al usuario a mitad de una tarea.
   useEffect(() => {
     if (isHydrated && isAuthenticated) {
       // En secuencia para no mostrar varios diálogos del sistema a la vez.

@@ -10,7 +10,7 @@ import { formatQuantity } from '../utils/units';
 import { useI18n } from '../i18n';
 
 /**
- * ShoppingItemRow — producto de la lista de compras (Compras.dc.html).
+ * ShoppingItemRow — producto de la lista de compras.
  * Por comprar: blanca, check vacío, quitar en rojo.
  * Comprado: avena, check salvia, nombre tachado, cantidad y quitar en gris.
  */

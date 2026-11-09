@@ -13,7 +13,7 @@ import { useI18n } from '../i18n';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
- * Barras del modo selección (Despensa-Seleccion.dc.html), compartidas por Despensa y Recetas.
+ * Barras del modo selección, compartidas por Despensa y Recetas.
  * - SelectionHeader: barra blanca de 64 dp que reemplaza el encabezado (✕ · «N seleccionados» · Todos).
  * - SelectionActionBar: barra cacao flotante que tapa la navegación (Cancelar · Eliminar (N)).
  */
@@ -70,7 +70,7 @@ export function SelectionActionBar({ count, onCancel, onDelete, itemNoun }: Sele
   const noun = itemNoun ?? t('organisms.selectionBars.itemsDefault');
   // Mientras esta barra existe, la navegación inferior se oculta (si no, la taparía).
   useEffect(() => hideBottomNav(), []);
-  // Entra desde abajo reemplazando la navegación (Paso 5 · Animaciones).
+  // Entra desde abajo reemplazando la navegación.
   const enter = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (reduceMotion) {

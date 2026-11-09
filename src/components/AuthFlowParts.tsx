@@ -24,7 +24,7 @@ export type CodeFieldProps = {
 export function CodeField({ label, accessibilityLabel, value, onChangeText, onSubmitEditing, autoFocus }: CodeFieldProps) {
   const styles = useStyles();
   const [focused, setFocused] = useState(false);
-  const groupRef = useRef<View>(null);
+  const groupRef = useRef<React.ComponentRef<typeof View>>(null);
   const ensureVisible = useEnsureFieldVisible();
   const release = useReleaseField();
   useEffect(() => () => release(groupRef.current), [release]);

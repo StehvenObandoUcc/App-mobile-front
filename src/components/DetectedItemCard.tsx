@@ -12,7 +12,7 @@ import { daysUntil } from '../utils/dates';
 import { useI18n, type t as TFn, type tp as TpFn } from '../i18n';
 
 /**
- * DetectedItemCard — alimento detectado por la IA (Escaneo-Resultado.dc.html).
+ * DetectedItemCard — alimento detectado por la IA.
  * Check circular (área 48) · icono de familia 44 · nombre, cantidad y vencimiento · confianza ·
  * Editar y Quitar siempre visibles. Si ya existe en la despensa, fila «Sumar» con casilla cuadrada.
  * No marcado: tarjeta al 62 % de opacidad.
@@ -30,12 +30,17 @@ export type DetectedItemCardProps = {
   mergeCompatible?: boolean;
 };
 
-export function expiryLabel(date: string | null, t: typeof TFn, tp: typeof TpFn): string {
+/** «vence en 5 días» · con fecha calculada por la IA (no leída en la etiqueta): «vence en 5 días (estimado)». */
+export function expiryLabel(date: string | null, t: typeof TFn, tp: typeof TpFn, estimated = false): string {
   const d = daysUntil(date);
   if (d === null) return t('organisms.detectedItemCard.noDate');
-  if (d < 0) return t('organisms.detectedItemCard.expired');
-  if (d === 0) return t('organisms.detectedItemCard.today');
-  return tp('organisms.detectedItemCard.daysLeft', d);
+  const label =
+    d < 0
+      ? t('organisms.detectedItemCard.expired')
+      : d === 0
+        ? t('organisms.detectedItemCard.today')
+        : tp('organisms.detectedItemCard.daysLeft', d);
+  return estimated ? t('organisms.detectedItemCard.estimated', { label }) : label;
 }
 
 /**
@@ -96,7 +101,7 @@ export function DetectedItemCard({ item, onToggle, onEdit, onRemove, existing, m
             {item.name}
           </AppText>
           <AppText variant="metadata" weight="regular" color={colors.textSecondary}>
-            {`${qty} · ${expiryLabel(item.expirationDate, t, tp)}`}
+            {`${qty} · ${expiryLabel(item.expirationDate, t, tp, item.expirationSource === 'estimated')}`}
           </AppText>
           {badge && (
             <View style={[styles.badge, { backgroundColor: badge.tone.background }]}>

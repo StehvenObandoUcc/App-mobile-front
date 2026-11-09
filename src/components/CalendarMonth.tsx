@@ -8,7 +8,7 @@ import { useI18n } from '../i18n';
 import { buildMonthGrid, formatMonthYear, formatLongDate, todayISO } from '../utils/dates';
 
 /**
- * CalendarMonth — molécula del calendario (Organismos.dc.html · M3DatePickerModal).
+ * CalendarMonth — molécula del calendario.
  * Navegación de mes con IconButton 48, días de la semana Lu–Do y celdas de 48 dp.
  * Seleccionado: círculo cacao. Hoy: anillo cacao. Deslizar a los lados cambia de mes
  * sin propagar el gesto a la navegación de pestañas.

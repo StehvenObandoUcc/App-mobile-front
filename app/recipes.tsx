@@ -40,6 +40,7 @@ import {
 import { sortRecipes } from '../src/utils/recipe-sorter';
 import { getValidTimeOptionsForFocus, checkIngredientSelectionCoherence } from '../src/utils/recipe-validation';
 import { daysUntil } from '../src/utils/dates';
+import { isCookable, isAlmostCookable } from '../src/utils/consumption';
 import { loadAppSettings } from '../src/storage/app-settings';
 import { isServerReachable } from '../src/services/api-client';
 import { isNetworkErrorMessage } from '../src/utils/error-messages';
@@ -61,7 +62,7 @@ const CUSTOM_STYLE_OPTIONS = [
 
 const SORT_OPTIONS: { key: RecipeSortOption; labelKey: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'createdAt_desc', labelKey: 'screensMain.recipes.sort.recent', icon: 'time-outline' },
-  { key: 'matchScore_desc', labelKey: 'screensMain.recipes.sort.match', icon: 'sparkles-outline' },
+  { key: 'matchScore_desc', labelKey: 'screensMain.recipes.sort.match', icon: 'basket-outline' },
   { key: 'prepTime_asc', labelKey: 'screensMain.recipes.sort.quick', icon: 'flash-outline' },
   { key: 'difficulty_asc', labelKey: 'screensMain.recipes.sort.easiest', icon: 'trending-down-outline' },
 ];
@@ -94,23 +95,20 @@ export default function RecipesScreen() {
   const stocked = useMemo(() => items.filter((i) => i.quantity !== 0), [items]);
   const { recipes, status, error, reload, toggleSave, deleteRecipe, deleteRecipes, generateWithAi } = useRecipes();
 
-  // ── Lista: búsqueda, filtros y orden ──
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
-  // Recetas-Estados · B: el Chef IA necesita red (lo guardado sigue disponible sin internet).
+  // El Chef IA necesita red (lo guardado sigue disponible sin internet).
   const [aiOffline, setAiOffline] = useState(false);
   const outbox = useOutboxStatus();
   const [sortBy, setSortBy] = useState<RecipeSortOption>('createdAt_desc');
   const [difficultyFilter, setDifficultyFilter] = useState<RecipeDifficultyFilter>('all');
   const [picker, setPicker] = useState<'sort' | 'difficulty' | null>(null);
 
-  // ── Chef IA ──
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [chef, setChef] = useState<ChefIaValues>({ ...DEFAULT_CHEF, ingredientIds: new Set() });
   const [isGenerating, setIsGenerating] = useState(false);
   const cancelledRef = useRef(false);
 
-  // ── Selección múltiple ──
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -286,7 +284,6 @@ export default function RecipesScreen() {
     [chosenIngredients.length, chef.focus, chef.time, chef.count]
   );
 
-  // ── Selección ──
   const toggleSelectRecipe = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -341,7 +338,7 @@ export default function RecipesScreen() {
     const q = searchQuery.trim().toLowerCase();
     const matched = recipes.filter((r) => {
       if (q && !r.title.toLowerCase().includes(q) && !r.description.toLowerCase().includes(q)) return false;
-      if (activeTab === 'high_match' && r.matchScore < 80) return false;
+      if (activeTab === 'high_match' && !isAlmostCookable(r)) return false;
       if (activeTab === 'quick' && (r.prepTimeMinutes || 99) > 20) return false;
       if (activeTab === 'saved' && !r.isSaved) return false;
       if (difficultyFilter !== 'all' && r.difficulty !== difficultyFilter) return false;
@@ -354,7 +351,7 @@ export default function RecipesScreen() {
   const handleSelectAll = () =>
     setSelectedIds(allSelected ? new Set() : new Set(filteredRecipes.map((r) => r.id)));
 
-  const readyCount = recipes.filter((r) => r.missingIngredients.length === 0).length;
+  const readyCount = recipes.filter((r) => isCookable(r)).length;
   const sortLabel = t(SORT_OPTIONS.find((o) => o.key === sortBy)?.labelKey ?? 'screensMain.recipes.sort.recent');
   const diffFilter = DIFFICULTY_FILTERS.find((d) => d.key === difficultyFilter)!;
 
@@ -549,8 +546,8 @@ export default function RecipesScreen() {
         />
       )}
 
-      {/* ── FAB «Generar con IA»: solo el icono; el Chef IA se despliega al tocarlo ── */}
-      {!isSelectMode && status === 'success' && (
+      {/* FAB «Generar con IA»: sin recetas el estado vacío ya trae el mismo botón, por eso no se repite. */}
+      {!isSelectMode && status === 'success' && (recipes.length > 0 || aiOffline) && (
         <Fab
           iconName="sparkles"
           tone="ai"
@@ -603,7 +600,6 @@ export default function RecipesScreen() {
         cancelLabel={t('screensMain.recipes.chefCancel')}
       />
 
-      {/* ── Ordenar / Dificultad ── */}
       <ActionSheetModal
         visible={picker !== null}
         onClose={() => setPicker(null)}
@@ -650,7 +646,6 @@ export default function RecipesScreen() {
   );
 }
 
-// Recetas.dc.html: margen 20, 16 entre bloques del encabezado, 14 entre tarjetas.
 const useStyles = makeStyles((colors) => ({
   offlineWrap: {
     flex: 1,
@@ -681,7 +676,9 @@ const useStyles = makeStyles((colors) => ({
   },
   tools: {
     flexDirection: 'row',
+    flexWrap: 'wrap', // en español «Más recientes» + «Cualquier dificultad» no caben juntas
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
 }));

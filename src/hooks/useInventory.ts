@@ -42,7 +42,7 @@ export function useInventory() {
 
     setError(null);
     try {
-      // 1. Carga inmediata desde almacenamiento local namespaced para respuesta instantánea (0ms)
+      // Carga inmediata desde el almacenamiento local, sin esperar la red
       const localData = await LocalStorage.getInventory();
       if (LocalStorage.getCurrentUserId() !== startUserId) return;
 
@@ -54,10 +54,9 @@ export function useInventory() {
         setStatus('loading');
       }
 
-      // Disparar procesamiento de la cola Outbox secuencial FIFO en segundo plano
       flushOutbox().catch(() => {});
 
-      // 2. Sincronización en red con deduplicación y aislamiento estricto de usuario
+      // Sincroniza con la red sin mezclar datos de otro usuario
       if (isSyncingInventory) return;
       isSyncingInventory = true;
       try {
@@ -146,7 +145,6 @@ export function useInventory() {
   useEffect(() => {
     loadItems();
 
-    // Suscripción reactiva al almacenamiento local
     const unsubscribeStorage = LocalStorage.subscribe(() => {
       LocalStorage.getInventory().then((data) => {
         memoryInventory = data;
@@ -172,11 +170,10 @@ export function useInventory() {
     if (!startUserId) throw new Error('No hay usuario autenticado');
 
     try {
-      // Optimista: guarda en local primero e impacta UI inmediatamente
+      // Optimista: guarda en local primero y refresca la UI
       await LocalStorage.addIngredient(item);
       await loadItems();
 
-      // Encolar mutación durable de creación en Outbox
       const mutation: OutboxMutation<Ingredient> = {
         operationId: generateOperationId(),
         userId: startUserId,
@@ -192,7 +189,6 @@ export function useInventory() {
       };
       await LocalStorage.enqueueOutboxMutation(mutation);
 
-      // Disparar sincronización secuencial FIFO en segundo plano
       flushOutbox().catch(() => {});
     } catch (err: any) {
       setError(err?.message || t('data.inventory.addError'));

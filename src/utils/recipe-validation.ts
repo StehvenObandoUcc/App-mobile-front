@@ -19,7 +19,7 @@ export function validateRecipeIngredients(recipe: Recipe): IngredientValidationR
       missingCount,
       missingItems,
       friendlyMessage: t('misc.recipeValidation.missingRequired'),
-      // Aunque falten ingredientes, se descuentan los que sí tienes (decisión de Stehven, 28-09-2026).
+      // Aunque falten ingredientes, se descuentan los que sí tienes.
       inventoryDeductionNotice:
         availableCount > 0
           ? t('misc.recipeValidation.deductOnlyHave')
@@ -53,16 +53,12 @@ export function validateRecipeIngredients(recipe: Recipe): IngredientValidationR
   };
 }
 
-/**
- * Regla de compatibilidad de tiempo vs dificultad para Chef IA
- */
+/** Tiempos permitidos para el Chef IA según enfoque y dificultad. */
 export function getValidTimeOptionsForFocus(focus: string, difficulty?: string): number[] {
   if (focus === 'quick') {
-    // Para enfoque express: máximo 20 minutos
     return [15, 20];
   }
   if (difficulty === 'hard') {
-    // Para recetas complejas: 30 a 60 minutos
     return [30, 45, 60];
   }
   if (difficulty === 'easy') {
@@ -76,7 +72,7 @@ export function getValidTimeOptionsForFocus(focus: string, difficulty?: string):
 
 /**
  * Clasificación y validación de coherencia gastronómica cuando se seleccionan ingredientes para el Chef IA.
- * Permite y valida casos de 1 solo ingrediente asegurando que sea coherente ("pero no está mal aún").
+ * Un solo ingrediente es válido si es coherente.
  */
 const CONDIMENT_KEYWORDS = [
   'sal',

@@ -16,7 +16,7 @@ import { makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
- * ShoppingItemFormSheet — «Nuevo producto» de Compras (Compras-Agregar.dc.html · derecha).
+ * ShoppingItemFormSheet — «Nuevo producto» de Compras.
  * Nombre · Cantidad (stepper a la derecha) · unidad · categoría (pastel + anillo) · Cancelar | Guardar.
  * Si hay cambios sin guardar y se intenta cerrar, avisa («Guardar» / «Salir sin guardar»).
  */

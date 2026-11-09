@@ -67,7 +67,7 @@ function syncRecipes(currentLocal, remoteRecipes, pendingDeletedRecipeIds = []) 
   return Array.from(localMap.values()).filter((r) => !pendingSet.has(r.id));
 }
 
-// ─── SUITE 1: Regresión de Sincronización No Destructiva ───────────────────────
+// SUITE 1: Regresión de Sincronización No Destructiva
 describe('1. Sincronización Offline y Prevención de Pérdida de Datos (Regresión)', () => {
   it('debe fallar si se reintroduce la sobrescritura destructiva anterior', () => {
     const offlineItems = [
@@ -99,7 +99,7 @@ describe('1. Sincronización Offline y Prevención de Pérdida de Datos (Regresi
   });
 });
 
-// ─── SUITE 2: Prevención de Artículos Zombie ──────────────────────────────────
+// SUITE 2: Prevención de Artículos Zombie
 describe('2. Prevención de Artículos Zombie (Eliminaciones Offline)', () => {
   it('escenario useShoppingList: "Leche" eliminada offline NO debe reaparecer al reconectar', () => {
     const initialSync = [
@@ -150,7 +150,7 @@ describe('2. Prevención de Artículos Zombie (Eliminaciones Offline)', () => {
   });
 });
 
-// ─── SUITE 3: Matriz Completa de Respuestas HTTP y Helper (Riesgos 1 y 3) ────
+// SUITE 3: Matriz Completa de Respuestas HTTP y Helper (Riesgos 1 y 3)
 describe('3. Matriz Completa de Respuestas HTTP y DeleteResolutionResult (Riesgos 1 y 3)', () => {
   it('1. HTTP 200 con JSON: borrado confirmado y pending limpio', async () => {
     let pending = ['item-200'];
@@ -333,7 +333,7 @@ describe('3. Matriz Completa de Respuestas HTTP y DeleteResolutionResult (Riesgo
   });
 });
 
-// ─── SUITE 4: Aislamiento de Sesión y Concurrencia (Riesgo 4) ─────────────────
+// SUITE 4: Aislamiento de Sesión y Concurrencia (Riesgo 4)
 describe('4. Aislamiento de Sesión, Renovación y Concurrencia (Riesgo 4)', () => {
   it('16. Renovación de sesión tras 401: pending se conserva y se reintenta tras renovar', async () => {
     let pending = ['item-session-renew'];
@@ -347,15 +347,15 @@ describe('4. Aislamiento de Sesión, Renovación y Concurrencia (Riesgo 4)', () 
     };
     const removePending = async (id) => { pending = pending.filter((i) => i !== id); };
 
-    // 1. Primer intento: falla con 401
+    // Primer intento: falla con 401
     const res1 = await executeDeleteWithPendingResolution('item-session-renew', mockDeleteWithAuth, removePending, 'Item');
     assert.equal(res1.remoteResolved, false);
     assert.deepEqual(pending, ['item-session-renew'], 'Se debe conservar en pending');
 
-    // 2. Simular renovación de sesión
+    // Simular renovación de sesión
     sessionToken = 'fresh-valid-token';
 
-    // 3. Reintento automático tras renovar sesión
+    // Reintento automático tras renovar sesión
     const res2 = await executeDeleteWithPendingResolution('item-session-renew', mockDeleteWithAuth, removePending, 'Item');
     assert.equal(res2.remoteResolved, true);
     assert.equal(res2.pendingCleared, true);
@@ -399,7 +399,7 @@ describe('4. Aislamiento de Sesión, Renovación y Concurrencia (Riesgo 4)', () 
   });
 });
 
-// ─── SUITE 5: Atomicidad y Recuperación de moveBoughtToInventory (Riesgo 2) ───
+// SUITE 5: Atomicidad y Recuperación de moveBoughtToInventory (Riesgo 2)
 describe('5. Atomicidad, Idempotencia y Recuperación de moveBoughtToInventory (Riesgo 2)', () => {
   it('19. moveBoughtToInventory repetido: segunda llamada consecutiva retorna 0 y no duplica', () => {
     let shoppingList = [
@@ -408,7 +408,6 @@ describe('5. Atomicidad, Idempotencia y Recuperación de moveBoughtToInventory (
     ];
     let inventory = [];
 
-    // Primera ejecución
     const boughtItems1 = shoppingList.filter((i) => i.isBought);
     assert.equal(boughtItems1.length, 1);
     inventory.push({ id: 'ing-1', name: boughtItems1[0].name, quantity: boughtItems1[0].quantity });
@@ -417,7 +416,6 @@ describe('5. Atomicidad, Idempotencia y Recuperación de moveBoughtToInventory (
     assert.equal(shoppingList.length, 1);
     assert.equal(inventory.length, 1);
 
-    // Segunda ejecución consecutiva
     const boughtItems2 = shoppingList.filter((i) => i.isBought);
     assert.equal(boughtItems2.length, 0, 'No deben quedar artículos comprados');
     assert.equal(inventory.length, 1, 'No se deben duplicar ingredientes en inventario');
@@ -470,12 +468,12 @@ describe('5. Atomicidad, Idempotencia y Recuperación de moveBoughtToInventory (
       let shop = savedShop ? JSON.parse(savedShop) : [];
       let pendingMap = new Map(savedPending ? JSON.parse(savedPending) : []);
 
-      // 1. Asegurar boughtIds en pendingMap
+      // Asegurar boughtIds en pendingMap
       tx.boughtItemIds.forEach((id) => pendingMap.set(id, tx.timestamp));
-      // 2. Asegurar boughtIds fuera de shop
+      // Asegurar boughtIds fuera de shop
       const boughtSet = new Set(tx.boughtItemIds);
       shop = shop.filter((i) => !boughtSet.has(i.id));
-      // 3. Reconciliar nuevos ingredientes sin duplicar por ID
+      // Reconciliar nuevos ingredientes sin duplicar por ID
       const existingIds = new Set(inv.map((i) => i.id));
       tx.newIngredients.forEach((newIng) => {
         if (!existingIds.has(newIng.id)) {
@@ -525,7 +523,6 @@ describe('5. Atomicidad, Idempotencia y Recuperación de moveBoughtToInventory (
     const existing = { id: 'ing-arroz', name: 'Arroz', quantity: 2, unit: 'kg' };
     const boughtItem = { name: 'Arroz', quantity: 1.5, unit: 'kg' };
 
-    // Fusión
     existing.quantity = Math.round((existing.quantity + boughtItem.quantity) * 10) / 10;
 
     assert.equal(existing.quantity, 3.5);
@@ -547,7 +544,7 @@ describe('5. Atomicidad, Idempotencia y Recuperación de moveBoughtToInventory (
   });
 });
 
-// ─── SUITE 6: Integridad de Inventario Offline y Aislamiento (Punto 3 - Fase A) ───
+// SUITE 6: Integridad de Inventario Offline y Aislamiento
 describe('6. Integridad de Inventario Offline y Aislamiento por Usuario (Punto 3 - Fase A)', () => {
   function mergeInventory(currentLocal, remoteFromCloud, pendingDeletedInventoryIds = []) {
     if (!Array.isArray(remoteFromCloud)) {
@@ -706,19 +703,19 @@ describe('6. Integridad de Inventario Offline y Aislamiento por Usuario (Punto 3
   });
 
   it('31. moveBoughtToInventory conserva localmente los alimentos movidos tras una sincronización remota de inventario', () => {
-    // 1. Estado inicial tras ejecutar moveBoughtToInventory en local:
+    // Estado inicial tras ejecutar moveBoughtToInventory en local:
     // Los alimentos comprados pasan a inventario con ID ing-...
     const localInventoryAfterMove = [
       { id: 'ing-moved-1', name: 'Leche Deslactosada', quantity: 2, unit: 'liters' },
       { id: 'ing-existing', name: 'Arroz', quantity: 1, unit: 'kg' },
     ];
 
-    // 2. Llega un GET remoto que solo conoce los alimentos previamente sincronizados (no conoce ing-moved-1 aún):
+    // Llega un GET remoto que solo conoce los alimentos previamente sincronizados (no conoce ing-moved-1 aún):
     const remoteInventory = [
       { id: 'ing-existing', name: 'Arroz', quantity: 1, unit: 'kg' },
     ];
 
-    // 3. Sincronización con merge no destructivo
+    // Sincronización con merge no destructivo
     const mergedInventory = mergeInventory(localInventoryAfterMove, remoteInventory, []);
 
     assert.equal(mergedInventory.length, 2, 'El inventario debe conservar tanto el existente como el movido');
@@ -736,7 +733,6 @@ describe('6. Integridad de Inventario Offline y Aislamiento por Usuario (Punto 3
     const shopKey = `@food_ai_shopping_list_v1_${userId}`;
     const pendingKey = `@food_ai_pending_deleted_shopping_v1_${userId}`;
 
-    // Snapshot preparado
     const snapshot = {
       version: 1,
       timestamp: Date.now(),
@@ -817,7 +813,7 @@ describe('6. Integridad de Inventario Offline y Aislamiento por Usuario (Punto 3
   });
 });
 
-// ─── SUITE 7: Cola Durable Outbox y Despachador Secuencial FIFO (Punto 3 - Fase B1) ───
+// SUITE 7: Cola Durable Outbox y Despachador Secuencial FIFO
 describe('7. Cola Durable Outbox y Despachador Secuencial FIFO (Punto 3 - Fase B1)', () => {
   it('34. generateOperationId genera identificadores UUID v4 válidos y únicos', () => {
     const ids = new Set();
@@ -1261,7 +1257,7 @@ describe('7. Cola Durable Outbox y Despachador Secuencial FIFO (Punto 3 - Fase B
   });
 });
 
-// ─── SUITE 8: Integración del Outbox en Lista de Compras (Punto 3 - Fase B3) ───
+// SUITE 8: Integración del Outbox en Lista de Compras
 describe('8. Integración del Outbox en Lista de Compras (Punto 3 - Fase B3)', () => {
   it('47. create offline → persistencia → flush → 201: mutación se purga tras éxito en backend', async () => {
     let queue = [
@@ -1702,7 +1698,7 @@ describe('8. Integración del Outbox en Lista de Compras (Punto 3 - Fase B3)', (
   });
 });
 
-// ─── SUITE 9: Durabilidad de clearBought y moveBoughtToInventory Offline (Corrección B3) ───
+// SUITE 9: Durabilidad de clearBought y moveBoughtToInventory Offline (Corrección B3)
 describe('9. Durabilidad de clearBought y moveBoughtToInventory Offline (Corrección B3)', () => {
   it('62. clearBought offline captura todos los IDs comprados', () => {
     const list = [

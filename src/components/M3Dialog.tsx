@@ -12,7 +12,7 @@ import { useI18n } from '../i18n';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
- * M3Dialog — Organismos.dc.html (neutral · ai · success · warning · error)
+ * M3Dialog (neutral · ai · success · warning · error)
  * Tarjeta blanca radio 32 · icono en cuadrado pastel 52 · título 22/28 300 + 600 ·
  * mensaje 15/22 · botones a lo ancho. Misma API que antes (+ titleEmphasis y confirmTone opcionales).
  *

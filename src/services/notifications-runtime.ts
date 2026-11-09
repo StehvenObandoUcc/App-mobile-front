@@ -4,7 +4,7 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 /**
  * Carga perezosa y segura de expo-notifications.
  *
- * En Expo Go para Android (SDK 53+), el solo hecho de IMPORTAR expo-notifications lanza
+ * En Expo Go para Android (SDK 53+), el solo hecho de importar expo-notifications lanza
  * un error que tumba toda la app. Por eso nadie debe importarlo de forma estática:
  * se pide aquí, y en Expo Go devolvemos null (la app funciona, solo sin avisos).
  * En un build de desarrollo o en la APK sí se carga normalmente.

@@ -24,7 +24,8 @@ import {
   DifficultyMeter,
 } from '../src/components';
 import { validateRecipeIngredients } from '../src/utils/recipe-validation';
-import { recipeBanner, splitRecipeTitle, cleanStepText } from '../src/utils/recipe-visuals';
+import { withLiveAvailability } from '../src/utils/consumption';
+import { recipeBanner, splitRecipeTitle, cleanStepText, recipeStatus } from '../src/utils/recipe-visuals';
 import { formatQuantity } from '../src/utils/units';
 import { daysUntil } from '../src/utils/dates';
 import { spacing } from '../src/theme';
@@ -44,13 +45,7 @@ type DialogState = {
   onCancel?: () => void;
 };
 
-/**
- * Detalle de receta — Receta-Detalle.dc.html.
- * Portada pastel con volver/guardar · coincidencia (IA) · título 300 + 600 · 3 fichas ·
- * ingredientes con progreso y «vence en N d» · faltantes con sustitutos · pasos con progreso
- * (hechos en salvia, el actual con anillo cacao) · barra fija «Preparar receta».
- * Sin «Volver a recetas» (decisión aprobada): se vuelve con la flecha de la portada.
- */
+/** Detalle de receta. Sin «Volver a recetas»: se vuelve con la flecha de la portada. */
 export default function RecipeDetailScreen() {
   const { colors } = useTheme();
   const { t, tp } = useI18n();
@@ -60,10 +55,16 @@ export default function RecipeDetailScreen() {
   const insets = useSafeAreaInsets();
   const { recipeId } = useLocalSearchParams<{ recipeId?: string }>();
   const { getRecipeById, prepareRecipe, getRecipeSteps, toggleSave } = useRecipes();
-  const { items } = useInventory();
+  const { items, status: pantryStatus } = useInventory();
   const { addFromRecipe } = useShoppingList();
 
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [storedRecipe, setRecipe] = useState<Recipe | null>(null);
+  // «Tienes / te falta» siempre contra la despensa actual (p. ej. justo después de preparar o de comprar).
+  // Mientras la despensa carga se muestra lo guardado, para no pintar un «te falta todo» momentáneo.
+  const recipe = useMemo(
+    () => (storedRecipe && pantryStatus === 'success' ? withLiveAvailability(storedRecipe, items) : storedRecipe),
+    [storedRecipe, items, pantryStatus]
+  );
   const [notFound, setNotFound] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [isFinishing, setIsFinishing] = useState(false);
@@ -284,9 +285,8 @@ export default function RecipeDetailScreen() {
         />
 
         <View style={styles.content}>
-          {/* ── Encabezado ── */}
           <View style={styles.intro}>
-            <AiBadge label={t('screensMain.recipeDetail.matchLabel', { score: recipe.matchScore })} />
+            <AiBadge label={recipeStatus(recipe).label} icon={recipeStatus(recipe).icon} />
             <AppText variant="screenTitle" weight="light" accessibilityRole="header">
               {lead ? `${lead} ` : ''}
               <AppText weight="semibold">{emphasis}</AppText>
@@ -308,7 +308,6 @@ export default function RecipeDetailScreen() {
             </View>
           </View>
 
-          {/* ── Ingredientes ── */}
           <RecipeIngredientsCard
             available={available}
             total={total}
@@ -327,7 +326,6 @@ export default function RecipeDetailScreen() {
             />
           )}
 
-          {/* ── Pasos ── */}
           <View style={styles.section}>
             <View style={styles.sectionHead}>
               <AppText variant="sectionTitle" accessibilityRole="header">

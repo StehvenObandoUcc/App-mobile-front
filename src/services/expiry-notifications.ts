@@ -12,9 +12,9 @@ export { areNotificationsAvailable, isExpoGo } from './notifications-runtime';
 /**
  * Avisos locales de vencimiento (expo-notifications).
  *
- * - Solo notificaciones LOCALES: no hay push remoto, no se envía nada al servidor.
+ * - Solo notificaciones locales: no hay push remoto, no se envía nada al servidor.
  * - El plan (qué y cuándo avisar) lo calcula utils/expiry-reminders.ts (función pura con tests).
- * - Cada recálculo cancela únicamente NUESTROS avisos (data.kind) y vuelve a programarlos,
+ * - Cada recálculo cancela únicamente nuestros avisos (data.kind) y vuelve a programarlos,
  *   serializado para que dos recálculos seguidos no se pisen.
  */
 export const EXPIRY_NOTIFICATION_KIND = 'expiry-reminder';
@@ -135,7 +135,6 @@ export function cancelExpiryReminders(): Promise<void> {
   return queue;
 }
 
-// ─── Funciones para la pantalla de Configuración ─────────────────────────────
 
 export type NotificationPermissionInfo = { granted: boolean; canAskAgain: boolean };
 

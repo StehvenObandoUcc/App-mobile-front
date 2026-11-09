@@ -7,7 +7,6 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import type { ThemeColors } from '../theme/colors';
 
 /**
- * IconButton (NUEVO) — Componentes.dc.html
  * 48 × 48 dp siempre (touchTargetMin). accessibilityLabel obligatorio.
  * variant: surface (blanco + filete) · ink (cacao) · tonal (durazno) · neutral (avena) · ghost (sin fondo)
  */
@@ -30,7 +29,7 @@ export type IconButtonProps = {
 
 const variantsFor = (colors: ThemeColors): Record<IconButtonVariant, { bg: string; pressed: string; fg: string; border?: string }> => ({
   surface: { bg: colors.surface, pressed: colors.m3.surfaceContainerLow, fg: colors.textPrimary, border: colors.border },
-  // Blanco sin filete: botón «volver» de las pantallas (mockups: círculo blanco de 48 sin borde).
+  // Blanco sin filete: botón «volver» de las pantallas (círculo blanco de 48 sin borde).
   white: { bg: colors.surface, pressed: colors.m3.surfaceContainerLow, fg: colors.textPrimary },
   ink: { bg: colors.ink, pressed: colors.inkPressed, fg: colors.onInk },
   tonal: { bg: colors.primaryContainer, pressed: colors.m3.inversePrimary, fg: colors.onPrimaryContainer },

@@ -11,10 +11,7 @@ import { spacing } from '../src/theme';
 import { makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 
-/**
- * Perfil (Perfil.dc.html): volver + «Mi perfil», ProfileCard y «Cerrar sesión» (no es destructivo: botón de contorno neutro).
- * Tocar la foto abre opciones (elegir o quitar). Cerrar sesión pide confirmación.
- */
+/** Perfil: foto, datos y «Cerrar sesión» (con confirmación; botón neutro porque no es destructivo). */
 export default function ProfileScreen() {
   const styles = useStyles();
   const router = useRouter();

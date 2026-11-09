@@ -1,4 +1,5 @@
 import { Recipe, RecipeSortOption, RecipeFilterOptions, RecipeDifficulty } from '../types';
+import { missingRequiredOf } from './consumption';
 
 const DIFFICULTY_WEIGHT: Record<RecipeDifficulty, number> = {
   easy: 1,
@@ -35,8 +36,9 @@ export function sortRecipes(recipes: Recipe[], sortOption: RecipeSortOption = 'c
         return (a.matchScore || 0) - (b.matchScore || 0) || a.id.localeCompare(b.id);
       }
 
+      // «Menos faltantes»: primero las que puedes cocinar ya; a igual faltantes, la que más ingredientes usa de tu despensa.
       case 'matchScore_desc':
-        return (b.matchScore || 0) - (a.matchScore || 0);
+        return missingRequiredOf(a) - missingRequiredOf(b) || (b.matchScore || 0) - (a.matchScore || 0);
 
       case 'prepTime_asc': {
         const timeA = a.prepTimeMinutes ?? 999;

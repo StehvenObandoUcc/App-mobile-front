@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ingredient, Recipe, ShoppingItem, IngredientCategory, OutboxMutation } from '../types';
+import { Ingredient, Recipe, ShoppingItem, IngredientCategory, OutboxMutation, ExpirationSource } from '../types';
 import { findSimilarItem, normalizeItemUnitAndQty } from '../utils/text-matching';
-import { addDaysISO, earliestISODate } from '../utils/dates';
+import { addDaysISO, earliestExpiry } from '../utils/dates';
 import { convertQuantity } from '../utils/consumption';
 import { generateOperationId } from '../utils/uuid';
 
@@ -39,7 +39,8 @@ export interface MoveBoughtSnapshot {
     /** Unidad final (al reponer un agotado cambia). Opcional para snapshots viejos. */
     unit?: Ingredient['unit'];
     expirationDate: string | null;
-    expirationSource: 'estimated';
+    /** Origen de la fecha que quedó: «estimated» si ganó la del traspaso, el original si ganó la que ya tenías. */
+    expirationSource: ExpirationSource;
   }[];
 }
 
@@ -91,10 +92,7 @@ function buildMoveOutbox(
   return { outbox: next, purgedShoppingIds };
 }
 
-/**
- * Genera la clave namespaced para el almacenamiento.
- * Lanza error si no hay un usuario activo para evitar colisiones o escrituras en claves globales.
- */
+/** Clave namespaced por usuario; lanza si no hay usuario activo para no escribir en claves globales. */
 export function getStorageKey(baseKey: string, userId: string): string {
   if (!userId || !userId.trim()) {
     throw new Error('Acceso de almacenamiento denegado: no hay usuario activo autenticado');
@@ -469,9 +467,6 @@ export const LocalStorage = {
     emitChange();
   },
 
-  /**
-   * Limpia todos los datos de muestra o inventario del usuario actual.
-   */
   async clearAllUserData(): Promise<void> {
     ensureActiveUser();
     memoryInventory = [];
@@ -486,7 +481,7 @@ export const LocalStorage = {
     await persistToDisk();
   },
 
-  // ─── Inventario ─────────────────────────────────────────────────────────────
+  // Inventario
   async getInventory(): Promise<Ingredient[]> {
     return memoryInventory.filter((item) => !pendingDeletedInventory.has(item.id));
   },
@@ -535,7 +530,7 @@ export const LocalStorage = {
     schedulePersist('pending_deleted_inventory');
   },
 
-  // ─── Recetas ────────────────────────────────────────────────────────────────
+  // Recetas
   async getRecipes(): Promise<Recipe[]> {
     return memoryRecipes.filter((r) => !deletedRecipeIds.has(r.id));
   },
@@ -597,7 +592,7 @@ export const LocalStorage = {
     schedulePersist('pending_deleted_recipes');
   },
 
-  // ─── Lista de Compras ────────────────────────────────────────────────────────
+  // Lista de Compras
   async getShoppingList(): Promise<ShoppingItem[]> {
     return [...memoryShoppingList];
   },
@@ -681,7 +676,6 @@ export const LocalStorage = {
     const newIngredients: Ingredient[] = [];
     const updatedIngredients: MoveBoughtSnapshot['updatedIngredients'] = [];
 
-    // Clonar lista actual para mutación inmutable
     const nextInventory: Ingredient[] = memoryInventory.map((item) => ({ ...item }));
 
     for (const bought of boughtItems) {
@@ -709,24 +703,25 @@ export const LocalStorage = {
           existing.quantity = cleanQty;
           existing.unit = cleanUnit;
           existing.expirationDate = estimatedExp;
+          existing.expirationSource = 'estimated';
         } else {
           if (extra !== null && existing.quantity !== null) {
             existing.quantity = Math.round((existing.quantity + extra) * 1000) / 1000;
           }
-          // Conservar la fecha más próxima si ambas existen (texto ISO: sin pasar por UTC)
-          existing.expirationDate = earliestISODate(existing.expirationDate, estimatedExp);
+          // Conservar la fecha más próxima si ambas existen (texto ISO: sin pasar por UTC), con su origen.
+          const kept = earliestExpiry(existing, { expirationDate: estimatedExp, expirationSource: 'estimated' });
+          existing.expirationDate = kept.expirationDate;
+          existing.expirationSource = kept.expirationSource;
         }
-        existing.expirationSource = 'estimated';
 
         updatedIngredients.push({
           id: existing.id,
           quantity: existing.quantity,
           unit: existing.unit,
           expirationDate: existing.expirationDate,
-          expirationSource: 'estimated',
+          expirationSource: existing.expirationSource ?? 'estimated',
         });
       } else {
-        // Producto nuevo en inventario
         const newIngredient: Ingredient = {
           id: `ing-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name: bought.name,
@@ -766,10 +761,10 @@ export const LocalStorage = {
       updatedIngredients,
     };
 
-    // 1. Snapshot previo de transacción para recuperación tras fallo/cierre
+    // Snapshot previo de la transacción para recuperarla tras un fallo o cierre
     await AsyncStorage.setItem(txKey, JSON.stringify(tx));
 
-    // 2. Persistencia coordinada multiSet (transaccional a nivel de almacenamiento)
+    // multiSet: escritura coordinada de despensa, compras y Outbox
     await AsyncStorage.multiSet([
       [getStorageKey(BASE_KEY_INVENTORY, uid), JSON.stringify(nextInventory)],
       [getStorageKey(BASE_KEY_SHOPPING_LIST, uid), JSON.stringify(nextShoppingList)],
@@ -781,10 +776,8 @@ export const LocalStorage = {
       [getStorageKey(BASE_KEY_OUTBOX, uid), JSON.stringify(nextOutbox)],
     ]);
 
-    // 3. Limpiar snapshot una vez confirmadas las escrituras
     await AsyncStorage.removeItem(txKey);
 
-    // 4. Actualizar memoria y emitir cambios
     memoryInventory = nextInventory;
     memoryShoppingList = nextShoppingList;
     pendingDeletedShopping = nextPendingDeletedShopping;
@@ -794,7 +787,7 @@ export const LocalStorage = {
     return movedCount;
   },
 
-  // ─── Control de Eliminaciones Pendientes (Anti-Zombie) ──────────────────────
+  // Control de Eliminaciones Pendientes (Anti-Zombie)
   async addPendingDeletedShopping(id: string): Promise<void> {
     ensureActiveUser();
     pendingDeletedShopping.set(id, Date.now());
@@ -861,7 +854,7 @@ export const LocalStorage = {
     }
   },
 
-  // ─── Cola de Mutaciones Offline (Outbox Pattern) ───────────────────────────
+  // Cola de Mutaciones Offline (Outbox Pattern)
   getOutboxQueue(): OutboxMutation[] {
     return [...memoryOutbox];
   },

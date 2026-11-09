@@ -6,14 +6,13 @@ import { AppText } from './AppText';
 import { PhotoCredit } from './PhotoCredit';
 import { radii, spacing } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
-import { recipeBanner, DIFFICULTY_LABELS, missingLabel as missingText } from '../utils/recipe-visuals';
+import { recipeBanner, DIFFICULTY_LABELS, recipeStatus } from '../utils/recipe-visuals';
 import { useI18n } from '../i18n';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 /**
- * RecipeCard — Organismos.dc.html
  * Franja superior de 150 dp: foto si hay `imageUri`; si no, pastel + plato blanco con icono.
- * Coincidencia en frambuesa (dato de la IA). Botón 48 dp: solo guardar (corazón), como el mockup; borrar = mantener presionado → selección.
+ * Coincidencia en frambuesa (dato de la IA). Botón 48 dp: solo guardar (corazón); borrar = mantener presionado → selección.
  * Cuerpo: título 20/600, descripción, meta (tiempo · dificultad segmentada · porciones)
  * y progreso de ingredientes segmentado «Tienes 7 de 8 · Falta 1».
  * Seleccionado: anillo cacao 2 dp + check circular en la esquina.
@@ -47,7 +46,6 @@ export function RecipeCard({
   const diffLabel = DIFFICULTY_LABELS[recipe.difficulty] || DIFFICULTY_LABELS.easy;
   const available = recipe.availableIngredients.length;
   const total = available + recipe.missingIngredients.length;
-  const missing = recipe.missingIngredients.length;
   const banner = recipeBanner(colors, recipe.id);
   // Si la foto remota falla al cargar, se muestra la ilustración de siempre
   const [failedUri, setFailedUri] = useState<string | null>(null);
@@ -104,7 +102,7 @@ export function RecipeCard({
     else onPress();
   };
 
-  const missingLabel = missingText(missing);
+  const status = recipeStatus(recipe);
   const segmented = total > 0 && total <= 12;
 
   return (
@@ -118,9 +116,9 @@ export function RecipeCard({
         style={styles.card}
         accessibilityRole="button"
         accessibilityState={isSelectMode ? { selected: isSelected } : undefined}
-        accessibilityLabel={t('organisms.recipeCard.a11y', { title: recipe.title, match: recipe.matchScore, difficulty: diffLabel, missing: missingLabel })}
+        accessibilityLabel={t('organisms.recipeCard.a11y', { title: recipe.title, status: status.label, difficulty: diffLabel })}
       >
-        {/* ── Franja superior ── */}
+        {/* Franja superior */}
         <View style={[styles.banner, { backgroundColor: banner.bg }]}>
           {recipe.imageUri && failedUri !== recipe.imageUri ? (
             <Image
@@ -153,9 +151,9 @@ export function RecipeCard({
             </Pressable>
           ) : (
             <View style={styles.matchBadge}>
-              <Ionicons name="sparkles" size={14} color={colors.onTertiaryContainer} />
+              <Ionicons name={status.icon} size={14} color={colors.onTertiaryContainer} />
               <AppText variant="metadata" weight="semibold" color={colors.onTertiaryContainer}>
-                {t('organisms.recipeCard.matchBadge', { match: recipe.matchScore })}
+                {status.label}
               </AppText>
             </View>
           )}
@@ -183,7 +181,7 @@ export function RecipeCard({
           )}
         </View>
 
-        {/* ── Cuerpo ── */}
+        {/* Cuerpo */}
         <View style={styles.body}>
           <AppText variant="sectionTitle" numberOfLines={2}>
             {recipe.title}
@@ -223,11 +221,11 @@ export function RecipeCard({
                 <AppText variant="metadata">{t('organisms.recipeCard.servings', { count: recipe.servings ?? 0 })}</AppText>
               </View>
             )}
-            {isSelectMode && missing > 0 && (
+            {isSelectMode && status.icon === 'cart-outline' && (
               <View style={styles.metaItem}>
                 <Ionicons name="cart-outline" size={16} color={colors.textMuted} />
                 <AppText variant="metadata" weight="semibold" color={colors.textMuted}>
-                  {missingLabel}
+                  {status.label}
                 </AppText>
               </View>
             )}
@@ -236,14 +234,8 @@ export function RecipeCard({
           {!isSelectMode && total > 0 && (
             <View style={styles.progress}>
               <View style={styles.progressHead}>
+                {/* Lo que falta ya lo dice la etiqueta de la franja; aquí solo el conteo. */}
                 <AppText variant="metadata" weight="semibold">{t('organisms.recipeCard.progress', { available, total })}</AppText>
-                {/* Faltantes: texto neutro con icono (Ladrillo es solo para errores y vencidos). */}
-                <View style={styles.metaItem}>
-                  {missing > 0 && <Ionicons name="cart-outline" size={16} color={colors.textMuted} />}
-                  <AppText variant="metadata" weight="semibold" color={missing === 0 ? colors.functional.fresh.text : colors.textMuted}>
-                    {missingLabel}
-                  </AppText>
-                </View>
               </View>
               {segmented ? (
                 <View style={styles.segments}>
@@ -282,7 +274,7 @@ const useStyles = makeStyles((colors) => ({
     overflow: 'hidden',
   },
   banner: {
-    height: 132, // Recetas.dc.html
+    height: 132,
     overflow: 'hidden',
   },
   bannerHalo: {

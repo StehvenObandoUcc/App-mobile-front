@@ -8,7 +8,7 @@ import { spacing } from '../src/theme';
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 
-/** Legal (Legal.dc.html): pestañas Términos / Privacidad. Se abre desde la Bienvenida y desde Configuración. */
+/** Pestañas Términos / Privacidad. Se abre desde la Bienvenida y desde Configuración. */
 export default function LegalScreen() {
   const { colors } = useTheme();
   const styles = useStyles();

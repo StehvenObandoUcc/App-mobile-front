@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet, useColorScheme } from 'react-native';
+import { StyleSheet, useColorScheme, type ImageStyle, type TextStyle, type ViewStyle } from 'react-native';
 import { lightColors, darkColors, type ThemeColors } from './colors';
 import { useAppPreferences } from '../preferences/AppPreferences';
 
@@ -25,7 +25,10 @@ export function useTheme(): { colors: ThemeColors; scheme: ColorSchemeName; isDa
  *   }));
  *   function Card() { const styles = useStyles(); ... }
  */
-export function makeStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<any>>(
+/** Mapa de estilos con nombre. RN 0.88 ya no exporta `StyleSheet.NamedStyles`; esta es la misma forma de antes. */
+type NamedStyles<T> = { [P in keyof T]: ViewStyle | TextStyle | ImageStyle };
+
+export function makeStyles<T extends NamedStyles<T> | NamedStyles<any>>(
   factory: (c: ThemeColors, scheme: ColorSchemeName) => T
 ): () => T {
   const cache: Partial<Record<ColorSchemeName, T>> = {};

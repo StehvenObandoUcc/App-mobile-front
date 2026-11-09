@@ -8,7 +8,7 @@ import { useI18n } from '../i18n';
 import { DIFFICULTY_LABELS } from '../utils/recipe-visuals';
 
 /**
- * DifficultyPicker — 3 fichas de 72 dp con medidor segmentado ▮▯▯ (Chef-IA.dc.html).
+ * DifficultyPicker — 3 fichas de 72 dp con medidor segmentado ▮▯▯.
  * La elegida toma el pastel de su nivel + anillo cacao; el medidor no depende solo del color.
  */
 export type DifficultyPickerProps = {

@@ -7,7 +7,6 @@ import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 
 /**
- * QuantityStepper — Despensa-Formulario.dc.html
  * Píldora avena de 56 dp: «−» blanco · número 20/600 · «+» cacao. Botones de 48 dp.
  */
 export type QuantityStepperProps = {

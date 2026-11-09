@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation, usePreventRemove } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInventory } from '../src/hooks/useInventory';
@@ -18,19 +18,16 @@ import {
   IngredientFormSheet,
   M3DatePickerModal,
   SummaryRow,
+  joinTitle,
 } from '../src/components';
 import { findSimilarItem } from '../src/utils/text-matching';
 import { convertQuantity } from '../src/utils/consumption';
-import { earliestISODate } from '../src/utils/dates';
+import { earliestExpiry, resolveFormExpirationSource } from '../src/utils/dates';
 import { radii, spacing } from '../src/theme';
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 
-/**
- * Resultado del escaneo (Escaneo-Resultado.dc.html + Escaneo-Resultado-Estados.dc.html).
- * Lista de DetectedItemCard, «Añadir manual», barra fija «Confirmar N alimentos».
- * Estados: nada detectado (A) y éxito con desglose (B, M3Dialog + SummaryRow).
- */
+/** Resultado del escaneo: estados «nada detectado» y éxito con desglose. */
 type DialogState = {
   visible: boolean;
   title: string;
@@ -55,7 +52,7 @@ export default function ScanResultScreen() {
   const insets = useSafeAreaInsets();
   const { items: inventoryItems, addItem, updateItem } = useInventory();
   const { t, tp } = useI18n();
-  const hasConfirmedRef = useRef(false);
+  const [hasConfirmed, setHasConfirmed] = useState(false);
   const [mergeOptions, setMergeOptions] = useState<Record<string, boolean>>({});
 
   const params = useLocalSearchParams<{
@@ -65,12 +62,14 @@ export default function ScanResultScreen() {
     warningsData?: string;
   }>();
 
-  // Ingredientes reales detectados por la IA (todos marcados al llegar)
+  // Ingredientes detectados por la IA. Llegan marcados, salvo los de baja confianza (< 60 %, «Verifica este
+  // alimento»): esos se revisan y se marcan a mano para no llenar la despensa con lo que la IA adivinó.
   const [detectedItems, setDetectedItems] = useState<Ingredient[]>(() => {
     if (params.ingredientsData) {
       try {
         const parsed = JSON.parse(params.ingredientsData);
-        if (Array.isArray(parsed)) return parsed.map((item: Ingredient) => ({ ...item, confirmed: true }));
+        if (Array.isArray(parsed))
+          return parsed.map((item: Ingredient) => ({ ...item, confirmed: item.confidence == null || item.confidence >= 0.6 }));
       } catch (e) {
         console.warn('[ScanResult] Error parseando ingredientsData:', e);
       }
@@ -83,30 +82,28 @@ export default function ScanResultScreen() {
   const closeDialog = () => setDialog((prev) => ({ ...prev, visible: false }));
 
   // Salir sin guardar (botón físico, gesto, «Descartar») pide confirmación.
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (hasConfirmedRef.current || detectedItems.length === 0) return;
-      e.preventDefault();
-      const n = detectedItems.length;
-      setDialog({
-        visible: true,
-        title: t('screensFlow.scanResult.discardTitle'),
-        titleEmphasis: tp('screensFlow.scanResult.discardEmphasis', n),
-        message: tp('screensFlow.scanResult.discardMessage', n),
-        type: 'error',
-        confirmText: t('screensFlow.scanResult.discardConfirm'),
-        confirmTone: 'danger',
-        cancelText: t('screensFlow.scanResult.keepReviewing'),
-        onConfirm: () => {
-          hasConfirmedRef.current = true;
-          closeDialog();
-          navigation.dispatch(e.data.action);
-        },
-        onCancel: closeDialog,
-      });
+  // Expo Router 58: `usePreventRemove` reemplaza al evento «beforeRemove».
+  const disableLeaveGuard = usePreventRemove(!hasConfirmed && detectedItems.length > 0, ({ data }) => {
+    const n = detectedItems.length;
+    setDialog({
+      visible: true,
+      title: t('screensFlow.scanResult.discardTitle'),
+      titleEmphasis: tp('screensFlow.scanResult.discardEmphasis', n),
+      message: tp('screensFlow.scanResult.discardMessage', n),
+      type: 'error',
+      confirmText: t('screensFlow.scanResult.discardConfirm'),
+      confirmTone: 'danger',
+      cancelText: t('screensFlow.scanResult.keepReviewing'),
+      onConfirm: () => {
+        setHasConfirmed(true);
+        closeDialog();
+        // Se quita el bloqueo antes de repetir la salida: si no, la misma salida volvería a pedir confirmación.
+        disableLeaveGuard();
+        navigation.dispatch(data.action);
+      },
+      onCancel: closeDialog,
     });
-    return unsubscribe;
-  }, [navigation, detectedItems.length]);
+  });
 
   // Coincidencias con la despensa (para ofrecer «Sumar»)
   const matchedInventoryMap = useMemo(() => {
@@ -128,7 +125,7 @@ export default function ScanResultScreen() {
     }
   }, [params.warningsData]);
 
-  // ── Hoja de edición / alta manual (la misma de la Despensa) ──
+  // Hoja de edición / alta manual (la misma de la Despensa)
   const [sheetVisible, setSheetVisible] = useState(false);
   const [dateVisible, setDateVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -173,11 +170,24 @@ export default function ScanResultScreen() {
     }
     const patch = { name: trimmed, quantity: qty, unit, category, expirationDate: expirationDate || null };
     if (editingId) {
-      setDetectedItems((prev) => prev.map((it) => (it.id === editingId ? { ...it, ...patch } : it)));
+      setDetectedItems((prev) =>
+        prev.map((it) =>
+          it.id === editingId
+            ? { ...it, ...patch, expirationSource: resolveFormExpirationSource(it, patch.expirationDate) }
+            : it
+        )
+      );
     } else {
       setDetectedItems((prev) => [
         ...prev,
-        { id: `manual-${Date.now()}`, ...patch, confidence: null, source: 'manual', confirmed: true },
+        {
+          id: `manual-${Date.now()}`,
+          ...patch,
+          expirationSource: resolveFormExpirationSource(null, patch.expirationDate),
+          confidence: null,
+          source: 'manual',
+          confirmed: true,
+        },
       ]);
     }
     setSheetVisible(false);
@@ -210,11 +220,17 @@ export default function ScanResultScreen() {
             : null;
         if (wantsMerge && existing && (restocking || extra !== null || item.quantity === null)) {
           const next: Ingredient = restocking
-            ? { ...existing, quantity: item.quantity, unit: item.unit, expirationDate: item.expirationDate ?? null }
+            ? {
+                ...existing,
+                quantity: item.quantity,
+                unit: item.unit,
+                expirationDate: item.expirationDate ?? null,
+                expirationSource: item.expirationSource ?? 'unknown',
+              }
             : {
                 ...existing,
                 quantity: extra !== null && existing.quantity !== null ? round(existing.quantity + extra) : existing.quantity,
-                expirationDate: earliestISODate(existing.expirationDate, item.expirationDate),
+                ...earliestExpiry(existing, item),
               };
           mergedById.set(existing.id, next);
           merged += 1;
@@ -226,7 +242,7 @@ export default function ScanResultScreen() {
       for (const next of mergedById.values()) {
         await updateItem(next);
       }
-      hasConfirmedRef.current = true;
+      setHasConfirmed(true);
       setDialog({
         visible: true,
         title: t('screensFlow.scanResult.savedTitle'),
@@ -255,6 +271,10 @@ export default function ScanResultScreen() {
     }
   };
 
+  // Fecha que puso la IA al alimento que se está editando: el formulario avisa que es estimada.
+  const editingItem = editingId ? detectedItems.find((it) => it.id === editingId) : undefined;
+  const editingEstimatedDate = editingItem?.expirationSource === 'estimated' ? editingItem.expirationDate : null;
+
   const overlays = (
     <>
       <IngredientFormSheet
@@ -271,6 +291,7 @@ export default function ScanResultScreen() {
         onSubmit={handleSaveSheet}
         onClose={() => setSheetVisible(false)}
         onOpenCalendar={() => setDateVisible(true)}
+        estimatedDate={editingEstimatedDate}
       />
       <M3DatePickerModal visible={dateVisible} value={expirationDate} onChange={setExpirationDate} onClose={() => setDateVisible(false)} />
       <M3Dialog
@@ -297,16 +318,17 @@ export default function ScanResultScreen() {
     </>
   );
 
-  // ── A · Nada detectado ──
   if (detectedItems.length === 0) {
     return (
       <View style={[styles.screen, styles.emptyScreen, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }]}>
         <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('screensFlow.scanResult.backToCameraA11y')} onPress={() => router.back()} />
         <View style={styles.empty}>
           <IllustrationBlob iconName="scan-outline" tone="ai" size="lg" />
-          <AppText variant="headline" weight="light" align="center" accessibilityRole="header">
-            {detectedCount === 0 ? t('screensFlow.scanResult.emptyTitleNone') : t('screensFlow.scanResult.emptyTitleRemoved')}
-            <AppText weight="semibold">{t('screensFlow.scanResult.emptyBold')}</AppText>
+          <AppText variant="headline" weight="semibold" align="center" accessibilityRole="header">
+            {joinTitle(
+              detectedCount === 0 ? t('screensFlow.scanResult.emptyTitleNone') : t('screensFlow.scanResult.emptyTitleRemoved'),
+              t('screensFlow.scanResult.emptyBold')
+            )}
           </AppText>
           <AppText variant="body" color={colors.textSecondary} align="center">
             {detectedCount === 0

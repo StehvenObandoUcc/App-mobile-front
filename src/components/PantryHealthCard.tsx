@@ -20,7 +20,6 @@ export type PantryHealthCardProps = {
 /**
  * «Salud de tu despensa» — resumen visual de getExpirationStatus() sobre todo el inventario.
  * Barra segmentada proporcional a cada estado + conteos. Toca la tarjeta para ver "Por vencer".
- * Fuente: Despensa.dc.html (Etapa 2, aprobado).
  */
 export function PantryHealthCard({ counts, onPress }: PantryHealthCardProps) {
   const { colors } = useTheme();

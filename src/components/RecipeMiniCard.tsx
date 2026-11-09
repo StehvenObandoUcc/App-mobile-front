@@ -6,11 +6,11 @@ import { PhotoCredit } from './PhotoCredit';
 import { Recipe } from '../types';
 import { radii } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
-import { recipeBanner, DIFFICULTY_LABELS, missingLabel } from '../utils/recipe-visuals';
+import { recipeBanner, DIFFICULTY_LABELS, recipeStatus } from '../utils/recipe-visuals';
 import { useI18n } from '../i18n';
 
 /**
- * RecipeMiniCard — tarjeta horizontal de «Ideas para cocinar» (Inicio.dc.html).
+ * RecipeMiniCard — tarjeta horizontal de «Ideas para cocinar».
  * 236 dp de ancho: franja pastel 104 con plato, coincidencia en frambuesa, título 16/22 y meta.
  */
 export type RecipeMiniCardProps = {
@@ -27,10 +27,10 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
   // Si la foto remota falla al cargar, se muestra la ilustración de siempre
   const [failedUri, setFailedUri] = useState<string | null>(null);
   const diff = DIFFICULTY_LABELS[recipe.difficulty] ?? DIFFICULTY_LABELS.easy;
+  const status = recipeStatus(recipe);
   const meta = [
     recipe.prepTimeMinutes !== null ? t('organisms.recipeMiniCard.minutes', { count: recipe.prepTimeMinutes ?? 0 }) : null,
     diff,
-    missingLabel(recipe.missingIngredients.length),
   ]
     .filter(Boolean)
     .join(' · ');
@@ -41,7 +41,7 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
       onLongPress={onLongPress}
       delayLongPress={350}
       accessibilityRole="button"
-      accessibilityLabel={t('organisms.recipeMiniCard.a11y', { title: recipe.title, match: recipe.matchScore, meta })}
+      accessibilityLabel={t('organisms.recipeMiniCard.a11y', { title: recipe.title, status: status.label, meta })}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={[styles.banner, { backgroundColor: banner.bg }]}>
@@ -60,7 +60,7 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
         {recipe.imageUri && failedUri !== recipe.imageUri ? <PhotoCredit credit={recipe.imageCredit} /> : null}
         <View style={styles.match}>
           <AppText variant="caption" weight="semibold" color={colors.onTertiaryContainer}>
-            {t('organisms.recipeMiniCard.match', { match: recipe.matchScore })}
+            {status.label}
           </AppText>
         </View>
       </View>

@@ -8,21 +8,30 @@ import { radii, spacing, elevations } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n';
 import type { RecipeImageCredit } from '../types';
-import { isUnsplashPageUrl } from '../utils/recipe-merge';
+import { isAllowedPageUrl } from '../utils/recipe-merge';
 
 /**
- * Piezas del detalle de receta (Receta-Detalle.dc.html).
+ * Piezas del detalle de receta.
  * Átomo: AiBadge · Moléculas: StatTile, StepItem, StickyActionBar
  * Organismos: RecipeCover, RecipeIngredientsCard, MissingIngredientsCard
  */
 
-// ── AiBadge ───────────────────────────────────────────────────────────────────
-export function AiBadge({ label, size = 'md' }: { label: string; size?: 'sm' | 'md' }) {
+// AiBadge
+export function AiBadge({
+  label,
+  size = 'md',
+  icon = 'sparkles',
+}: {
+  label: string;
+  size?: 'sm' | 'md';
+  /** «sparkles» = lo hizo la IA. Otro icono cuando la etiqueta no es de la IA (p. ej. «Tienes todo»). */
+  icon?: keyof typeof Ionicons.glyphMap;
+}) {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
     <View style={[styles.aiBadge, size === 'sm' ? styles.aiBadgeSm : styles.aiBadgeMd]}>
-      <Ionicons name="sparkles" size={size === 'sm' ? 12 : 14} color={colors.onTertiaryContainer} />
+      <Ionicons name={icon} size={size === 'sm' ? 12 : 14} color={colors.onTertiaryContainer} />
       <AppText variant={size === 'sm' ? 'caption' : 'metadata'} weight="semibold" color={colors.onTertiaryContainer}>
         {label}
       </AppText>
@@ -30,7 +39,7 @@ export function AiBadge({ label, size = 'md' }: { label: string; size?: 'sm' | '
   );
 }
 
-// ── RecipeCover ───────────────────────────────────────────────────────────────
+// RecipeCover
 export type RecipeCoverProps = {
   banner: { bg: string; fg: string };
   imageUri?: string | null;
@@ -77,27 +86,35 @@ export function RecipeCover({ banner, imageUri, imageCredit, isSaved, topInset, 
   );
 }
 
-// ── RecipePhotoCredit ─────────────────────────────────────────────────────────
-function openLink(url: string) {
-  if (!isUnsplashPageUrl(url)) return;
+// RecipePhotoCredit
+function openLink(source: RecipeImageCredit['source'], url: string) {
+  if (!isAllowedPageUrl(source, url)) return;
   Linking.openURL(url).catch(() => {});
 }
 
-/** Crédito del fotógrafo (guía de Unsplash): «Foto: {name} en Unsplash», con ambos enlaces. */
+/** Crédito del fotógrafo (guía de Unsplash): «Foto: {name} en Unsplash/Pexels/Wikimedia Commons» (+ «, {licencia}» en Wikimedia), con ambos enlaces. */
 export function RecipePhotoCredit({ credit }: { credit: RecipeImageCredit }) {
   const { colors } = useTheme();
   const styles = useStyles();
   const { t } = useI18n();
+  const sourceName = t(
+    credit.source === 'pexels'
+      ? 'organisms.recipeDetailParts.photoSourcePexels'
+      : credit.source === 'wikimedia'
+        ? 'organisms.recipeDetailParts.photoSourceWikimedia'
+        : 'organisms.recipeDetailParts.photoSourceUnsplash',
+  );
+  const license = credit.source === 'wikimedia' ? credit.license?.trim() : '';
   return (
     <View style={styles.photoCredit}>
       <AppText variant="caption" color={colors.textSecondary}>
         {t('organisms.recipeDetailParts.photoBy')}
       </AppText>
       <Pressable
-        onPress={() => openLink(credit.profileUrl)}
+        onPress={() => openLink(credit.source, credit.profileUrl)}
         style={styles.photoCreditLink}
         accessibilityRole="link"
-        accessibilityLabel={t('organisms.recipeDetailParts.photoProfileA11y', { name: credit.name })}
+        accessibilityLabel={t('organisms.recipeDetailParts.photoProfileA11y', { name: credit.name, source: sourceName })}
       >
         <AppText variant="caption" weight="semibold" color={colors.primary} style={styles.photoCreditUnderline}>
           {credit.name}
@@ -107,20 +124,20 @@ export function RecipePhotoCredit({ credit }: { credit: RecipeImageCredit }) {
         {t('organisms.recipeDetailParts.photoOn')}
       </AppText>
       <Pressable
-        onPress={() => openLink(credit.sourceUrl)}
+        onPress={() => openLink(credit.source, credit.sourceUrl)}
         style={styles.photoCreditLink}
         accessibilityRole="link"
-        accessibilityLabel={t('organisms.recipeDetailParts.photoSourceA11y')}
+        accessibilityLabel={t('organisms.recipeDetailParts.photoSourceA11y', { source: sourceName })}
       >
         <AppText variant="caption" weight="semibold" color={colors.primary} style={styles.photoCreditUnderline}>
-          {t('organisms.recipeDetailParts.photoSourceName')}
+          {license ? `${sourceName}${t('organisms.recipeDetailParts.photoLicense', { license })}` : sourceName}
         </AppText>
       </Pressable>
     </View>
   );
 }
 
-// ── StatTile ──────────────────────────────────────────────────────────────────
+// StatTile
 export type StatTileProps = {
   value: string;
   label: string;
@@ -146,7 +163,7 @@ export function StatTile({ value, label, iconName, top, tone }: StatTileProps) {
   );
 }
 
-// ── RecipeIngredientsCard ─────────────────────────────────────────────────────
+// RecipeIngredientsCard
 export type IngredientRow = { id: string; name: string; quantity: string; badge?: { label: string; tone: { background: string; text: string } } };
 
 export function RecipeIngredientsCard({ available, total, rows }: { available: number; total: number; rows: IngredientRow[] }) {
@@ -218,7 +235,7 @@ export function RecipeIngredientsCard({ available, total, rows }: { available: n
   );
 }
 
-// ── MissingIngredientsCard ────────────────────────────────────────────────────
+// MissingIngredientsCard
 export type MissingRow = { id: string; name: string; quantity: string; optional: boolean; substitutions: string[] };
 
 export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: MissingRow[]; onAddToShopping: () => void }) {
@@ -231,7 +248,7 @@ export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: Missin
   return (
     <View style={[styles.missing, { backgroundColor: tone.background }]}>
       <AppText variant="bodySmall" weight="semibold" color={tone.text}>
-        {tp('organisms.recipeDetailParts.missing', n)}
+        {tp(rows.every((r) => r.optional) ? 'organisms.recipeDetailParts.missingOptional' : 'organisms.recipeDetailParts.missing', n)}
       </AppText>
       {rows.map((r) => (
         <View key={r.id} style={styles.missingItem}>
@@ -262,7 +279,7 @@ export function MissingIngredientsCard({ rows, onAddToShopping }: { rows: Missin
   );
 }
 
-// ── StepItem ──────────────────────────────────────────────────────────────────
+// StepItem
 export type StepState = 'done' | 'current' | 'pending';
 
 export function StepItem({ index, text, state, onPress }: { index: number; text: string; state: StepState; onPress: () => void }) {
@@ -299,7 +316,7 @@ export function StepItem({ index, text, state, onPress }: { index: number; text:
   );
 }
 
-// ── StickyActionBar ───────────────────────────────────────────────────────────
+// StickyActionBar
 /** StepsLoading — «El Chef IA está escribiendo los pasos…» + dos pasos fantasma (Recetas-Estados · D). */
 export function StepsLoading() {
   const { colors } = useTheme();

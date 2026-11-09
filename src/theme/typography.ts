@@ -1,5 +1,5 @@
 /**
- * Despensa Tonal — Typography Tokens (rediseño M3 · Etapa 2)
+ * Despensa Tonal — Typography Tokens
  *
  * Se conservan todas las claves de Warm Material Editorial; cambian algunos valores
  * y se añaden alias M3 (displayNumber, weights.light, letterSpacing, families).
@@ -16,7 +16,7 @@ export const typography = {
     bold: 'Outfit-Bold',
   },
   sizes: {
-    displayNumber: 44, // NUEVO: cifras grandes (días, métricas del Inicio)
+    displayNumber: 44, // cifras grandes (días, métricas del Inicio)
     ticketNumber: 24, // cifra grande del «boleto» de caducidad de IngredientCard
     screenTitle: 32, // 30 → 32 · M3 displaySmall (peso 300 + énfasis 600)
     headline: 24, // M3 headlineSmall
@@ -30,7 +30,7 @@ export const typography = {
     micro: 11, // 10 → 11 · M3 labelSmall (solo badges numéricos)
   },
   weights: {
-    light: '300' as const, // NUEVO: titulares con contraste de peso
+    light: '300' as const, // titulares con contraste de peso
     regular: '400' as const,
     medium: '500' as const,
     semibold: '600' as const,

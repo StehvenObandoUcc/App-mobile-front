@@ -6,7 +6,7 @@ import { elevations } from './elevations';
 import { CATEGORY_CONFIG, CATEGORY_LIST, getCategoryConfig, type CategoryMeta } from './categories';
 import type { Theme } from './types';
 
-// ─── Despensa Tonal Theme (evolución de Warm Material Editorial) ──────────────
+// Despensa Tonal Theme (evolución de Warm Material Editorial)
 export const theme: Theme = {
   colors,
   typography,
@@ -15,10 +15,10 @@ export const theme: Theme = {
   elevations,
 };
 
-// ─── Exportaciones Directas de Tokens y Tipos ─────────────────────────────────
+// Exportaciones Directas de Tokens y Tipos
 export { colors, typography, spacing, radii, elevations, CATEGORY_CONFIG, CATEGORY_LIST, getCategoryConfig };
 export type { Theme, CategoryMeta };
 
-// ─── Tema dinámico (claro / oscuro) ───────────────────────────────────────────
+// Tema dinámico (claro / oscuro)
 export { lightColors, darkColors, type ThemeColors } from './colors';
 export { useTheme, makeStyles, type ColorSchemeName } from './ThemeProvider';

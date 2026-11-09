@@ -1,6 +1,4 @@
-/**
- * delete-helpers.ts - Utilidades para resolución de eliminaciones pendientes (Anti-Zombies y HTTP 404).
- */
+/** Resolución de eliminaciones pendientes (anti-zombies y HTTP 404). */
 
 export class ApiError extends Error {
   status: number;
@@ -63,7 +61,7 @@ export async function executeDeleteWithPendingResolution(
     const status = typeof err?.status === 'number' ? err.status : null;
 
     if (status === 404) {
-      // HTTP 404: El recurso ya no existe en el servidor. Tratar como borrado confirmado (idempotente).
+      // 404: el recurso ya no existe; se trata como borrado confirmado (idempotente).
       remoteConfirmedStatus = 404;
     } else {
       if (status === 401 || status === 403) {
@@ -88,7 +86,7 @@ export async function executeDeleteWithPendingResolution(
       }
 
       if (err?.isNetworkError || status === 0) {
-        // Error de red / timeout: conservar en pendientes silenciosamente para la próxima reconexión
+        // Error de red / timeout: se conserva pendiente para la próxima reconexión.
         return { remoteResolved: false, pendingCleared: false, status: 0, isNetworkError: true };
       }
 
@@ -104,9 +102,7 @@ export async function executeDeleteWithPendingResolution(
     }
   }
 
-  // Servidor confirmó borrado (200, 204 o 404).
-  // Procedemos a limpiar localmente el pending. Si falla la persistencia local,
-  // NO volvemos a invocar deleteFn y conservamos el ID en pendientes.
+  // Borrado confirmado (200, 204 o 404): si falla limpiar el pendiente local, no se vuelve a invocar deleteFn.
   try {
     await removePendingFn(id);
     return {

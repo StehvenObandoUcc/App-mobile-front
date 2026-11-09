@@ -14,13 +14,7 @@ import { radii } from '../src/theme';
 import { useTheme, makeStyles } from '../src/theme/ThemeProvider';
 import { useI18n } from '../src/i18n';
 
-/**
- * Escaneo (Escaneo.dc.html + Escaneo-Estados.dc.html).
- * - Cámara: barra con volver y cuota, título, visor, consejos y controles (galería · obturador · girar).
- * - Analizando: AiProgressScreen a pantalla completa, sin salida hasta terminar.
- * - Límite de 5 fotos y Error: StatusScreen en la misma pantalla (sin Alert).
- * Un intento fallido no cuenta como foto de prueba: el contador sube solo si el análisis funciona.
- */
+/** Escaneo. Un intento fallido no cuenta como foto de prueba: el contador sube solo si el análisis funciona. */
 type ScanView = 'camera' | 'limit' | 'error';
 
 export default function ScanScreen() {
@@ -32,6 +26,8 @@ export default function ScanScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   // Linterna: ilumina la vista y la foto cuando hay poca luz (solo cámara trasera).
   const [torchOn, setTorchOn] = useState(false);
+  // Alto real del título: el visor empieza justo debajo para que el texto no se monte sobre sus esquinas.
+  const [headingHeight, setHeadingHeight] = useState(150);
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
@@ -173,7 +169,6 @@ export default function ScanScreen() {
     />
   );
 
-  // ── Límite de fotos (B) ──
   if (view === 'limit') {
     return (
       <StatusScreen
@@ -195,7 +190,6 @@ export default function ScanScreen() {
     );
   }
 
-  // ── Error al analizar (C) ──
   if (view === 'error') {
     return (
       <>
@@ -231,7 +225,6 @@ export default function ScanScreen() {
     return <View style={styles.camera} />;
   }
 
-  // ── Sin permiso de cámara ──
   if (!permission.granted) {
     return (
       <StatusScreen
@@ -255,7 +248,6 @@ export default function ScanScreen() {
     );
   }
 
-  // ── Cámara (Escaneo.dc.html) ──
   return (
     <View style={styles.camera}>
       {capturedPhotoUri ? (
@@ -291,7 +283,10 @@ export default function ScanScreen() {
       </View>
 
       {/* Título + guía */}
-      <View style={[styles.heading, { top: insets.top + 84 }]}>
+      <View
+        style={[styles.heading, { top: insets.top + 84 }]}
+        onLayout={(e) => setHeadingHeight(e.nativeEvent.layout.height)}
+      >
         <AppText variant="screenTitle" weight="light" color={colors.textInverse} accessibilityRole="header">
           {t('screensFlow.scan.headingLight')}
           <AppText weight="semibold" color={colors.textInverse}>
@@ -304,7 +299,10 @@ export default function ScanScreen() {
       </View>
 
       {/* Visor + consejos */}
-      <View pointerEvents="none" style={styles.center}>
+      <View
+        pointerEvents="none"
+        style={[styles.center, { paddingTop: insets.top + 84 + headingHeight + 12, paddingBottom: insets.bottom + 150 }]}
+      >
         <View style={styles.frame} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <View style={[styles.corner, styles.cornerTL]} />
           <View style={[styles.corner, styles.cornerTR]} />
@@ -400,11 +398,10 @@ const useStyles = makeStyles((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 28,
-    paddingBottom: 40, // el visor queda un poco arriba del centro, como en el mockup
   },
   frame: {
-    width: 320,
-    maxWidth: '82%',
+    width: 300,
+    maxWidth: '78%',
     aspectRatio: 320 / 340,
   },
   corner: {

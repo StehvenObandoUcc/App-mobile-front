@@ -78,16 +78,15 @@ export function useShoppingList() {
     }
 
     try {
-      // 1. Carga inmediata desde almacenamiento local namespaced
+      // Carga inmediata desde el almacenamiento local
       const data = await LocalStorage.getShoppingList();
       if (LocalStorage.getCurrentUserId() !== startUserId) return;
       memoryShoppingList = data;
       setItems(data);
 
-      // Disparar procesamiento de la cola Outbox secuencial FIFO en segundo plano
       flushOutbox().catch(() => {});
 
-      // 2. Sincronización en segundo plano con deduplicación y aislamiento de usuario
+      // Sincroniza en segundo plano sin mezclar datos de otro usuario
       if (isSyncingShopping) return;
       isSyncingShopping = true;
       try {
@@ -172,9 +171,6 @@ export function useShoppingList() {
   const pendingItems = items.filter((item) => !item.isBought);
   const boughtItems = items.filter((item) => item.isBought);
 
-  /**
-   * Agrega un nuevo ítem a la lista de compras mediante mutación Outbox durable.
-   */
   const addItem = async (
     name: string,
     quantity: number | null = null,
@@ -199,7 +195,6 @@ export function useShoppingList() {
     await LocalStorage.addShoppingItem(newItem);
     await loadItems();
 
-    // Encolar mutación durable de creación en Outbox (reemplaza llamada HTTP directa)
     const mutation: OutboxMutation<ShoppingItem> = {
       operationId: generateOperationId(),
       userId: startUserId,
@@ -220,9 +215,6 @@ export function useShoppingList() {
     return newItem;
   };
 
-  /**
-   * Actualiza un ítem de la lista de compras mediante Outbox durable.
-   */
   const updateItem = async (item: ShoppingItem) => {
     const startUserId = LocalStorage.getCurrentUserId();
     if (!startUserId) throw new Error('No hay usuario autenticado');
@@ -273,7 +265,6 @@ export function useShoppingList() {
         await queueOrCompactShoppingUpdate(target.id, target, startUserId);
         mergedCount++;
       } else {
-        // Coincidencia inexistente: crear ítem separado
         const newItem: ShoppingItem = {
           id: `shop-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           name: missing.name,
@@ -400,16 +391,15 @@ async function queueOrCompactShoppingDelete(id: string, userId: string): Promise
       const boughtIds = currentList.filter((i) => i.isBought).map((i) => i.id);
       if (boughtIds.length === 0) return;
 
-      // 1. Actualización local optimista y tombstones
+      // Borrado local optimista y tombstones
       await LocalStorage.deleteBoughtItems();
       await loadItems();
 
-      // 2. Encolar mutación DELETE individual por cada ID en el Outbox
+      // Un DELETE por cada ID en el Outbox
       for (const bid of boughtIds) {
         await queueOrCompactShoppingDelete(bid, startUserId);
       }
 
-      // 3. Despacho único en segundo plano
       flushOutbox().catch(() => {});
     } catch (err: any) {
       console.warn('[useShoppingList] Error en clearBought:', err?.message);
