@@ -58,10 +58,12 @@ export type RecipeIngredient = {
 };
 
 export type RecipeImageCredit = {
-  source: 'unsplash';
+  source: 'unsplash' | 'pexels' | 'wikimedia';
   name: string;
   profileUrl: string;
   sourceUrl: string;
+  /** Solo Wikimedia (p. ej. «CC BY-SA 4.0»). */
+  license?: string;
 };
 
 export type Recipe = {

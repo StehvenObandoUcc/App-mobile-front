@@ -142,3 +142,53 @@ describe('foto solo con atribución válida', () => {
     assert.deepEqual(merged.imageCredit, CREDIT);
   });
 });
+
+describe('fotos de varias fuentes', () => {
+  const PEXELS = { source: 'pexels', name: 'Pedro', profileUrl: 'https://www.pexels.com/@pedro', sourceUrl: 'https://www.pexels.com/photo/1' };
+  const PEXELS_IMG = 'https://images.pexels.com/photos/1/a.jpeg';
+  const WIKI = {
+    source: 'wikimedia',
+    name: 'Wiki Autor',
+    profileUrl: 'https://commons.wikimedia.org/wiki/User:Autor',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Arroz.jpg',
+    license: 'CC BY-SA 4.0',
+  };
+  const WIKI_IMG = 'https://upload.wikimedia.org/wikipedia/commons/a/a1/Arroz.jpg';
+
+  it('una foto válida de cada fuente', () => {
+    assert.deepEqual(readRecipeImage({ imageUri: PHOTO, imageCredit: CREDIT }), { imageUri: PHOTO, imageCredit: CREDIT });
+    assert.deepEqual(readRecipeImage({ imageUri: PEXELS_IMG, imageCredit: PEXELS }), { imageUri: PEXELS_IMG, imageCredit: PEXELS });
+    assert.deepEqual(readRecipeImage({ imageUri: WIKI_IMG, imageCredit: WIKI }), { imageUri: WIKI_IMG, imageCredit: WIKI });
+    const es = { ...WIKI, profileUrl: 'https://es.wikipedia.org/wiki/Usuario:Autor' };
+    assert.equal(readRecipeImage({ imageUri: WIKI_IMG, imageCredit: es }).imageCredit.profileUrl, es.profileUrl);
+    assert.equal(readRecipeImage({ imageUri: PEXELS_IMG, imageCredit: { ...PEXELS, profileUrl: 'https://pexels.com/@p' } }).imageUri, PEXELS_IMG);
+  });
+  it('host cruzado -> sin foto', () => {
+    assert.deepEqual(readRecipeImage({ imageUri: PHOTO, imageCredit: PEXELS }), {});
+    assert.deepEqual(readRecipeImage({ imageUri: PEXELS_IMG, imageCredit: CREDIT }), {});
+    assert.deepEqual(readRecipeImage({ imageUri: WIKI_IMG, imageCredit: PEXELS }), {});
+    assert.equal(parseRecipeImageCredit({ ...PEXELS, profileUrl: 'https://unsplash.com/@x' }), null);
+  });
+  it('wikimedia sin licencia -> sin foto', () => {
+    const { license: _l, ...noLic } = WIKI;
+    assert.deepEqual(readRecipeImage({ imageUri: WIKI_IMG, imageCredit: noLic }), {});
+    assert.deepEqual(readRecipeImage({ imageUri: WIKI_IMG, imageCredit: { ...WIKI, license: '  ' } }), {});
+  });
+  it('fuente desconocida -> sin foto', () => {
+    assert.deepEqual(readRecipeImage({ imageUri: PHOTO, imageCredit: { ...CREDIT, source: 'flickr' } }), {});
+  });
+  it('hosts con sufijo ajeno -> sin foto', () => {
+    assert.deepEqual(readRecipeImage({ imageUri: 'https://images.pexels.com.evil.com/a.jpg', imageCredit: PEXELS }), {});
+    assert.deepEqual(readRecipeImage({ imageUri: 'https://upload.wikimedia.org.evil.com/a.jpg', imageCredit: WIKI }), {});
+    assert.deepEqual(readRecipeImage({ imageUri: WIKI_IMG, imageCredit: { ...WIKI, profileUrl: 'https://evilwikipedia.org/x' } }), {});
+    assert.deepEqual(readRecipeImage({ imageUri: PEXELS_IMG, imageCredit: { ...PEXELS, profileUrl: 'https://www.pexels.com@evil.com/x' } }), {});
+  });
+  it('sin source -> unsplash', () => {
+    const { source: _s, ...legacy } = CREDIT;
+    assert.deepEqual(readRecipeImage({ imageUri: PHOTO, imageCredit: legacy }), { imageUri: PHOTO, imageCredit: CREDIT });
+    assert.deepEqual(readRecipeImage({ imageUri: PEXELS_IMG, imageCredit: legacy }), {});
+  });
+  it('la licencia solo se conserva en wikimedia', () => {
+    assert.equal('license' in parseRecipeImageCredit({ ...CREDIT, license: 'CC0' }), false);
+  });
+});
