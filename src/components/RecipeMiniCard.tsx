@@ -3,6 +3,7 @@ import { View, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { PhotoCredit } from './PhotoCredit';
+import { useRecipePhoto } from '../hooks/useRecipePhoto';
 import { Recipe } from '../types';
 import { radii } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
@@ -26,6 +27,8 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
   const banner = recipeBanner(colors, recipe.id);
   // Si la foto remota falla al cargar, se muestra la ilustración de siempre
   const [failedUri, setFailedUri] = useState<string | null>(null);
+  const ownPhoto = useRecipePhoto(recipe.id).uri;
+  const photoUri = ownPhoto || recipe.imageUri;
   const diff = DIFFICULTY_LABELS[recipe.difficulty] ?? DIFFICULTY_LABELS.easy;
   const status = recipeStatus(recipe);
   const meta = [
@@ -45,19 +48,19 @@ export function RecipeMiniCard({ recipe, onPress, onLongPress }: RecipeMiniCardP
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={[styles.banner, { backgroundColor: banner.bg }]}>
-        {recipe.imageUri && failedUri !== recipe.imageUri ? (
+        {photoUri && failedUri !== photoUri ? (
           <Image
-            source={{ uri: recipe.imageUri }}
+            source={{ uri: photoUri }}
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
-            onError={() => setFailedUri(recipe.imageUri!)}
+            onError={() => setFailedUri(photoUri!)}
           />
         ) : (
           <View style={styles.plate}>
             <Ionicons name="restaurant-outline" size={28} color={banner.fg} />
           </View>
         )}
-        {recipe.imageUri && failedUri !== recipe.imageUri ? <PhotoCredit credit={recipe.imageCredit} /> : null}
+        {photoUri && failedUri !== photoUri ? <PhotoCredit credit={ownPhoto ? null : recipe.imageCredit} /> : null}
         <View style={styles.match}>
           <AppText variant="caption" weight="semibold" color={colors.onTertiaryContainer}>
             {status.label}

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Recipe } from '../types';
 import { AppText } from './AppText';
 import { PhotoCredit } from './PhotoCredit';
+import { useRecipePhoto } from '../hooks/useRecipePhoto';
 import { radii, spacing } from '../theme';
 import { useTheme, makeStyles } from '../theme/ThemeProvider';
 import { recipeBanner, DIFFICULTY_LABELS, recipeStatus } from '../utils/recipe-visuals';
@@ -49,6 +50,8 @@ export function RecipeCard({
   const banner = recipeBanner(colors, recipe.id);
   // Si la foto remota falla al cargar, se muestra la ilustración de siempre
   const [failedUri, setFailedUri] = useState<string | null>(null);
+  const ownPhoto = useRecipePhoto(recipe.id).uri;
+  const photoUri = ownPhoto || recipe.imageUri;
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -120,12 +123,12 @@ export function RecipeCard({
       >
         {/* Franja superior */}
         <View style={[styles.banner, { backgroundColor: banner.bg }]}>
-          {recipe.imageUri && failedUri !== recipe.imageUri ? (
+          {photoUri && failedUri !== photoUri ? (
             <Image
-              source={{ uri: recipe.imageUri }}
+              source={{ uri: photoUri }}
               style={StyleSheet.absoluteFill}
               resizeMode="cover"
-              onError={() => setFailedUri(recipe.imageUri!)}
+              onError={() => setFailedUri(photoUri!)}
             />
           ) : (
             <>
@@ -135,7 +138,7 @@ export function RecipeCard({
               </View>
             </>
           )}
-          {recipe.imageUri && failedUri !== recipe.imageUri ? <PhotoCredit credit={recipe.imageCredit} /> : null}
+          {photoUri && failedUri !== photoUri ? <PhotoCredit credit={ownPhoto ? null : recipe.imageCredit} /> : null}
 
           {isSelectMode ? (
             <Pressable

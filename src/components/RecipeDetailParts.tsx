@@ -49,9 +49,11 @@ export type RecipeCoverProps = {
   topInset: number;
   onBack: () => void;
   onToggleSave: () => void;
+  /** Si se pasa, aparece el botón de cámara para poner una foto propia. */
+  onChangePhoto?: () => void;
 };
 
-export function RecipeCover({ banner, imageUri, imageCredit, isSaved, topInset, onBack, onToggleSave }: RecipeCoverProps) {
+export function RecipeCover({ banner, imageUri, imageCredit, isSaved, topInset, onBack, onToggleSave, onChangePhoto }: RecipeCoverProps) {
   const styles = useStyles();
   const { t } = useI18n();
   // Si la foto remota falla al cargar, se muestra la ilustración de siempre
@@ -72,13 +74,24 @@ export function RecipeCover({ banner, imageUri, imageCredit, isSaved, topInset, 
       )}
       <View style={[styles.coverBar, { top: 20 + topInset }]}>
         <IconButton iconName="chevron-back" variant="white" accessibilityLabel={t('common.back')} onPress={onBack} style={styles.coverBtn} />
-        <IconButton
-          iconName={isSaved ? 'heart' : 'heart-outline'}
-          variant="surface"
-          accessibilityLabel={isSaved ? t('organisms.recipeDetailParts.unsaveA11y') : t('organisms.recipeDetailParts.saveA11y')}
-          onPress={onToggleSave}
-          style={styles.coverBtn}
-        />
+        <View style={styles.coverActions}>
+          {onChangePhoto ? (
+            <IconButton
+              iconName="camera-outline"
+              variant="surface"
+              accessibilityLabel={t('organisms.recipeDetailParts.photoA11y')}
+              onPress={onChangePhoto}
+              style={styles.coverBtn}
+            />
+          ) : null}
+          <IconButton
+            iconName={isSaved ? 'heart' : 'heart-outline'}
+            variant="surface"
+            accessibilityLabel={isSaved ? t('organisms.recipeDetailParts.unsaveA11y') : t('organisms.recipeDetailParts.saveA11y')}
+            onPress={onToggleSave}
+            style={styles.coverBtn}
+          />
+        </View>
       </View>
     </View>
     {showPhoto && imageCredit ? <RecipePhotoCredit credit={imageCredit} /> : null}
@@ -461,6 +474,10 @@ const useStyles = makeStyles((colors) => ({
   },
   coverBtn: {
     borderWidth: 0,
+  },
+  coverActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
 
   stat: {

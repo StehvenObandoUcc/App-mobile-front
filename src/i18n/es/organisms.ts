@@ -64,6 +64,7 @@ export const organisms = {
     minutes: '{count} min',
   },
   recipeDetailParts: {
+    photoA11y: 'Poner tu propia foto',
     photoBy: 'Foto:',
     photoSourceUnsplash: 'Unsplash',
     photoSourcePexels: 'Pexels',

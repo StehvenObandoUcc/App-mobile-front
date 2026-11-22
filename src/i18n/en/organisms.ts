@@ -65,6 +65,7 @@ export const organisms: typeof Es = {
     minutes: '{count} min',
   },
   recipeDetailParts: {
+    photoA11y: 'Add your own photo',
     photoBy: 'Photo by',
     photoSourceUnsplash: 'Unsplash',
     photoSourcePexels: 'Pexels',

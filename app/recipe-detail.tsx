@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRecipes } from '../src/hooks/useRecipes';
 import { useInventory } from '../src/hooks/useInventory';
 import { useShoppingList } from '../src/hooks/useShoppingList';
+import { useRecipePhoto, PhotoSource } from '../src/hooks/useRecipePhoto';
 import { Recipe, RecipeIngredient } from '../src/types';
 import {
   AppText,
@@ -22,6 +23,7 @@ import {
   StepItem,
   StickyActionBar,
   DifficultyMeter,
+  ActionSheetModal,
 } from '../src/components';
 import { validateRecipeIngredients } from '../src/utils/recipe-validation';
 import { withLiveAvailability } from '../src/utils/consumption';
@@ -72,6 +74,33 @@ export default function RecipeDetailScreen() {
   const [stepsError, setStepsError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogState>({ visible: false, title: '', message: '', onConfirm: () => {} });
   const closeDialog = () => setDialog((d) => ({ ...d, visible: false }));
+  const ownPhoto = useRecipePhoto(recipeId);
+  const [photoSheet, setPhotoSheet] = useState(false);
+
+  const choosePhoto = async (source: PhotoSource) => {
+    try {
+      const result = await ownPhoto.pick(source);
+      if (result !== 'denied') return;
+      setDialog({
+        visible: true,
+        type: 'warning',
+        iconName: 'camera-outline',
+        title: t('screensMain.recipeDetail.photoDeniedTitle'),
+        message: t(source === 'camera' ? 'screensMain.recipeDetail.photoDeniedCamera' : 'screensMain.recipeDetail.photoDeniedLibrary'),
+        confirmText: t('screensMain.recipeDetail.photoOk'),
+        onConfirm: closeDialog,
+      });
+    } catch {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: t('screensMain.recipeDetail.photoFailTitle'),
+        message: t('screensMain.recipeDetail.photoFailMessage'),
+        confirmText: t('screensMain.recipeDetail.photoOk'),
+        onConfirm: closeDialog,
+      });
+    }
+  };
 
   const loadSteps = useCallback(
     async (rec: Recipe) => {
@@ -273,8 +302,9 @@ export default function RecipeDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 170 + insets.bottom }}>
         <RecipeCover
           banner={banner}
-          imageUri={recipe.imageUri}
-          imageCredit={recipe.imageCredit}
+          imageUri={ownPhoto.uri || recipe.imageUri}
+          imageCredit={ownPhoto.uri ? null : recipe.imageCredit}
+          onChangePhoto={() => setPhotoSheet(true)}
           isSaved={recipe.isSaved}
           topInset={insets.top}
           onBack={() => router.back()}
@@ -381,6 +411,20 @@ export default function RecipeDetailScreen() {
         cancelText={dialog.cancelText}
         onConfirm={dialog.onConfirm}
         onCancel={dialog.onCancel}
+      />
+
+      <ActionSheetModal
+        visible={photoSheet}
+        onClose={() => setPhotoSheet(false)}
+        title={t('screensMain.recipeDetail.photoSheetTitle')}
+        headerIconName="camera-outline"
+        actions={[
+          { label: t('screensMain.recipeDetail.photoTake'), icon: 'camera-outline', onPress: () => choosePhoto('camera') },
+          { label: t('screensMain.recipeDetail.photoChoose'), icon: 'image-outline', onPress: () => choosePhoto('library') },
+          ...(ownPhoto.uri
+            ? [{ label: t('screensMain.recipeDetail.photoRemove'), icon: 'trash-outline' as const, isDestructive: true, onPress: () => ownPhoto.save(null) }]
+            : []),
+        ]}
       />
     </View>
   );
