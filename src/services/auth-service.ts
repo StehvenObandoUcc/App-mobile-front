@@ -98,7 +98,8 @@ AppState.addEventListener('change', (state) => {
   if (state === 'active') AuthService.refreshIfNeeded();
 });
 
-type RefreshResult = 'ok' | 'expired' | 'unavailable';
+// 'unsupported': el servidor no tiene /auth/refresh (404, backend sin renovación desplegada).
+type RefreshResult = 'ok' | 'expired' | 'unavailable' | 'unsupported';
 let refreshInFlight: Promise<RefreshResult> | null = null;
 // La sesión se cerró porque el servidor ya no la renueva: el login lo explica una vez.
 let sessionExpiredNotice = false;
@@ -179,6 +180,7 @@ export class AuthService {
         return 'unavailable';
       }
       if (response.status === 401) return 'expired';
+      if (response.status === 404) return 'unsupported';
       if (!response.ok) return 'unavailable'; // 429 / 5xx: no es culpa de la sesión
       const data = await response.json().catch(() => null);
       // Si mientras tanto se cerró sesión o se cambió de cuenta, la respuesta ya no aplica.
@@ -209,7 +211,8 @@ export class AuthService {
   static async refreshIfNeeded(): Promise<void> {
     if (!currentSession || !shouldRefreshSession(currentSession.expiresAt)) return;
     const result = await AuthService.refreshSession();
-    if (result === 'expired') await AuthService.expireSession();
+    const pastExpiry = Date.parse(currentSession?.expiresAt ?? '') <= Date.now();
+    if (result === 'expired' || (result === 'unsupported' && pastExpiry)) await AuthService.expireSession();
   }
 
   /** Cierra una sesión que el servidor ya no acepta y deja el aviso para la pantalla de login. */
@@ -414,7 +417,8 @@ registerUnauthorizedHandler(async () => {
   if (!currentSession) return false;
   const result = await AuthService.refreshSession();
   if (result === 'ok') return true;
-  if (result === 'expired') await AuthService.expireSession().catch(() => {});
+  // Sin renovación en el servidor, un token rechazado ya no tiene arreglo: se vuelve al login.
+  if (result === 'expired' || result === 'unsupported') await AuthService.expireSession().catch(() => {});
   return false;
 });
 
