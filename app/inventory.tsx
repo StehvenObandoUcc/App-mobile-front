@@ -499,7 +499,8 @@ export default function InventoryScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={[
             styles.listContainer,
-            { paddingBottom: Math.max(100, getBottomContentPadding(insets.bottom)) },
+            // + alto del Fab «Agregar» (56) y su margen (16): el último alimento termina por encima del botón.
+            { paddingBottom: getBottomContentPadding(insets.bottom) + (!isSelectMode && items.length > 0 ? 56 + 16 + 8 : 0) },
           ]}
           showsVerticalScrollIndicator={false}
           renderItem={renderIngredientItem}
