@@ -14,7 +14,7 @@
       "package": "com.foodai.app",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#2B1B17",
+        "backgroundColor": "#FDF5E9",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -42,7 +42,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Food AI necesita acceso a tus fotos para personalizar tu foto de perfil."
+          "photosPermission": "Food AI necesita acceso a tus fotos para tu foto de perfil y las fotos de tus recetas."
         }
       ],
       "expo-secure-store",
